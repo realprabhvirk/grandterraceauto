@@ -125,6 +125,61 @@ try {
     await ev(() => window.__gta.controls.input.setVirtual('KeyW', false));
     check('cinematic: shots change and never clip', bad === 0 && shots.size >= 2, { bad, shots: [...shots] });
   }
+  // ---------------------------------------------------------------- Step 3: health / destruction
+  if (run('combat')) {
+    await load();
+    await ev(() => window.__gta.debug.enter()); await wait(1500);
+    // Ram a power pole at speed: line the car up 30 m before it on the verge.
+    await ev(() => {
+      const g = window.__gta, it = g.breakables.sets.find((s) => s.name === 'powerPole').items[3];
+      const S = g.world.network.main.samples; let best = S[0], bd = 1e9;
+      for (const s of S) { const d = Math.hypot(s.x - it.x, s.z - it.z); if (d < bd) { bd = d; best = s; } }
+      const x = it.x - best.tx * 30, z = it.z - best.tz * 30;
+      g.controls.car.body.teleport(x, g.world.terrain.getHeight(x, z), z, Math.atan2(best.tx, best.tz));
+      window.__pole = it;
+    });
+    await wait(600);
+    const before = await ev(() => window.__gta.debug.state());
+    await ev(async () => {
+      const g = window.__gta, I = g.controls.input, t0 = performance.now();
+      I.setVirtual('KeyW', true); I.setVirtual('ShiftLeft', true);
+      while (performance.now() - t0 < 6000 && !window.__pole.broken) await new Promise((r) => requestAnimationFrame(r));
+      I.setVirtual('KeyW', false); I.setVirtual('ShiftLeft', false); I.setVirtual('KeyS', true);
+      await new Promise((r) => setTimeout(r, 1500)); I.setVirtual('KeyS', false);
+    });
+    const after = await ev(() => ({ s: window.__gta.debug.state(), broken: window.__pole.broken }));
+    check('ramming a power pole breaks it', after.broken, after.broken);
+    check('car health dropped', after.s.carHealth < 100, { before: before.carHealth, after: after.s.carHealth });
+    check('player health dropped (fast impact)', after.s.health < 100, after.s.health);
+    // Hit a pedestrian (stood still for the test).
+    const hit = await ev(async () => {
+      const g = window.__gta, p = g.peds.peds.find((q) => q.ch.root.visible && q.state !== 'down') || g.peds.peds[0];
+      p.state = 'pause'; p.timer = 30; p.action = 'look';
+      const car = g.controls.car, a = 0.7;
+      const x = p.pos.x - Math.sin(a) * 18, z = p.pos.z - Math.cos(a) * 18;
+      car.body.teleport(x, g.world.terrain.getHeight(x, z), z, a);
+      await new Promise((r) => setTimeout(r, 500));
+      const I = g.controls.input; I.setVirtual('KeyW', true);
+      const t0 = performance.now();
+      while (performance.now() - t0 < 5000 && p.state !== 'down') await new Promise((r) => requestAnimationFrame(r));
+      I.setVirtual('KeyW', false); I.setVirtual('KeyS', true);
+      const down = p.state === 'down', stats = g.peds.stats();
+      await new Promise((r) => setTimeout(r, 1200)); I.setVirtual('KeyS', false);
+      await new Promise((r) => setTimeout(r, 5200));
+      return { down, fleeing: stats.fleeing, recovered: p.state !== 'down' };
+    });
+    check('pedestrian knocked down', hit.down, hit);
+    check('pedestrian gets back up', hit.recovered, hit);
+    // Knock-out -> hospital respawn, -$200.
+    const ko = await ev(async () => {
+      const g = window.__gta, cash0 = g.wallet.cash;
+      g.combat.damagePlayer(500, 'test');
+      await new Promise((r) => setTimeout(r, 2200));
+      const sp = g.spawns.hospital().position, p = g.controls.player.position;
+      return { cash0, cash: g.wallet.cash, mode: g.controls.mode, d: +Math.hypot(p.x - sp.x, p.z - sp.z).toFixed(2), hp: g.combat.hp };
+    });
+    check('knocked out -> hospital respawn, -$200, full health', ko.cash === ko.cash0 - 200 && ko.mode === 'walk' && ko.d < 2 && ko.hp === 100, ko);
+  }
 } finally {
   await context.close();
   await browser.close();

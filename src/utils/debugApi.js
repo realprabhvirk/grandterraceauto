@@ -114,6 +114,11 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
         prompt: controls.interact.current ? (typeof controls.interact.current.label === 'function' ? controls.interact.current.label() : controls.interact.current.label) : null,
         lastExit: controls.lastExit || null,
         cameraMode: controls.cameraMode,
+        health: +(window.__gta.combat?.hp ?? 100).toFixed(1),
+        carHealth: controls.car ? +(controls.car.health ?? 100).toFixed(1) : null,
+        cash: window.__gta.wallet?.cash,
+        stars: window.__gta.world.wanted?.stars || 0,
+        ko: !!window.__gta.combat?.ko,
         wheelAngle: +controls.cabin.wheelAngle().toFixed(3),
       };
     },

@@ -51,6 +51,6 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
       wheels.instanceMatrix.needsUpdate = true;
     },
     /** For pedestrians (dodging) and the minimap. */
-    movers() { return cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v })); },
+    movers() { return cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })); },
   };
 }

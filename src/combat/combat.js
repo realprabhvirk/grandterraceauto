@@ -1,0 +1,133 @@
+// Combat/damage orchestrator: player health (car impacts, falls, being hit by cars, regen,
+// knock-out -> hospital respawn -$200), car damage for every car, breakable props, people
+// knocked down by cars. Emits events (pedHit, propBroken, policeDamaged) for the wanted system.
+import * as THREE from 'three';
+import { damageCar, repairCar, updateCarDamage } from './carDamage.js';
+
+const REGEN_DELAY = 20, REGEN_RATE = 0.5;
+
+export function createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud, spawns, world }) {
+  const st = { hp: 100, lastHit: -999, t: 0, ko: false, koT: 0, airTop: null, hitCd: 0 };
+  const listeners = {};
+  const emit = (e, d) => (listeners[e] || []).forEach((f) => f(d));
+  const allCars = () => [...vehicles.cars, ...traffic.cars, ...(world.police ? world.police.cars : [])];
+  const heroCar = () => vehicles.cars.find((c) => c.hero);
+
+  function damagePlayer(n, why = '') {
+    if (st.ko || n <= 0) return;
+    st.hp = Math.max(0, st.hp - n);
+    st.lastHit = st.t;
+    if (st.hp <= 0) knockOut(why);
+  }
+
+  function knockOut() {
+    st.ko = true; st.koT = 0;
+    hud.fade(true);
+  }
+
+  function respawn() {
+    const sp = spawns.hospital();
+    controls.respawnAt(sp.position, sp.yaw);
+    wallet.add(-200);
+    st.hp = 100; st.ko = false; st.lastHit = st.t;
+    hud.fade(false);
+    hud.message('KNOCKED OUT  -$200', 3);
+    restoreHeroCar();
+    emit('respawn', { reason: 'ko' });
+  }
+
+  /** Wrecked hero car comes back in 62's driveway at the next respawn. */
+  function restoreHeroCar() {
+    const h = heroCar();
+    if (!h || !h.dead) return;
+    repairCar(h);
+    const s = h.spawn;
+    h.body.teleport(s.x, world.terrain.getHeight(s.x, s.z), s.z, s.yaw);
+  }
+
+  return {
+    get hp() { return st.hp; },
+    get ko() { return st.ko; },
+    damagePlayer, respawn, restoreHeroCar, damageCar,
+    on(e, f) { (listeners[e] = listeners[e] || []).push(f); },
+    emit,
+    setHp(v) { st.hp = v; },
+
+    update(dt) {
+      st.t += dt;
+      st.hitCd -= dt;
+      if (st.ko) { st.koT += dt; if (st.koT > 1.1) respawn(); return; }
+      const mode = controls.mode, active = mode === 'drive' ? controls.car : null;
+
+      // --- Car impacts: every Rapier car (player, parked) -----------------------------------
+      for (const c of vehicles.cars) {
+        const dv = c.body.impactDv || 0;
+        c.body.impactDv = 0;
+        if (dv > 3) {
+          damageCar(c, (dv - 3) * 4.5);
+          if (c === active) {
+            audio.crash(Math.min(1, (dv - 3) / 10));
+            if (dv > 8) damagePlayer((dv - 8) * 6 * (controls.cameraMode === 'cabin' ? 0.85 : 1), 'crash');
+            // Kinematic cars we hit take the same damage.
+            const p = c.position;
+            for (const t of [...traffic.cars, ...(world.police ? world.police.cars : [])]) {
+              if (Math.hypot(t.pos.x - p.x, t.pos.z - p.z) < 6) { damageCar(t, (dv - 3) * 4.5); if (t.isPolice) emit('policeDamaged', { car: t }); }
+            }
+          }
+        }
+      }
+
+      // --- Breakables: the driven car (and anything else fast) ------------------------------
+      for (const c of [...vehicles.cars.filter((v) => Math.abs(v.body.state.speed) > 2)]) {
+        const p = c.position, f = c.body.forward();
+        const broken = breakables.hitTest({ x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, halfLen: c.cfg.L / 2, halfW: c.cfg.W / 2 });
+        for (const it of broken) {
+          const v = c.body.body.linvel();
+          c.body.body.setLinvel({ x: v.x * 0.82, y: v.y, z: v.z * 0.82 }, true); // lose some speed ploughing through
+          damageCar(c, it.set.carDamage);
+          if (it.set.sparks) particles.sparks(new THREE.Vector3(it.x, it.y + it.set.h * 0.85, it.z));
+          audio.snap();
+          if (c === active) {
+            audio.crash(Math.min(1, it.set.carDamage / 30));
+            if (Math.abs(c.body.state.speed) > 8) damagePlayer(it.set.carDamage * 0.4 * (controls.cameraMode === 'cabin' ? 0.85 : 1), 'prop');
+          }
+          emit('propBroken', { item: it, byPlayer: c === active, x: it.x, z: it.z });
+        }
+      }
+
+      // --- On foot: falls and being hit by moving cars -----------------------------------------
+      if (mode === 'walk') {
+        const pl = controls.player, ps = pl.state, pos = pl.position;
+        if (!ps.grounded) st.airTop = Math.max(st.airTop ?? pos.y, pos.y);
+        else if (st.airTop != null) { const drop = st.airTop - pos.y; st.airTop = null; if (drop > 4) damagePlayer((drop - 4) * 12, 'fall'); }
+        if (st.hitCd <= 0) {
+          for (const c of allCars()) {
+            const p = c.position, v = c.body?.state ? c.body.state.speed : c.v;
+            if (Math.abs(v) < 4) continue;
+            const f = c.body?.state ? c.body.forward() : c.fwd;
+            const dx = pos.x - p.x, dz = pos.z - p.z;
+            const ahead = Math.abs(dx * f.x + dz * f.z), lat = Math.abs(dx * f.z - dz * f.x);
+            if (ahead < c.cfg.L / 2 + 0.45 && lat < c.cfg.W / 2 + 0.4 && Math.abs(pos.y - p.y) < 2) {
+              damagePlayer(Math.abs(v) * 2.2, 'hit');
+              ps.vel.set(f.x * Math.sign(v) * 6, 0, f.z * Math.sign(v) * 6); // knocked back
+              st.hitCd = 1;
+              audio.crash(0.4);
+              break;
+            }
+          }
+        }
+      }
+
+      // --- Regen + damage visuals ---------------------------------------------------------------
+      if (st.t - st.lastHit > REGEN_DELAY) st.hp = Math.min(100, st.hp + REGEN_RATE * dt);
+      for (const c of allCars()) updateCarDamage(c, dt, particles);
+      // Non-hero wrecks are towed away (hidden) after 3 minutes.
+      for (const c of allCars()) {
+        if (c.dead && !c.hero && c.dmg && c.dmg.wreckT > 180 && c.group.visible) {
+          c.group.visible = false;
+          if (c.body?.colliders) c.body.colliders.forEach((k) => k.setEnabled(false));
+        }
+      }
+    },
+  };
+}

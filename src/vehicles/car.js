@@ -57,6 +57,7 @@ export class Car {
     scene.add(this.group);
 
     this.lights = false;
+    this.health = 100;
     this.driver = null; // set while the player drives
     this.sync();
   }

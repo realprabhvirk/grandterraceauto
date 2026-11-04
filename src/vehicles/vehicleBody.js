@@ -127,7 +127,7 @@ export class VehicleBody {
     st.speed = speed;
     const parked = !input;
     this.parked = parked;
-    const thr = parked ? 0 : input.throttle, rev = parked ? 0 : input.reverse;
+    const thr = parked || this.dead ? 0 : input.throttle, rev = parked || this.dead ? 0 : input.reverse; // dead engine: no drive
     const boost = !parked && input.boost && thr > 0;
 
     // --- Steering: eased, with less lock at speed ---------------------------------
@@ -218,6 +218,7 @@ export class VehicleBody {
     // Collision strength (sudden velocity change not explained by braking).
     const dv = Math.hypot(v.x - this.lastVel.x, v.y - this.lastVel.y, v.z - this.lastVel.z);
     this.impact = dv > 2.2 ? Math.min(1, (dv - 2.2) / 6) : 0;
+    this.impactDv = Math.max(this.impactDv || 0, dv); // peak since last read (consumed by combat)
     this.lastVel = { x: v.x, y: v.y, z: v.z };
     st.throttle = thr;
     st.boost = boost;

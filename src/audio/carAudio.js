@@ -109,6 +109,33 @@ export function createCarAudio() {
       }
     },
     setListener(p) { listener = p; },
+    /** Crunch: filtered noise burst + low thump, strength 0..1. */
+    crash(strength) {
+      if (!ctx || strength <= 0.02) return;
+      const src = ctx.createBufferSource(); src.buffer = noiseBuffer(0.5);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900 + strength * 1200; bp.Q.value = 0.8;
+      const g = ctx.createGain(); const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18 + 0.32 * strength, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(); src.stop(t + 0.5);
+      this.thud(strength);
+    },
+    /** Pole / sign snapping: sharp crack. */
+    snap() {
+      if (!ctx) return;
+      const src = ctx.createBufferSource(); src.buffer = noiseBuffer(0.25);
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+      const g = ctx.createGain(); const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      src.connect(hp); hp.connect(g); g.connect(master); src.start(); src.stop(t + 0.25);
+    },
+    /** Little UI ding (cash, pickups). */
+    ding(f = 880) {
+      if (!ctx) return;
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      const g = ctx.createGain(); const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g); g.connect(master); o.start(); o.stop(t + 0.4);
+    },
     /** One-shot low thud, strength 0..1. */
     thud(strength) {
       if (!ctx || strength <= 0.05) return;

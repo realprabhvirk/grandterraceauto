@@ -75,3 +75,7 @@ One line per judgment call made during the autonomous build.
 - Cameras: C cycles third/first person on foot and chase/cabin/cinematic in a car (remembered separately); F2 stays the debug fly cam.
 - Cabin: one shared cabin builder sized from CAR_TYPES (dash, binnacle, pillars, lining, door cards, seats); steering wheel = 450 deg lock-to-lock scaled by steer/maxSteer; gauges from a simulated 5-speed gearbox (src/vehicles/drivetrain.js).
 - Mirrors: 3x 256x128 render targets updated round-robin (one per frame), shadow map not re-rendered; perf guard compares 1.5 s frozen vs 2 s live and falls back to a static tint if >10 fps lost or <40 fps.
+- Damage: car damage = (impact dv - 3 m/s) x 4.5; player damage when dv > 8 = (dv - 8) x 6 (x0.85 in cabin); falls > 4 m = (drop - 4) x 12; hit by a car = speed x 2.2 with knockback.
+- Car damage visuals reuse each car's own merged geometry (vertex-colour darkening in bands) plus a loose bumper bar, popped hood, pooled smoke and emissive flame cones - no extra lights.
+- Breakables: props break BEFORE their collider stops the car (prediction from speed/heading vs toughness); timber fence sections and the street-name signs stay unbreakable (merged geometry) - logged as rough.
+- Respawn points are temporary footpath spots near 62 until the town exists (src/world/spawnPoints.js).

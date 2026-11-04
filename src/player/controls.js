@@ -307,6 +307,18 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       const extra = car && mode === 'drive' ? `\ncar ${car.cfg.label} ${(car.body.state.speed * 3.6).toFixed(0)} km/h` : '';
       return `mode ${mode}\npos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}${extra}`;
     },
+    /** Respawn on foot at pos (hospital / police station): leaves any car or transition. */
+    respawnAt(pos, yaw = 0) {
+      if (car) { car.driver = null; vehicles.setActive(null); }
+      if (ch.root.parent !== scene) scene.add(ch.root);
+      ch.root.rotation.set(0, yaw, 0);
+      trans = null; car = null; mode = 'walk';
+      player.teleport(pos, yaw);
+      player.setEnabled(true);
+      chase.restoreFov();
+      applyCam();
+      panel.setPage('walk');
+    },
     /** Test helper: enter a car immediately (no walk-up). */
     debugEnter(c) { beginEnter(c); trans.t = 0.999; },
     debugExit() { if (car && mode === 'drive') beginExit(); },

@@ -81,5 +81,5 @@ export function buildStreetLights(network, layout) {
   const group = new THREE.Group();
   group.name = 'street-lights';
   group.add(poles, heads, pools);
-  return { group, poles: colliders, count: n };
+  return { group, poles: colliders, count: n, meshes: { poles, heads, pools } };
 }

@@ -28,9 +28,9 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
     scene.add(ch.root);
     const p = line[idx];
     const body = phys.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(p.x, p.y + HALF + RADIUS, p.z));
-    phys.createCollider(RAPIER.ColliderDesc.capsule(HALF * scale, RADIUS).setCollisionGroups(G_NPC), body);
+    const collider = phys.createCollider(RAPIER.ColliderDesc.capsule(HALF * scale, RADIUS).setCollisionGroups(G_NPC), body);
     peds.push({
-      id: `ped-${i}`, ch, body, scale,
+      id: `ped-${i}`, ch, body, collider, scale, flee: 0,
       li, idx, dir: rng.chance(0.5) ? 1 : -1,
       pos: new THREE.Vector3(p.x, p.y, p.z), yaw: 0,
       speed: rng.range(1.05, 1.45), cur: 0,
@@ -84,12 +84,46 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
     ped.yaw += dy * Math.min(1, dt * 5);
   }
 
+  const hitListeners = [];
+  function knockDown(ped, car) {
+    ped.state = 'down'; ped.downT = 0; ped.dodge = null; ped.action = null;
+    ped.yaw = Math.atan2(-car.fx * Math.sign(car.speed), -car.fz * Math.sign(car.speed)); // falls away from the car
+    ped.collider.setEnabled(false);
+    ped.pos.x += car.fx * Math.sign(car.speed) * 1.2; ped.pos.z += car.fz * Math.sign(car.speed) * 1.2;
+    // Everyone nearby runs off for ~8 s.
+    for (const o of peds) if (o !== ped && o.state !== 'down' && o.pos.distanceTo(ped.pos) < 25) { o.flee = 8; o.state = 'walk'; o.action = null; o.fleeFrom = ped.pos.clone();
+      const L = graph.lines[o.li], a = L[Math.min(L.length - 1, o.idx + 1)], b = L[Math.max(0, o.idx - 1)];
+      o.dir = Math.hypot(a.x - ped.pos.x, a.z - ped.pos.z) > Math.hypot(b.x - ped.pos.x, b.z - ped.pos.z) ? 1 : -1; }
+    hitListeners.forEach((f) => f({ ped, car }));
+  }
+
   function update(dt, { focus, player, cars }) {
     for (const ped of peds) {
       const dist = Math.hypot(ped.pos.x - focus.x, ped.pos.z - focus.z);
       const asleep = dist > SLEEP_DIST;
       ped.ch.root.visible = !asleep;
       if (asleep) continue;
+
+      // --- Knocked down by a car: tumble, lie still, stand back up after ~4 s ---------------
+      if (ped.state !== 'down') {
+        for (const c of cars) {
+          if (Math.abs(c.speed) < 3) continue;
+          const dx = ped.pos.x - c.x, dz = ped.pos.z - c.z;
+          const ahead = Math.abs(dx * c.fx + dz * c.fz), lat = Math.abs(dx * c.fz - dz * c.fx);
+          if (ahead < (c.len || 4.5) / 2 + 0.4 && lat < (c.w || 1.8) / 2 + 0.3) { knockDown(ped, c); break; }
+        }
+      }
+      if (ped.state === 'down') {
+        ped.downT += dt;
+        const k = ped.downT < 0.35 ? ped.downT / 0.35 : ped.downT < 4 ? 1 : Math.max(0, 1 - (ped.downT - 4) / 0.6);
+        ped.ch.root.position.copy(ped.pos);
+        ped.ch.root.rotation.set(-k * 1.45, ped.yaw, 0);
+        ped.ch.root.visible = ped.downT > 0.6 || Math.floor(ped.downT * 12) % 2 === 0; // hurt flash
+        ped.ch.animate({ dt, speed: 0, grounded: true, crouch: false, action: null, steer: 0 });
+        if (ped.downT > 4.6) { ped.state = 'walk'; ped.ch.root.rotation.set(0, ped.yaw, 0); ped.collider.setEnabled(true); }
+        continue;
+      }
+      if (ped.flee > 0) ped.flee -= dt;
 
       // --- React to fast cars: step back toward the verge (away from the road) ---------
       const here = lineAt(ped, Math.max(0, Math.min(graph.lines[ped.li].length - 1, ped.idx)));
@@ -137,7 +171,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
         const nextI = ped.idx + ped.dir;
         if (nextI < 0 || nextI >= line.length) { atEnd(ped); continue; }
         const tgt = line[nextI];
-        const d = stepToward(ped, tgt.x, tgt.y, tgt.z, ped.speed, dt);
+        const d = stepToward(ped, tgt.x, tgt.y, tgt.z, ped.flee > 0 ? 3.4 : ped.speed, dt);
         speed = ped.cur;
         if (d < 0.25) {
           ped.idx = nextI;
@@ -171,8 +205,9 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
     graph,
     update,
     /** Debug: count awake / waving etc. */
+    onHit(f) { hitListeners.push(f); },
     stats() {
-      return { total: peds.length, awake: peds.filter((p) => p.ch.root.visible).length, paused: peds.filter((p) => p.state === 'pause').length };
+      return { total: peds.length, awake: peds.filter((p) => p.ch.root.visible).length, paused: peds.filter((p) => p.state === 'pause').length, down: peds.filter((p) => p.state === 'down').length, fleeing: peds.filter((p) => p.flee > 0).length };
     },
   };
 }

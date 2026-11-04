@@ -34,7 +34,8 @@ export class TrafficCar {
     this.model.position.y = 0.04;
     this.group.add(this.model);
     const mk = (geo, mat, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.castShadow = shadow; m.receiveShadow = true; this.model.add(m); return m; };
-    mk(g.paint, MAT.solid);
+    this.paintMesh = mk(g.paint, MAT.solid);
+    this.health = 100;
     mk(g.glass, CAR_MAT.glass, false);
     this.headMesh = mk(g.head, CAR_MAT.headOff, false);
     this.tailMesh = mk(g.tail, CAR_MAT.tailOff, false);
@@ -60,6 +61,7 @@ export class TrafficCar {
 
   /** Advance along the lane network. ctx: { lanes, obstacles, honk(car) } */
   update(dt, ctx) {
+    if (this.dead) { this.v = 0; this.speed = 0; this.sync(dt); return; } // wrecked: stays put
     const cfg = this.cfg;
     // --- Target speed: cruise, slower on curves and connectors ----------------------------
     sampleLane(this.lane, this.s, P0);
