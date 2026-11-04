@@ -12,15 +12,15 @@ const C = (hex) => new THREE.Color(hex);
 
 const PRESETS = {
   afternoon: {
-    sun: C(PALETTE.light.sun), sunI: 2.6, elev: 24, azim: 250,
-    hemiSky: C(PALETTE.light.hemiSky), hemiGround: C(PALETTE.light.hemiGround), hemiI: 1.15,
+    sun: C(PALETTE.light.sun), sunI: 3.7, elev: 24, azim: 250,
+    hemiSky: C(PALETTE.light.hemiSky), hemiGround: C(PALETTE.light.hemiGround), hemiI: 1.95,
     fog: C(PALETTE.fog), fogNear: 90, fogFar: 520,
     zenith: C(PALETTE.sky.zenith), mid: C(PALETTE.sky.mid), horizon: C(PALETTE.sky.horizon),
     exposure: 1.0,
   },
   dusk: {
-    sun: C(PALETTE.light.sunDusk), sunI: 1.1, elev: 5, azim: 262,
-    hemiSky: C(PALETTE.light.hemiSkyDusk), hemiGround: C(PALETTE.light.hemiGroundDusk), hemiI: 0.7,
+    sun: C(PALETTE.light.sunDusk), sunI: 1.7, elev: 5, azim: 262,
+    hemiSky: C(PALETTE.light.hemiSkyDusk), hemiGround: C(PALETTE.light.hemiGroundDusk), hemiI: 1.05,
     fog: C(PALETTE.fogDusk), fogNear: 60, fogFar: 420,
     zenith: C(PALETTE.sky.duskZenith), mid: C(PALETTE.sky.duskMid), horizon: C(PALETTE.sky.duskHorizon),
     exposure: 1.0,

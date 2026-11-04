@@ -36,8 +36,8 @@ export const PALETTE = {
   },
 
   road: {
-    asphalt: '#45434a',
-    asphaltPatch: '#3d3b41',
+    asphalt: '#716e73',
+    asphaltPatch: '#67646a',
     curb: '#e6dfd0',
     footpath: '#c8bda8',
     driveway: '#cfc4b0',

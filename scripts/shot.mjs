@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const URL_BASE = 'http://127.0.0.1:5173/';
-const ALL = ['overview', 'street', 'hero-front', 'hero-34', 'player'];
+const ALL = ['overview', 'street', 'hero-front', 'hero-34', 'hero-34-dusk', 'top'];
 const presets = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 const outDir = path.join(root, 'shots');
 mkdirSync(outDir, { recursive: true });
