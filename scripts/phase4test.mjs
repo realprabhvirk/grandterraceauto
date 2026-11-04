@@ -246,6 +246,23 @@ try {
     });
     check('carjack: driver pulled out, you drive off, wanted up', cj.mode === 'drive' && cj.stolen && cj.stars >= 1 && cj.trafficLeft === 5, cj);
   }
+  // ---------------------------------------------------------------- Step 5: minimap
+  if (run('minimap')) {
+    await load();
+    const mm = await ev(async () => {
+      const g = window.__gta, cv = [...document.querySelectorAll('canvas')].find((c) => c.width === 190);
+      await new Promise((r) => setTimeout(r, 400));
+      const px = cv.getContext('2d').getImageData(95, 60, 1, 1).data;
+      const v0 = g.minimap.visible;
+      await g.debug.tap('Tab');
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }));
+      const v1 = g.minimap.visible;
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }));
+      return { drawn: px[3] > 0, v0, v1, v2: g.minimap.visible, places: g.world.places.map((p) => p.kind) };
+    });
+    check('minimap draws and Tab toggles it', mm.drawn && mm.v0 && !mm.v1 && mm.v2, mm);
+    check('minimap has 62, police and hospital markers', ['home', 'police', 'hospital'].every((k) => mm.places.includes(k)), mm.places);
+  }
 } finally {
   await context.close();
   await browser.close();

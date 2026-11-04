@@ -29,6 +29,7 @@ import { createSpawnPoints } from './world/spawnPoints.js';
 import { createWanted } from './police/wanted.js';
 import { createPolice } from './police/policeManager.js';
 import { createTheft } from './police/theft.js';
+import { createMinimap } from './ui/minimap.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -99,6 +100,13 @@ const police = createPolice({ scene, physics, world, traffic, vehicles, controls
 world.police = police;
 const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world });
 
+// --- Minimap (Tab) ---------------------------------------------------------------------------
+const heroLot = world.layout.hero;
+world.places = [{ kind: 'home', x: heroLot.x, z: heroLot.z, label: '62 Grand Terrace' }];
+const placeSpawns = () => [{ kind: 'police', ...spawns.police().position }, { kind: 'hospital', ...spawns.hospital().position }];
+world.places.push(...placeSpawns().map((p) => ({ kind: p.kind, x: p.x, z: p.z })));
+const minimap = createMinimap(world);
+
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -107,7 +115,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -121,6 +129,7 @@ renderer.setAnimationLoop(() => {
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: police.movers() });
   police.update(dt);
   theft.update(dt, world.terrain);
+  { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
   audio.setListener(controls.focus());
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   combat.update(dt);

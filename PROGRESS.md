@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 00:06)**
-- Done: P4 steps 0-4 (bugs, cameras, damage, theft/wanted/police/busted); phase4test police 6/6
+**STATUS (2026-11-05 00:07)**
+- Done: P4 steps 0-5 (bugs, cameras, damage, police, minimap)
 - Broken: none known
-- Next: Step 5 minimap
+- Next: Step 6 Terrace town centre
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -162,3 +162,4 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 - 23:49 P4 step 2 done: C camera modes (third/first person; chase/cabin/cinematic), cabin interior with working gauges, dash lamps, 450-deg wheel, limited look + auto-recentre, impact shake, crack overlay (<35 car health), cinematic auto-director with ray-checked shots + letterbox, live mirrors (60 fps headless, no drop). phase4test cameras 8/8.
 - 23:58 P4 step 3 done: HUD (HP/car bars, stars slot, cash ,000 persisted), player damage (impacts, falls, hit by cars), regen, knock-out -> hospital (temp) -, car damage visuals + wrecks, breakables (street lights, power poles + wires, regulatory signs, bollards, letterboxes, kerb bins) with tip-over/sparks/restore, pedestrian knock-down + flee, crash/snap/ding sounds. phase4test combat 6/6.
 - 00:06 P4 step 4 done: hold-F break-in (witness check: ped 30 m LOS / cop 60 m), carjack (driver ejected, drivable copy), wanted 0-5 stars from heat, police cars (lights, siren, A*/Dijkstra lane routing, direct chase, box-in), busted (-$500, impound, station), escape (search flash, clear). phase4test police 6/6.
+- 00:07 P4 step 5 done: Tab minimap (north-up canvas, pre-rendered roads, player arrow, police blips, wanted radius, place markers) at ~10 fps; phase4test minimap 2/2.
