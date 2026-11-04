@@ -20,8 +20,8 @@ export const PALETTE = {
     sunDusk: '#ff9a5a',
     hemiSky: '#c7d9e8',
     hemiGround: '#7b6448',
-    hemiSkyDusk: '#6d6f9c',
-    hemiGroundDusk: '#4a3a33',
+    hemiSkyDusk: '#8a7fa6',
+    hemiGroundDusk: '#5e4638',
   },
 
   ground: {

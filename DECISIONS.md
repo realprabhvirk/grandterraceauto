@@ -28,3 +28,8 @@ One line per judgment call made during the autonomous build.
 - Player: walk 4.2 m/s, Shift run 7.8 m/s, Space jump; orbit camera (mouse/arrow keys, wheel zoom) that ray-casts and pulls in when a wall/hedge blocks it.
 - Debug: C toggles free-fly; in fly mode keys 1-5 jump to presets (hero-front, hero-34, street, overview, top).
 - Physics: invisible boundary walls 40 m inside the map edge keep the player in the playable area.
+- Roads: cul-de-sac mouths use 5 m fillets tangent to both the straight kerb and the turning circle (a plain circle-meets-road gave a hard sideways "tongue").
+- Look: shadow PCF radius 3 and a 42 m shadow extent (~4 cm texels) - the default kernel produced sawtooth edges under eaves.
+- Look: ~110 bushland trees in noise-driven groves around the suburb so the hills aren't an empty field (spec's ~20 yard trees are separate and unchanged).
+- Look: dusk fill raised (hemi 1.6) so roads/lawns stay readable instead of going navy-black.
+- Docs: README documents controls, URL presets and self-test scripts; hero tweak points called out.

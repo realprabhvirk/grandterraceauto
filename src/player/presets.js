@@ -34,6 +34,12 @@ export function cameraPreset(name, world, spawn) {
       p.y = T.getHeight(p.x, p.z) + 3.4;
       return { position: p, target: H.clone().add(new THREE.Vector3(0, 2.6, 0)).addScaledVector(t, -1.5) };
     }
+    case 'culdesac': {
+      // Standing at the mouth of Banksia Cl's turning circle, looking at the houses around it.
+      const pad = world.network.pads[1];
+      const p = new THREE.Vector3(pad.x - pad.inX * 16, pad.h + 2.2, pad.z - pad.inZ * 16);
+      return { position: p, target: new THREE.Vector3(pad.x + pad.inX * 14, pad.h + 2.5, pad.z + pad.inZ * 14) };
+    }
     case 'hero-porch': {
       // Close-up of the entry (good for judging shadow quality and detail).
       const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
