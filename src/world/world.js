@@ -1,6 +1,9 @@
 // Builds the whole static world in dependency order and returns handles the game needs.
 import * as THREE from 'three';
-import { buildRoadNetwork } from './roadNetwork.js';
+import { buildRoadNetwork, RoadIndex } from './roadNetwork.js';
+import { buildTownPlan } from '../town/townPlan.js';
+import { buildTown } from '../town/town.js';
+import { findWattleSite } from '../town/parks.js';
 import { buildLayout, lotPads } from './layout.js';
 import { Terrain } from './terrain.js';
 import { buildRoads } from './roads.js';
@@ -18,16 +21,22 @@ export function buildWorld(scene) {
   const t0 = performance.now();
   const network = buildRoadNetwork();
   const layout = buildLayout(network);
-  const terrain = new Terrain({ roads: network.roads, pads: network.pads, lots: lotPads(layout) });
+  // Terrace Town Centre street plan (after the suburb layout, so lots are unaffected).
+  const plan = (network.town = buildTownPlan(network));
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads], pads: network.pads, lots: lotPads(layout) });
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));
+  scene.add(buildRoads({ roads: [plan.link], junctions: [], pads: [], index: network.index }, []));
   scene.add(buildDriveways(layout.driveways, terrain));
   scene.add(buildSigns(network));
 
   const houses = buildHouses(layout.regular);
   scene.add(houses.group);
 
-  const trees = buildTrees([...layout.treeSpots, ...bushSpots(network, layout)], terrain);
+  // Wattle Park (suburb): pick an open flat spot near the cul-de-sacs before the bush goes in.
+  const wattleSite = findWattleSite(network, layout, terrain);
+  const clearOfPark = (p) => !wattleSite || Math.hypot(p.x - wattleSite.x, p.z - wattleSite.z) > 30;
+  const trees = buildTrees([...layout.treeSpots, ...bushSpots(network, layout).filter(clearOfPark)], terrain);
   scene.add(trees.group);
 
   const hero = buildHeroHouse(layout.hero, terrain);
@@ -36,10 +45,15 @@ export function buildWorld(scene) {
   const lights = buildStreetLights(network, layout);
   scene.add(lights.group);
 
-  const colliders = [...houses.colliders, ...(hero ? hero.colliders : [])];
-  const trunks = trees.trunks;
+  // Everything else in town (streets, buildings, props); then the road index covers town too.
+  network.allRoads = [...network.roads, plan.link, ...plan.roads];
+  const town = buildTown(scene, { network, terrain, plan, wattleSite });
+  network.index = new RoadIndex(network.allRoads);
+
+  const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders];
+  const trunks = [...trees.trunks, ...town.trunks];
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, poles: [], streetLights: lights, toggles: hero ? hero.toggles : [] };
+  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles] };
 }
 
 /**

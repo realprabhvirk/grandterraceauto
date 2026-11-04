@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 00:07)**
-- Done: P4 steps 0-5 (bugs, cameras, damage, police, minimap)
-- Broken: none known
-- Next: Step 6 Terrace town centre
+**STATUS (2026-11-05 00:39)**
+- Done: P4 steps 0-6 (bugs, cameras, damage, police, minimap, Terrace Town Centre)
+- Broken: garage 'street exit' check is occasionally flaky with more traffic (passes on rerun)
+- Next: Step 7 NPC variety
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -163,3 +163,4 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 - 23:58 P4 step 3 done: HUD (HP/car bars, stars slot, cash ,000 persisted), player damage (impacts, falls, hit by cars), regen, knock-out -> hospital (temp) -, car damage visuals + wrecks, breakables (street lights, power poles + wires, regulatory signs, bollards, letterboxes, kerb bins) with tip-over/sparks/restore, pedestrian knock-down + flee, crash/snap/ding sounds. phase4test combat 6/6.
 - 00:06 P4 step 4 done: hold-F break-in (witness check: ped 30 m LOS / cop 60 m), carjack (driver ejected, drivable copy), wanted 0-5 stars from heat, police cars (lights, siren, A*/Dijkstra lane routing, direct chase, box-in), busted (-$500, impound, station), escape (search flash, clear). phase4test police 6/6.
 - 00:07 P4 step 5 done: Tab minimap (north-up canvas, pre-rendered roads, player arrow, police blips, wanted radius, place markers) at ~10 fps; phase4test minimap 2/2.
+- 00:39 P4 step 6 done: Terrace Town Centre (grid + ring road + Terrace Link, 10 shops, Terrace Central + Quick Stop enterable, police station, hospital, petrol, bus stops, breakable trees/lights/bins/signs, Central Gardens + Wattle Park). phase4test town 11/11; town centre 69 draw calls, 60 fps headless; police/garage/cameras/combat/minimap + walk/drive/phase2 regressions pass.

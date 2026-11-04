@@ -233,7 +233,7 @@ try {
     check('escape: stars flash then clear', esc.stars0 >= 1 && esc.searching && esc.stars === 0, esc);
     // Carjack a traffic car.
     const cj = await ev(async () => {
-      const g = window.__gta, t = g.traffic.cars[0];
+      const g = window.__gta, t = g.traffic.cars[0], n0 = g.traffic.cars.length;
       const yaw = Math.atan2(t.fwd.x, t.fwd.z), x = t.pos.x - Math.cos(yaw) * 2.2, z = t.pos.z + Math.sin(yaw) * 2.2;
       g.controls.player.teleport({ x, y: g.world.terrain.getHeight(x, z), z }, yaw);
       t.v = 0; t.cruise = 0.01;
@@ -242,9 +242,9 @@ try {
       await g.debug.tap('KeyF');
       await new Promise((r) => setTimeout(r, 1500));
       const s = g.debug.state();
-      return { prompt, mode: s.mode, stolen: s.stolen, stars: s.stars, trafficLeft: g.traffic.cars.length };
+      return { prompt, mode: s.mode, stolen: s.stolen, stars: s.stars, trafficLeft: g.traffic.cars.length, trafficStart: n0 };
     });
-    check('carjack: driver pulled out, you drive off, wanted up', cj.mode === 'drive' && cj.stolen && cj.stars >= 1 && cj.trafficLeft === 5, cj);
+    check('carjack: driver pulled out, you drive off, wanted up', cj.mode === 'drive' && cj.stolen && cj.stars >= 1 && cj.trafficLeft === cj.trafficStart - 1, cj);
   }
   // ---------------------------------------------------------------- Step 5: minimap
   if (run('minimap')) {
@@ -262,6 +262,61 @@ try {
     });
     check('minimap draws and Tab toggles it', mm.drawn && mm.v0 && !mm.v1 && mm.v2, mm);
     check('minimap has 62, police and hospital markers', ['home', 'police', 'hospital'].every((k) => mm.places.includes(k)), mm.places);
+  }
+  // ---------------------------------------------------------------- Step 6: Terrace Town Centre
+  if (run('town')) {
+    await load();
+    const st = () => ev(() => window.__gta.debug.state());
+    // Terrace Central: walk to the door, E to open, walk inside.
+    await ev(() => window.__gta.debug.teleport(553, -89.5, Math.PI));
+    await wait(700);
+    await ev(() => window.__gta.debug.walkToWorld(553, -92.6));
+    let s = await st();
+    check('Terrace Central door prompt', /open/.test(s.prompt || ''), s.prompt);
+    await ev(() => window.__gta.debug.tap('KeyE'));
+    await wait(900);
+    let p = await ev(() => window.__gta.debug.walkToWorld(553, -104));
+    const tc = await ev(() => { const T = window.__gta.world.town; return { inside: T.interiors.chunks.length, vis: T.group.children.filter((c) => /inside/.test(c.name) && c.visible).length, people: T.interiors.people.length }; });
+    check('walked inside Terrace Central', p[2] < -100 && tc.vis >= 1 && tc.people >= 6, { p, tc });
+    // Quick Stop: in through the door, snack at the counter.
+    await ev(() => window.__gta.debug.teleport(391.5, -80.5, 0));
+    await wait(700);
+    await ev(() => window.__gta.debug.walkToWorld(391.5, -77.6));
+    await ev(() => window.__gta.debug.tap('KeyE'));
+    await wait(900);
+    await ev(() => window.__gta.debug.walkToWorld(391.5, -74.6));
+    p = await ev(() => window.__gta.debug.walkToWorld(399.6, -74.1));
+    const before = await ev(() => { window.__gta.combat.setHp(50); return { cash: window.__gta.wallet.cash }; });
+    s = await st();
+    check('Quick Stop counter prompt', /snack/.test(s.prompt || ''), { prompt: s.prompt, p });
+    await ev(() => window.__gta.debug.tap('KeyE'));
+    await wait(300);
+    s = await st();
+    check('snack: +25 health, -$20', s.health >= 75 && s.health < 76.5 && s.cash === before.cash - 20, { health: s.health, cash: s.cash, before });
+    // Life in town.
+    await wait(2500);
+    const tw = await ev(() => window.__gta.debug.town());
+    check('traffic + pedestrians in town', tw.traffic >= 2 && tw.peds >= 4, tw);
+    // Busiest view: town centre on foot.
+    await ev(() => window.__gta.debug.teleport(470, -92, 0));
+    await wait(3500);
+    const perf = await ev(() => ({ calls: window.__gta.renderer.info.render.calls, fps: window.__gta.stats().fps, tris: window.__gta.renderer.info.render.triangles }));
+    check('town perf: draw calls < 450, fps >= 45', perf.calls < 450 && perf.fps >= 45, perf);
+    // Respawn points: hospital (KO) and police station are in town.
+    await ev(() => window.__gta.combat.damagePlayer(500, 'test'));
+    await wait(3500);
+    s = await st();
+    const sp = await ev(() => ({ h: window.__gta.spawns.hospital().position, pol: window.__gta.spawns.police().position }));
+    check('KO respawns at the town hospital', Math.hypot(s.player[0] - sp.h.x, s.player[2] - sp.h.z) < 4, { player: s.player, h: sp.h });
+    check('police respawn point is the town station', sp.pol.x > 300 && Math.abs(sp.pol.z + 92) < 3, sp.pol);
+    // Ring road loop in the hero car.
+    await ev(() => window.__gta.debug.enter());
+    await wait(800);
+    const loop = await ev(() => window.__gta.debug.driveTownLoop());
+    check('drove the ring road loop', loop.ok, loop);
+    s = await st();
+    check('no NaN after town run', s.player.every(Number.isFinite) && (s.car?.pos || []).every(Number.isFinite), s.car);
+    check('no page errors (town)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

@@ -8,8 +8,8 @@ import { buildLaneGraph } from './laneGraph.js';
 import { TrafficCar } from './trafficCar.js';
 import { makeRng } from '../utils/rng.js';
 
-const COUNT = 6;
-const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '#b98a4a'];
+const COUNT = 10; // 6 start on Grand Terrace, the rest in Terrace Town Centre
+const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '#b98a4a', '#2f4f6b', '#7c2f2f', '#e9e6dc', '#4f6b3a'];
 
 export function createTraffic({ scene, physics, world, vehicles, audio, count = COUNT }) {
   const rng = makeRng(4646);
@@ -21,8 +21,9 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
   const cars = [];
   // Spread the cars out along both Grand Terrace lanes, away from the hero house.
   const starts = [[graph.fwd, 0.08], [graph.bwd, 0.2], [graph.fwd, 0.55], [graph.bwd, 0.62], [graph.fwd, 0.85], [graph.bwd, 0.9]];
+  const townLanes = graph.lanes.filter((l) => l.town && l.from && l.len > 40);
   for (let i = 0; i < count; i++) {
-    const [lane, f] = starts[i % starts.length];
+    const [lane, f] = i < starts.length || !townLanes.length ? starts[i % starts.length] : [townLanes[((i - starts.length) * 7) % townLanes.length], 0.4];
     const type = types[i % types.length];
     cars.push(new TrafficCar({
       id: `traffic-${i}`, type, cfg: CAR_TYPES[type], paint: TRAFFIC_PAINTS[i % TRAFFIC_PAINTS.length] || PALETTE.cars.paints[i],

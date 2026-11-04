@@ -42,7 +42,7 @@ function boxBlur(arr, radius) {
   return out;
 }
 
-function sampleCurve(curve) {
+export function sampleCurve(curve) {
   const len = curve.getLength();
   const count = Math.max(2, Math.ceil(len / ROAD.step));
   const pts = curve.getSpacedPoints(count);

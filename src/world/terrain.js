@@ -6,8 +6,14 @@ import { fbm } from '../utils/noise.js';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
 
-export const MAP = { half: 300, cell: 2.5 };
-MAP.n = Math.round((MAP.half * 2) / MAP.cell); // subdivisions per side
+// Rectangular grid: the suburb (+-300) plus Terrace Town Centre to the east.
+export const MAP = { x0: -300, z0: -300, cell: 2.5, nx: 400, nz: 240 };
+MAP.x1 = MAP.x0 + MAP.nx * MAP.cell; MAP.z1 = MAP.z0 + MAP.nz * MAP.cell;
+MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
+
+// Terrace Town Centre: a flat graded district east of the end of Grand Terrace.
+export const TOWN = { h: -4.4, x0: 300, x1: 640, z0: -245, z1: 75, margin: 34 };
+const LINK = { x0: 200, x1: 320, z0: -125, z1: -45 }; // valley between the suburb and town
 
 // Corridor flat half-width measured from a road centreline (asphalt + curb + verge +
 // footpath + a little). Beyond it the terrain eases back to natural over BLEND metres.
@@ -23,9 +29,15 @@ export function naturalHeight(x, z) {
   let h = 13 * fbm(x / 240 + 3.1, z / 240 - 1.7, 4, 3);
   h += 2.2 * fbm(x / 60, z / 60, 3, 11);
   h += 0.018 * (z - x); // slight fall toward the north-west: views over the valley
-  // Rise at the map edge so the world reads as a valley, not a cliff.
-  const r = Math.max(Math.abs(x), Math.abs(z));
-  if (r > 220) h += ((r - 220) / 80) ** 2 * 28;
+  // Rise at the edge of the playable area (suburb, link valley, town) so the world reads
+  // as a valley, not a cliff. Inside the suburb this is exactly the original +-220 rule.
+  const out = (b, m) => Math.max(b.x0 - m - x, x - b.x1 - m, b.z0 - m - z, z - b.z1 - m);
+  const d = Math.min(Math.max(Math.abs(x), Math.abs(z)) - 220, out(LINK, 0), out(TOWN, 20));
+  if (d > 0) h += (d / 80) ** 2 * 28;
+  // The town itself is graded flat.
+  const dx = Math.max(TOWN.x0 - x, 0, x - TOWN.x1), dz = Math.max(TOWN.z0 - z, 0, z - TOWN.z1);
+  const w = 1 - smoothstep(0, TOWN.margin, Math.hypot(dx, dz));
+  if (w > 0) h = h * (1 - w) + TOWN.h * w;
   return h;
 }
 
@@ -37,17 +49,17 @@ export class Terrain {
    * @param {Array} opts.lots    [{ x, z, rot, hw, hd, h, fall }] oriented flat house pads
    */
   constructor({ roads = [], pads = [], lots = [] } = {}) {
-    const { n, cell, half } = MAP;
-    const vn = n + 1;
-    this.vn = vn;
-    const H = (this.heights = new Float32Array(vn * vn));
-    const roadDist = (this.roadDist = new Float32Array(vn * vn).fill(1e9));
-    const roadH = new Float32Array(vn * vn);
-    const lotMask = (this.lotMask = new Float32Array(vn * vn));
+    const { nx, nz, cell, x0, z0 } = MAP;
+    const vn = nx + 1, vz = nz + 1, N = vn * vz;
+    this.vn = vn; this.vz = vz;
+    const H = (this.heights = new Float32Array(N));
+    const roadDist = (this.roadDist = new Float32Array(N).fill(1e9));
+    const roadH = new Float32Array(N);
+    const lotMask = (this.lotMask = new Float32Array(N));
 
-    for (let iz = 0; iz < vn; iz++) {
+    for (let iz = 0; iz < vz; iz++) {
       for (let ix = 0; ix < vn; ix++) {
-        H[iz * vn + ix] = naturalHeight(-half + ix * cell, -half + iz * cell);
+        H[iz * vn + ix] = naturalHeight(x0 + ix * cell, z0 + iz * cell);
       }
     }
 
@@ -55,14 +67,14 @@ export class Terrain {
     const R = CORRIDOR.flat + CORRIDOR.blend;
     const stamp = (px, pz, ph, offset, radius) => {
       const r = radius + R;
-      const ix0 = Math.max(0, Math.floor((px - r + half) / cell));
-      const ix1 = Math.min(n, Math.ceil((px + r + half) / cell));
-      const iz0 = Math.max(0, Math.floor((pz - r + half) / cell));
-      const iz1 = Math.min(n, Math.ceil((pz + r + half) / cell));
+      const ix0 = Math.max(0, Math.floor((px - r - x0) / cell));
+      const ix1 = Math.min(nx, Math.ceil((px + r - x0) / cell));
+      const iz0 = Math.max(0, Math.floor((pz - r - z0) / cell));
+      const iz1 = Math.min(nz, Math.ceil((pz + r - z0) / cell));
       for (let iz = iz0; iz <= iz1; iz++) {
-        const z = -half + iz * cell;
+        const z = z0 + iz * cell;
         for (let ix = ix0; ix <= ix1; ix++) {
-          const x = -half + ix * cell;
+          const x = x0 + ix * cell;
           const d = Math.hypot(x - px, z - pz) - offset;
           const k = iz * vn + ix;
           if (d < roadDist[k]) {
@@ -77,7 +89,7 @@ export class Terrain {
     for (const p of pads) stamp(p.x, p.z, p.h, Math.max(0, p.r - 3.6), p.r);
 
     // --- Roads: exact road height inside the corridor, eased outside ---------------
-    for (let k = 0; k < vn * vn; k++) {
+    for (let k = 0; k < N; k++) {
       const d = roadDist[k];
       if (d > R) continue;
       const w = 1 - smoothstep(CORRIDOR.flat, R, d);
@@ -90,13 +102,13 @@ export class Terrain {
       const c = Math.cos(lot.rot), s = Math.sin(lot.rot);
       const fall = lot.fall ?? 6;
       const ext = Math.hypot(lot.hw, lot.hd) + fall;
-      const ix0 = Math.max(0, Math.floor((lot.x - ext + half) / cell));
-      const ix1 = Math.min(n, Math.ceil((lot.x + ext + half) / cell));
-      const iz0 = Math.max(0, Math.floor((lot.z - ext + half) / cell));
-      const iz1 = Math.min(n, Math.ceil((lot.z + ext + half) / cell));
+      const ix0 = Math.max(0, Math.floor((lot.x - ext - x0) / cell));
+      const ix1 = Math.min(nx, Math.ceil((lot.x + ext - x0) / cell));
+      const iz0 = Math.max(0, Math.floor((lot.z - ext - z0) / cell));
+      const iz1 = Math.min(nz, Math.ceil((lot.z + ext - z0) / cell));
       for (let iz = iz0; iz <= iz1; iz++) {
         for (let ix = ix0; ix <= ix1; ix++) {
-          const dx = -half + ix * cell - lot.x, dz = -half + iz * cell - lot.z;
+          const dx = x0 + ix * cell - lot.x, dz = z0 + iz * cell - lot.z;
           // Into lot-local space (lot faces +Z local).
           const lx = dx * c - dz * s, lz = dx * s + dz * c;
           const ox = Math.max(0, Math.abs(lx) - lot.hw);
@@ -117,11 +129,11 @@ export class Terrain {
 
   /** Height exactly matching the rendered triangles. */
   getHeight(x, z) {
-    const { n, cell, half } = MAP;
+    const { nx, nz, cell, x0, z0 } = MAP;
     const vn = this.vn;
-    let fx = (x + half) / cell, fz = (z + half) / cell;
-    fx = Math.min(n - 1e-4, Math.max(0, fx));
-    fz = Math.min(n - 1e-4, Math.max(0, fz));
+    let fx = (x - x0) / cell, fz = (z - z0) / cell;
+    fx = Math.min(nx - 1e-4, Math.max(0, fx));
+    fz = Math.min(nz - 1e-4, Math.max(0, fz));
     const ix = Math.floor(fx), iz = Math.floor(fz);
     const tx = fx - ix, tz = fz - iz;
     const H = this.heights;
@@ -133,18 +145,18 @@ export class Terrain {
 
   /** Heights in Rapier's layout: index = ix * (nz + 1) + iz. */
   rapierHeights() {
-    const vn = this.vn;
-    const out = new Float32Array(vn * vn);
-    for (let ix = 0; ix < vn; ix++) for (let iz = 0; iz < vn; iz++) out[ix * vn + iz] = this.heights[iz * vn + ix];
+    const vn = this.vn, vz = this.vz;
+    const out = new Float32Array(vn * vz);
+    for (let ix = 0; ix < vn; ix++) for (let iz = 0; iz < vz; iz++) out[ix * vz + iz] = this.heights[iz * vn + ix];
     return out;
   }
 
   _buildMesh() {
-    const { n, cell, half } = MAP;
+    const { nx, nz, cell, x0, z0 } = MAP;
     const vn = this.vn;
     const H = this.heights;
-    const pos = new Float32Array(n * n * 18);
-    const col = new Float32Array(n * n * 18);
+    const pos = new Float32Array(nx * nz * 18);
+    const col = new Float32Array(nx * nz * 18);
     const P = PALETTE.ground;
     const cGrass = new THREE.Color(P.grass), cDry = new THREE.Color(P.grassDry);
     const cDark = new THREE.Color(P.grassDark), cLawn = new THREE.Color(P.lawn);
@@ -152,9 +164,9 @@ export class Terrain {
     const tmp = new THREE.Color();
     let p = 0;
     const put = (ix, iz) => {
-      pos[p++] = -half + ix * cell;
+      pos[p++] = x0 + ix * cell;
       pos[p++] = H[iz * vn + ix];
-      pos[p++] = -half + iz * cell;
+      pos[p++] = z0 + iz * cell;
     };
     let c = 0;
     const colour = (i0, i1, i2, x, z, slope) => {
@@ -174,10 +186,10 @@ export class Terrain {
         col[c++] = tmp.b * j;
       }
     };
-    for (let iz = 0; iz < n; iz++) {
-      for (let ix = 0; ix < n; ix++) {
+    for (let iz = 0; iz < nz; iz++) {
+      for (let ix = 0; ix < nx; ix++) {
         const a = iz * vn + ix, b = a + 1, cc = a + vn + 1, d = a + vn;
-        const x = -half + (ix + 0.5) * cell, z = -half + (iz + 0.5) * cell;
+        const x = x0 + (ix + 0.5) * cell, z = z0 + (iz + 0.5) * cell;
         const slope1 = Math.max(Math.abs(H[b] - H[a]), Math.abs(H[d] - H[a])) / cell;
         const slope2 = Math.max(Math.abs(H[cc] - H[b]), Math.abs(H[cc] - H[d])) / cell;
         // Split along the b-d anti-diagonal to match Rapier's heightfield exactly.

@@ -53,6 +53,7 @@ const spawn = heroSpawn(world);
 const physics = createPhysics(world);
 const vehicles = createVehicles({ physics, scene, world });
 world.hero?.attach(physics.toggles); // 62's door colliders
+world.town?.attach(physics.toggles); // town shop doors
 world.vehicles = vehicles;
 const headlights = createHeadlightRig(scene);
 const audio = createCarAudio();
@@ -72,6 +73,7 @@ if (params.has('shot')) controls.panel.hide();
 // Order matters: controls set this step's car input, then every car steps.
 physics.onStep((h) => { controls.fixedUpdate(h); vehicles.fixedUpdate(h); });
 for (const t of world.hero?.targets || []) controls.interact.register(t); // E: front door, garage
+for (const t of world.town?.targets || []) controls.interact.register(t); // E: shop doors, Quick Stop counter
 const debugDraw = createDebugDraw(scene, physics, world.terrain);
 const peds = createPedestrians({ scene, physics, world });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
@@ -86,12 +88,22 @@ breakables.addSet({ name: 'streetLight', meshes: [{ mesh: SL.meshes.poles, mode:
 const props = buildStreetProps(world);
 scene.add(props.group);
 for (const d of props.defs) breakables.addSet(d);
+for (const d of world.town?.breakables || []) breakables.addSet(d);
 const wallet = createWallet();
 const statusHud = createStatusHud();
 const spawns = createSpawnPoints(world);
+if (world.town) { spawns.setPolice(world.town.spawns.police); spawns.setHospital(world.town.spawns.hospital); }
 world.spawns = spawns;
 const combat = createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud: statusHud, spawns, world });
 peds.onHit((e) => combat.emit('pedHit', e));
+// Quick Stop: E at the counter buys a snack ($20, +25 health).
+if (world.town) world.town.hooks.buySnack = () => {
+  if (wallet.cash < 20) { statusHud.message('Not enough cash', 2, '#ff8a7a'); return; }
+  wallet.add(-20);
+  combat.setHp(Math.min(100, combat.hp + 25));
+  statusHud.message('Snack  +25 health  -$20', 2.5, '#9fd18b');
+  audio.ding?.(880);
+};
 
 // --- Wanted level, police, theft ------------------------------------------------------------
 const wanted = createWanted(statusHud);
@@ -102,9 +114,7 @@ const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wa
 
 // --- Minimap (Tab) ---------------------------------------------------------------------------
 const heroLot = world.layout.hero;
-world.places = [{ kind: 'home', x: heroLot.x, z: heroLot.z, label: '62 Grand Terrace' }];
-const placeSpawns = () => [{ kind: 'police', ...spawns.police().position }, { kind: 'hospital', ...spawns.hospital().position }];
-world.places.push(...placeSpawns().map((p) => ({ kind: p.kind, x: p.x, z: p.z })));
+world.places = [{ kind: 'home', x: heroLot.x, z: heroLot.z, label: '62 Grand Terrace' }, ...(world.town?.places || [])];
 const minimap = createMinimap(world);
 
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
@@ -132,6 +142,7 @@ renderer.setAnimationLoop(() => {
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
   audio.setListener(controls.focus());
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
+  world.town?.update(dt, { focus: controls.focus() });
   combat.update(dt);
   breakables.update(dt, controls.focus());
   particles.update(dt);

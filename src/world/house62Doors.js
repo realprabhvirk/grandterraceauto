@@ -85,3 +85,38 @@ export function buildDoors(o) {
     },
   };
 }
+
+/**
+ * Generic hinged door (town shops) with the same behaviour as 62's front door: E toggles,
+ * swings inward over 0.6 s, its toggle collider is enabled only while mostly shut.
+ * o = { id, x, y, z, w, h, rot (front faces +Z local), color, glass }
+ */
+export function buildSwingDoor(o) {
+  const root = new THREE.Group();
+  root.position.set(o.x, o.y, o.z);
+  root.rotation.y = o.rot;
+  const pivot = new THREE.Group();
+  pivot.position.set(-o.w / 2, 0, 0);
+  root.add(pivot);
+  const panel = new THREE.Mesh(merge([
+    boxB(o.w, o.h, 0.06, o.w / 2, 0, 0, o.color || '#3a3a3c', { jitter: 0.02 }),
+    box(o.w - 0.3, o.h - 0.5, 0.07, o.w / 2, o.h / 2 + 0.05, 0, o.glass || '#6f8797'),
+    box(0.04, 0.5, 0.12, o.w - 0.15, 1.05, 0, '#b9b6ae'),
+  ]), MAT.solid);
+  panel.castShadow = true;
+  pivot.add(panel);
+  const state = { t: 0, target: 0 };
+  let handles = null;
+  const toggle = () => { state.target = state.target > 0.5 ? 0 : 1; };
+  return {
+    group: root, state, toggle,
+    toggles: [{ id: o.id, x: o.x, y: o.y + o.h / 2, z: o.z, hx: o.w / 2, hy: o.h / 2, hz: 0.08, rot: o.rot }],
+    target: { id: o.id, key: 'E', range: 2.6, position: () => ({ x: o.x, y: o.y, z: o.z }), label: () => (state.target > 0.5 ? 'Press E to close' : 'Press E to open'), action: toggle },
+    attach(h) { handles = h; },
+    update(dt) {
+      state.t += Math.sign(state.target - state.t) * Math.min(Math.abs(state.target - state.t), dt / 0.6);
+      pivot.rotation.y = state.t * state.t * (3 - 2 * state.t) * 1.6; // swings inward
+      handles?.[o.id]?.setEnabled(state.t < 0.3);
+    },
+  };
+}

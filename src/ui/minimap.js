@@ -20,7 +20,8 @@ export function createMinimap(world) {
 
   function refresh() {
     let maxR = 300;
-    for (const r of world.network.roads) for (const s of r.samples) maxR = Math.max(maxR, Math.abs(s.x) + 40, Math.abs(s.z) + 40);
+    const roads = world.network.allRoads || world.network.roads;
+    for (const r of roads) for (const s of r.samples) maxR = Math.max(maxR, Math.abs(s.x) + 40, Math.abs(s.z) + 40);
     half = Math.ceil(maxR);
     bg = document.createElement('canvas');
     bg.width = bg.height = half * 2;
@@ -29,7 +30,8 @@ export function createMinimap(world) {
     b.lineCap = b.lineJoin = 'round';
     for (const [w, col] of [[ROAD.pathOut * 2, '#b9ad95'], [ROAD.halfW * 2 + 1, '#3e3c42']]) {
       b.strokeStyle = col; b.lineWidth = w;
-      for (const r of world.network.roads) {
+      for (const r of roads) {
+        b.lineWidth = r.town ? (w > 9 ? (r.halfW + 9.3) : r.halfW * 2 + 1) : w;
         b.beginPath();
         r.samples.forEach((s, i) => (i ? b.lineTo(s.x + half, s.z + half) : b.moveTo(s.x + half, s.z + half)));
         b.stroke();

@@ -31,12 +31,12 @@ export function createDebugDraw(scene, physics, terrain) {
   });
 
   function drawTerrainPatch(focus) {
-    const { cell, half } = MAP, vn = terrain.vn, H = terrain.heights;
-    const cx = Math.floor((focus.x + half) / cell), cz = Math.floor((focus.z + half) / cell);
+    const { cell, x0, z0 } = MAP, vn = terrain.vn, H = terrain.heights;
+    const cx = Math.floor((focus.x - x0) / cell), cz = Math.floor((focus.z - z0) / cell);
     let k = 0;
-    const v = (ix, iz) => { hfPos[k++] = -half + ix * cell; hfPos[k++] = H[iz * vn + ix] + 0.03; hfPos[k++] = -half + iz * cell; };
+    const v = (ix, iz) => { hfPos[k++] = x0 + ix * cell; hfPos[k++] = H[iz * vn + ix] + 0.03; hfPos[k++] = z0 + iz * cell; };
     for (let iz = cz - PATCH; iz < cz + PATCH; iz++) for (let ix = cx - PATCH; ix < cx + PATCH; ix++) {
-      if (ix < 0 || iz < 0 || ix >= MAP.n || iz >= MAP.n) { for (let i = 0; i < 18; i++) hfPos[k++] = 0; continue; }
+      if (ix < 0 || iz < 0 || ix >= MAP.nx || iz >= MAP.nz) { for (let i = 0; i < 18; i++) hfPos[k++] = 0; continue; }
       // Edges a-b, a-d and the b-d diagonal (the split Rapier uses).
       v(ix, iz); v(ix + 1, iz);
       v(ix, iz); v(ix, iz + 1);

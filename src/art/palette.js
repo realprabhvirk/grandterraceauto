@@ -46,6 +46,17 @@ export const PALETTE = {
     signPole: '#8d8f8a',
   },
 
+  // Terrace Town Centre.
+  town: {
+    paving: '#cbbfa9', pavingEdge: '#b7aa93', line: '#ece8dc', yellow: '#e2c25a', carpark: '#68656b',
+    shopWalls: ['#e9dcc4', '#d9c3a0', '#c9d3c4', '#e7cfc0', '#d4c9b8', '#bfc9cf', '#efe6d2'],
+    awnings: ['#b8483a', '#2f6b5a', '#d29a3c', '#3d5f8a', '#7a4a6a', '#4f7a3a', '#c0703a'],
+    brick: '#9a5a44', brickDark: '#7e4636', police: '#2d5aa0', policeLight: '#dfe6ef',
+    hospital: '#f1efe9', hBlue: '#2f6fc0', concrete: '#bdb6aa', roofFlat: '#8d8a84',
+    office: ['#c9c4b8', '#b8bfc4', '#d6cbb6', '#a9b2a8'], fuelRed: '#c4473a', canopy: '#f0ede6',
+    grassPark: '#7da35a', water: '#5f8fa8', gravel: '#d6c9ae', wood: '#8a6446', play: ['#d8553e', '#3f7fc0', '#e2b33a', '#4f9a55'],
+  },
+
   // Regular houses pick from these. Kept warm and slightly desaturated.
   walls: ['#efe3cc', '#e3cfae', '#d8c2a2', '#c9d0bb', '#bfcbcd', '#e9d6c3', '#d7b79a', '#f2ece0'],
   roofs: ['#40444a', '#a9573b', '#5c6772', '#6d4b3b', '#d9d8cf', '#7a3f31', '#4f5a52'],

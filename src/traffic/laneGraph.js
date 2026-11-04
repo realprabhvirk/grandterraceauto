@@ -5,6 +5,7 @@
 //   - curved connectors at each junction (turn in / turn out) and U-turns at the dead ends.
 // Each lane has `exits` (taken at its end) and `branches` (optional turn-offs part way).
 import { ROAD } from '../world/roadNetwork.js';
+import { buildTownLanes } from '../town/townLanes.js';
 
 const LANE = 1.8, STEP = 1.5;
 
@@ -95,7 +96,9 @@ export function buildLaneGraph(network) {
     const toB = add({ name: `${br.name} turn-out (bwd)`, pts: bezier(outEnd, brOut0, lanePt(S[idxAt(gt, sj - near)], -1)), exits: [{ lane: bwd.id, s: sOnBwd(sj - near), prob: 1 }], slow: true, giveWay: { x: js.x, z: js.z } });
     cul.exits.push({ lane: toF.id, s: 0, prob: 0.5 }, { lane: toB.id, s: 0, prob: 0.5 });
   }
-  return { lanes, fwd, bwd };
+  // Terrace Town Centre (if built): grid lanes + the Terrace Link joining GT's end.
+  const town = network.town ? buildTownLanes(network.town, { add, fwd, bwd, lanePt, S }) : null;
+  return { lanes, fwd, bwd, town };
 }
 
 /** Position + tangent on a lane at distance s (clamped). */

@@ -58,7 +58,8 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
     if (cars.length >= MAX) return;
     let lp = null;
     const station = spawns.police().position;
-    if (!cars.some((c) => c.fromStation)) lp = nearestLanePoint(station.x, station.z);
+    // The station's first car only when the station is reasonably close (it's in town).
+    if (!cars.some((c) => c.fromStation) && Math.hypot(station.x - target.x, station.z - target.z) < 260) lp = nearestLanePoint(station.x, station.z);
     if (!lp || Math.hypot(lp.x - target.x, lp.z - target.z) < 60) {
       for (let k = 0; k < 40 && !lp; k++) {
         const p = pts[rng.int(0, pts.length - 1)];
@@ -73,7 +74,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       id: `police-${i}`, type, cfg: CAR_TYPES[type], paint: '#f1f1ec', lane: lp.lane, s: lp.s, cruise: 15,
       physics, scene, wheels, wheelOffset: i * 4, terrain: world.terrain, rng: rng.fork(i + 30),
     });
-    cop.fromStation = !cars.some((c) => c.fromStation);
+    cop.fromStation = !cars.some((c) => c.fromStation) && Math.hypot(lp.x - station.x, lp.z - station.z) < 30;
     wheels.count = (i + 1) * 4;
     cars.push(cop);
   }

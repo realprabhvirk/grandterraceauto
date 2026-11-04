@@ -22,8 +22,8 @@ export function createPhysics(world) {
   // Terrain: Rapier heightfield is centred on the collider; layout index = ix*(nz+1)+iz,
   // nrows = z subdivisions, ncols = x subdivisions. The visual mesh uses the same
   // anti-diagonal cell split, so physics and visuals agree exactly.
-  const n = MAP.n;
-  add(RAPIER.ColliderDesc.heightfield(n, n, world.terrain.rapierHeights(), { x: MAP.half * 2, y: 1, z: MAP.half * 2 }).setFriction(1.0));
+  add(RAPIER.ColliderDesc.heightfield(MAP.nz, MAP.nx, world.terrain.rapierHeights(), { x: MAP.x1 - MAP.x0, y: 1, z: MAP.z1 - MAP.z0 })
+    .setTranslation(MAP.cx, 0, MAP.cz).setFriction(1.0));
 
   // Yaw (rot) then optional pitch (rotX, e.g. the stair ramp in 62): q = qY(rot) * qX(rotX).
   const quat = (rot, rotX = 0) => {
@@ -45,8 +45,9 @@ export function createPhysics(world) {
     add(RAPIER.ColliderDesc.cylinder(p.h / 2, p.r).setTranslation(p.x, p.y + p.h / 2, p.z));
   }
   // Keep everyone inside the playable area.
-  const wall = MAP.half - 40;
-  for (const [x, z, hx, hz] of [[wall, 0, 1, wall], [-wall, 0, 1, wall], [0, wall, wall, 1], [0, -wall, wall, 1]]) {
+  const wx0 = MAP.x0 + 40, wx1 = MAP.x1 - 40, wz0 = MAP.z0 + 40, wz1 = MAP.z1 - 40;
+  const mx = (wx0 + wx1) / 2, mz = (wz0 + wz1) / 2, hx2 = (wx1 - wx0) / 2, hz2 = (wz1 - wz0) / 2;
+  for (const [x, z, hx, hz] of [[wx1, mz, 1, hz2], [wx0, mz, 1, hz2], [mx, wz1, hx2, 1], [mx, wz0, hx2, 1]]) {
     add(RAPIER.ColliderDesc.cuboid(hx, 60, hz).setTranslation(x, 30, z));
   }
 

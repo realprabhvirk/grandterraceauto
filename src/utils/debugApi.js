@@ -92,6 +92,53 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       await new Promise((r) => setTimeout(r, 250));
       return this.heroLocal();
     },
+    /** Teleport the walker to a world point (y = ground + dy). */
+    teleport(x, z, yaw = 0, dy = 0.1) { const y = world.terrain.getHeight(x, z) + dy; controls.player.teleport({ x, y, z }, yaw); return [x, y, z]; },
+    /** Walk (virtual W) to a world point. Resolves with the final world position. */
+    async walkToWorld(tx, tz, timeout = 12000) {
+      const st = controls.player.state, I = controls.input, t0 = performance.now();
+      I.setVirtual('KeyW', true);
+      while (performance.now() - t0 < timeout) {
+        const p = controls.player.position;
+        if (Math.hypot(tx - p.x, tz - p.z) < 0.45) break;
+        st.yaw = Math.atan2(tx - p.x, tz - p.z);
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      I.setVirtual('KeyW', false);
+      await new Promise((r) => setTimeout(r, 250));
+      const p = controls.player.position;
+      return [p.x, p.y, p.z].map((v) => +v.toFixed(2));
+    },
+    /** Teleport the driven car onto the town ring road and autopilot one full loop (keep left). */
+    async driveTownLoop(opts = {}) {
+      const car = controls.car;
+      if (!car) throw new Error('not driving');
+      const { X, Z } = { X: world.town.plan.nodes.map((n) => n.x), Z: world.town.plan.nodes.map((n) => n.z) };
+      const x0 = Math.min(...X), x1 = Math.max(...X), z0 = Math.min(...Z), z1 = Math.max(...Z), L = 2.2;
+      const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
+      const pts = [];
+      for (let k = 0; k < 4; k++) {
+        const [ax, az] = corners[k], [bx, bz] = corners[k + 1];
+        const len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
+        for (let s = 10; s <= len - 10; s += 4) pts.push({ x: ax + dx * s + dz * L, z: az + dz * s - dx * L });
+      }
+      pts.push({ ...pts[0] });
+      const a = pts[0], b = pts[1];
+      car.body.teleport(a.x, world.terrain.getHeight(a.x, a.z), a.z, Math.atan2(b.x - a.x, b.z - a.z));
+      controls.chase.reset(car);
+      await new Promise((r) => setTimeout(r, 400));
+      return runAutopilot({ car, input: controls.input, terrain: world.terrain, points: pts, obstacles: [], speed: 15, timeout: 160, ...opts });
+    },
+    /** Town summary: what is in the district right now. */
+    town() {
+      const g = window.__gta, T = world.town, b = T.plan.bounds, inTown = (x, z) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1;
+      return {
+        chunks: T.chunks.length, visibleChunks: T.chunks.filter((c) => c.group.visible).length,
+        traffic: g.traffic.cars.filter((c) => inTown(c.pos.x, c.pos.z)).length,
+        peds: g.peds.peds.filter((p) => inTown(p.pos.x, p.pos.z)).length,
+        storeInside: T.interiors.chunks.length, places: world.places?.length,
+      };
+    },
     /** Press a key for one frame (virtual). */
     async tap(code) { controls.input.setVirtual(code, true); await new Promise((r) => setTimeout(r, 80)); controls.input.setVirtual(code, false); await new Promise((r) => setTimeout(r, 60)); },
     /** Hero car position in 62 lot-local space. */

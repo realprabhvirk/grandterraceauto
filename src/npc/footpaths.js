@@ -8,7 +8,7 @@ import { ROAD } from '../world/roadNetwork.js';
 const STEP = 2.5;              // metres between waypoints
 const LAT = (ROAD.pathIn + ROAD.pathOut) / 2;
 
-export function buildFootpaths(network, layout, terrain) {
+export function buildFootpaths(network, layout, terrain, extra = []) {
   const lines = [];
   const pt = (x, z, ox, oz) => ({ x, z, y: terrain.getHeight(x, z) + 0.05, ox, oz, detour: null });
   const sideLine = (road, side, sFrom, sTo) => {
@@ -47,6 +47,9 @@ export function buildFootpaths(network, layout, terrain) {
     lines.push([...left, ...ring, ...right.reverse()]);
   }
 
+  const suburbLines = lines.length;
+  lines.push(...extra); // e.g. the town's block loops
+
   // Driveway detours: walk a few metres into a driveway, then come back.
   for (const dw of layout.driveways) {
     let best = null, bd = 4;
@@ -72,5 +75,5 @@ export function buildFootpaths(network, layout, terrain) {
       });
     }
   });
-  return { lines, links };
+  return { lines, links, suburbLines };
 }

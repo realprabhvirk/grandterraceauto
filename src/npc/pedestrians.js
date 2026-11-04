@@ -12,16 +12,19 @@ import { makeRng } from '../utils/rng.js';
 const COUNT = 20, SLEEP_DIST = 120, NEAR_DIST = 45;
 const RADIUS = 0.28, HALF = 0.55;
 
-export function createPedestrians({ scene, physics, world, count = COUNT }) {
+export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 10 }) {
   const rng = makeRng(3131);
-  const graph = buildFootpaths(world.network, world.layout, world.terrain);
+  const graph = buildFootpaths(world.network, world.layout, world.terrain, world.town?.pedLines || []);
+  const townRng = makeRng(3232);
+  const nTown = graph.lines.length > graph.suburbLines ? townCount : 0;
   const { world: phys, RAPIER } = physics;
   const peds = [];
 
-  for (let i = 0; i < count; i++) {
-    const li = rng.int(0, graph.lines.length - 1);
+  for (let i = 0; i < count + nTown; i++) {
+    const town = i >= count;
+    const li = town ? townRng.int(graph.suburbLines, graph.lines.length - 1) : rng.int(0, graph.suburbLines - 1);
     const line = graph.lines[li];
-    const idx = rng.int(1, line.length - 2);
+    const idx = (town ? townRng : rng).int(1, line.length - 2);
     const ch = createCharacter(randomOutfit(rng), { name: `ped-${i}` });
     const scale = rng.range(0.92, 1.08);
     ch.root.scale.setScalar(scale);

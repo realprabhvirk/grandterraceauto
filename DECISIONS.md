@@ -83,3 +83,11 @@ One line per judgment call made during the autonomous build.
 - Escape: no reinforcements spawn while the stars flash; routing to last-seen (not true) position.
 - Footpath-scare heat only counts when the player's car is off the road (>4.6 m from any centreline).
 - Carjack swaps the kinematic traffic car for a drivable Rapier copy (8 spare wheel slots in the instanced wheel mesh).
+- P4 step 6: Terrace Town Centre sits east of Grand Terrace's end (x 300-640, z -245..75), reached by the new Terrace Link; the terrain grid became a rectangle (-300..700 x -300..300) so the suburb heights are unchanged.
+- P4 step 6: town is a 4x3 street grid (outer lines = Ring Rd, Terrace Pde = main street, Market St + Station St); square corners, give-way rule for minor approaches; GT's end U-turn now continues into town.
+- P4 step 6: town kerbs/footpaths are visual only (flat ground = terrain heightfield), like the suburb.
+- P4 step 6: car park / police bay / ambulance cars are static merged meshes with colliders (not stealable) to save draw calls and wheel slots.
+- P4 step 6: police cars only launch from the (town) station when it is within 260 m; otherwise they spawn out of view as before.
+- P4 step 6: shop interiors have no extra point lights (sunlit through a non-shadow ceiling would need a shadow exception; kept simple: hemisphere-lit, ceiling light panels are just pale boxes).
+- P4 step 6: Wattle Park is auto-sited (flattest open spot 42-72 m from a cul-de-sac head, clear of lots/roads); bush trees there are removed.
+- P4 step 6: traffic 6 -> 10 cars (4 start in town); 10 extra pedestrians walk the town block loops.
