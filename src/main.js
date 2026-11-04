@@ -1,35 +1,47 @@
-// Hello-world check: spinning cube + directional light + Rapier init.
+// Grand Terrace Auto - entry point.
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { Terrain } from './world/terrain.js';
+import { createLighting } from './world/lighting.js';
+import { createOverlay } from './utils/overlay.js';
+
+const params = new URLSearchParams(location.search);
 
 await RAPIER.init();
-console.log(`[gta] Rapier ${RAPIER.version()} WASM initialised, three r${THREE.REVISION}`);
+console.log(`[gta] Rapier ${RAPIER.version()} ready, three r${THREE.REVISION}`);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.getElementById('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#e9c9a3');
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(2.5, 2, 3.5);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.25, 2000);
+
+const lighting = createLighting(scene, renderer);
+const terrain = new Terrain();
+scene.add(terrain.mesh);
+
+camera.position.set(-160, 90, 160);
 camera.lookAt(0, 0, 0);
 
-scene.add(new THREE.HemisphereLight('#bcd3e6', '#6d5a44', 1.0));
-const sun = new THREE.DirectionalLight('#ffd8a8', 2.5);
-sun.position.set(3, 5, 2);
-scene.add(sun);
+const overlay = createOverlay(renderer, { visible: params.has('hud') });
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshLambertMaterial({ color: '#c98b6b', flatShading: true }),
-);
-scene.add(cube);
-
-window.__gta = { ready: false };
-renderer.setAnimationLoop((t) => {
-  cube.rotation.set(t * 0.0005, t * 0.0008, 0);
+window.__gta = { ready: false, stats: () => overlay.stats() };
+const clock = new THREE.Clock();
+const focus = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  lighting.update(dt, focus, camera.position);
   renderer.render(scene, camera);
+  overlay.update(dt);
   window.__gta.ready = true;
 });
