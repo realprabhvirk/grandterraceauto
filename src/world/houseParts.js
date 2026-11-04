@@ -27,7 +27,7 @@ export function addWindow(out, { x, y, z, w, h, face = 'z', frame, glassColor, s
 }
 
 /** Hip roof over a W x D rectangle (centred at cx, cz) with eaves overhang. Ridge along the longer axis. */
-export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0.55, color, fascia, soffit, fasciaH = 0.22, caps = null }) {
+export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0.55, color, fascia, soffit, fasciaH = 0.22, caps = null, clip = null }) {
   const w = W / 2 + overhang, d = D / 2 + overhang;
   const t = Math.tan(THREE.MathUtils.degToRad(pitch));
   const tris = [];
@@ -47,12 +47,15 @@ export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0
     tris.push([v(-w, y, d), v(w, y, d), v(0, top, r)]);
     tris.push([v(w, y, -d), v(-w, y, -d), v(0, top, -r)]);
   }
-  out.roof.push(trisGeometry(tris, color, 0.05));
+  // clip: [[x0, x1, z0, z1], ...] rectangles to cut away (e.g. where an upper storey sits on the roof).
+  const kept = clip ? clipOutside(tris, clip) : tris;
+  out.roof.push(trisGeometry(kept, color, 0.05));
+  const inClip = (a, b) => clip && clip.some(([x0, x1, z0, z1]) => { const mx = (a[0] + b[0]) / 2, mz = (a[2] + b[2]) / 2; return mx > x0 && mx < x1 && mz > z0 && mz < z1; });
   // Tile roofs: capping along the ridge and the four hips.
   if (caps) {
     const rise = (w >= d ? d : w) * t, top = y + rise;
     const ends = w >= d ? [[-(w - d), 0], [w - d, 0]] : [[0, -(d - w)], [0, d - w]];
-    const seg = (a, b) => out.detail.push(capSegment(a, b, caps));
+    const seg = (a, b) => { if (!inClip(a, b)) out.detail.push(capSegment(a, b, caps)); };
     seg([cx + ends[0][0], top + 0.03, cz + ends[0][1]], [cx + ends[1][0], top + 0.03, cz + ends[1][1]]);
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       const e = w >= d ? ends[sx > 0 ? 1 : 0] : ends[sz > 0 ? 1 : 0];
@@ -100,6 +103,43 @@ export function gableRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 22, overhang =
     }
   }
   return top;
+}
+
+/**
+ * Remove the parts of triangles that fall inside axis-aligned XZ rectangles. The region
+ * outside a rectangle is split into 4 convex pieces; each triangle is clipped to each piece
+ * (Sutherland-Hodgman) and re-fanned. Heights interpolate along the cut edges.
+ */
+function clipOutside(tris, rects) {
+  let cur = tris;
+  for (const [x0, x1, z0, z1] of rects) {
+    const regions = [
+      [[0, 2, z1, 1]],                                   // z >= z1
+      [[0, 2, z0, -1]],                                  // z <= z0
+      [[0, 0, x0, -1], [0, 2, z0, 1], [0, 2, z1, -1]],   // x <= x0, z0..z1
+      [[0, 0, x1, 1], [0, 2, z0, 1], [0, 2, z1, -1]],    // x >= x1, z0..z1
+    ];
+    const next = [];
+    for (const t of cur) {
+      for (const planes of regions) {
+        let poly = t;
+        for (const [, axis, v, sign] of planes) {
+          const res = [];
+          for (let i = 0; i < poly.length; i++) {
+            const a = poly[i], b = poly[(i + 1) % poly.length];
+            const ia = (a[axis] - v) * sign >= 0, ib = (b[axis] - v) * sign >= 0;
+            if (ia) res.push(a);
+            if (ia !== ib) { const k = (v - a[axis]) / (b[axis] - a[axis]); res.push([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]); }
+          }
+          poly = res;
+          if (poly.length < 3) break;
+        }
+        for (let i = 1; i + 1 < poly.length; i++) next.push([poly[0], poly[i], poly[i + 1]]);
+      }
+    }
+    cur = next;
+  }
+  return cur;
 }
 
 /** Thin capping bar from point a to point b (ridge / hip tiles). */

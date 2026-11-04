@@ -133,6 +133,18 @@ export const PALETTE = {
     beam: '#ffe9b8',
   },
 
+  // 62 Grand Terrace interior.
+  interior: {
+    wall: '#efe9dc', wallWarm: '#e8dcc6', garageWall: '#cfccc4', ceiling: '#f6f3ec',
+    timber: '#b08560', tile: '#ddd6c8', carpet: '#a9aea9', garageFloor: '#9e9b93', wetTile: '#d3dcdf',
+    stair: '#9a7350', rail: '#3a3b3e',
+    sofa: '#5d6f7a', cushion: '#d8b25a', rug: '#b0614a', rug2: '#6f8a8c', timberDark: '#6d4a33',
+    cabinet: '#f2eee6', benchtop: '#3a3b3e', appliance: '#d9d9d6', steel: '#a4a8aa', tv: '#1d1e20',
+    linen: '#ede8de', duvet: ['#7f97a8', '#c48b6b', '#8aa47a'], wardrobe: '#e7e1d4',
+    bath: '#f4f4f1', mirror: '#b9cbd3', plant: '#5b7f3c', pot: '#b0603d', lampShade: '#f3e6c8',
+    paneDay: '#cfe0ea', paneNight: '#1c2433',
+  },
+
   // Pedestrian wardrobe (mixed and matched per NPC, seeded).
   npc: {
     shirts: ['#3f7a8c', '#e8d6b0', '#b5493a', '#6d8a4a', '#f0ece2', '#d99a3c', '#7a5a8c', '#2f4a6a', '#c46f8a'],

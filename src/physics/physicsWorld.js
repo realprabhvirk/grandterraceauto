@@ -25,11 +25,18 @@ export function createPhysics(world) {
   const n = MAP.n;
   add(RAPIER.ColliderDesc.heightfield(n, n, world.terrain.rapierHeights(), { x: MAP.half * 2, y: 1, z: MAP.half * 2 }).setFriction(1.0));
 
+  // Yaw (rot) then optional pitch (rotX, e.g. the stair ramp in 62): q = qY(rot) * qX(rotX).
+  const quat = (rot, rotX = 0) => {
+    const cy = Math.cos(rot / 2), sy = Math.sin(rot / 2), cx = Math.cos(rotX / 2), sx = Math.sin(rotX / 2);
+    return { x: cy * sx, y: sy * cx, z: -sy * sx, w: cy * cx };
+  };
   for (const c of world.colliders) {
-    const half = c.rot / 2;
-    add(RAPIER.ColliderDesc.cuboid(c.hx, c.hy, c.hz)
-      .setTranslation(c.x, c.y, c.z)
-      .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) }));
+    add(RAPIER.ColliderDesc.cuboid(c.hx, c.hy, c.hz).setTranslation(c.x, c.y, c.z).setRotation(quat(c.rot, c.rotX)));
+  }
+  // Switchable colliders (62's doors): handles go back to their owner.
+  const toggles = {};
+  for (const t of world.toggles || []) {
+    toggles[t.id] = add(RAPIER.ColliderDesc.cuboid(t.hx, t.hy, t.hz).setTranslation(t.x, t.y, t.z).setRotation(quat(t.rot)));
   }
   for (const t of world.trunks) {
     add(RAPIER.ColliderDesc.cylinder(t.h / 2, t.r + 0.05).setTranslation(t.x, t.y + t.h / 2, t.z));
@@ -48,6 +55,7 @@ export function createPhysics(world) {
   return {
     world: phys,
     RAPIER,
+    toggles,
     STEP,
     /** Register a per-substep callback (vehicles, character). */
     onStep(fn) { listeners.push(fn); },

@@ -53,6 +53,22 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       const obstacles = vehicles.cars.filter((o) => o !== car);
       return runAutopilot({ car, input: controls.input, terrain: world.terrain, points: pts, obstacles, speed: 13, timeout: 90, ...opts });
     },
+    /** Teleport the walker to a 62 lot-local point (x across, z toward street, y above the pad), facing yaw (lot-relative). */
+    teleportLocal(x, y, z, yawLocal = Math.PI) {
+      const lot = world.layout.hero, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+      const wx = lot.x + x * c + z * s, wz = lot.z - x * s + z * c;
+      controls.player.teleport({ x: wx, y: lot.h + y, z: wz }, lot.rot + yawLocal);
+      return [wx, lot.h + y, wz];
+    },
+    /** Point the debug camera from one 62-local point at another. */
+    lookLocal(from, to) {
+      const lot = world.layout.hero, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+      const W = ([x, y, z]) => [lot.x + x * c + z * s, lot.h + y, lot.z - x * s + z * c];
+      camera.position.set(...W(from));
+      camera.lookAt(...W(to));
+      controls.syncFly();
+    },
+    doors: () => world.hero.doors.state,
     /** Lot-local position of the walker relative to 62 (x across, z toward the street). */
     heroLocal() {
       const p = controls.player.position, lot = world.layout.hero;

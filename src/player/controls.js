@@ -148,10 +148,11 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       // ---- modes ----
       if (mode === 'walk') {
         player.update(dt, input, camera, true);
-        const target = interact.update(player.position, true);
-        if (input.pressed('KeyF') && target) interact.fire();
+        const target = interact.update(player.position, 'walk');
+        if (target && input.pressed('Key' + target.key)) interact.fire();
       } else if (mode === 'drive') {
-        interact.update(player.position, false);
+        const ct = interact.update(car.position, 'car'); // e.g. 'Press E to open the garage'
+        if (ct && input.pressed('Key' + ct.key)) interact.fire();
         if (input.pressed('KeyL')) car.setLights(!car.lights);
         if (input.pressed('KeyR')) car.body.resetUpright(world.terrain.getHeight(car.position.x, car.position.z));
         chase.update(dt, car, input);

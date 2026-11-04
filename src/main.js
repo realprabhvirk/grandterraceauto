@@ -40,6 +40,7 @@ const world = buildWorld(scene);
 const spawn = heroSpawn(world);
 const physics = createPhysics(world);
 const vehicles = createVehicles({ physics, scene, world });
+world.hero?.attach(physics.toggles); // 62's door colliders
 world.vehicles = vehicles;
 const headlights = createHeadlightRig(scene);
 const audio = createCarAudio();
@@ -57,6 +58,7 @@ const controls = createControls({
 if (params.has('shot')) controls.panel.hide();
 // Order matters: controls set this step's car input, then every car steps.
 physics.onStep((h) => { controls.fixedUpdate(h); vehicles.fixedUpdate(h); });
+for (const t of world.hero?.targets || []) controls.interact.register(t); // E: front door, garage
 const debugDraw = createDebugDraw(scene, physics, world.terrain);
 const peds = createPedestrians({ scene, physics, world });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
@@ -84,6 +86,7 @@ renderer.setAnimationLoop(() => {
   controls.update(dt);
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5 });
   audio.setListener(controls.focus());
+  world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   peds.update(dt, { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: movingCars() });
   const lit = controls.car && controls.car.lights ? controls.car : vehicles.cars.find((c) => c.lights) || null;
   headlights.update(dt, lit, lighting.dusk);

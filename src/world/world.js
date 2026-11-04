@@ -39,7 +39,7 @@ export function buildWorld(scene) {
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : [])];
   const trunks = trees.trunks;
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, poles: lights.poles };
+  return { network, layout, terrain, colliders, trunks, hero, poles: lights.poles, toggles: hero ? hero.toggles : [] };
 }
 
 /**

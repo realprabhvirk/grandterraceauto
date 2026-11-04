@@ -15,7 +15,10 @@ import * as THREE from 'three';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
 import { box, boxB, cylinder, icosa, painted, trisGeometry, merge } from '../utils/geom.js';
-import { addWindow, addGarageDoor, hipRoof } from './houseParts.js';
+import { addWindow, hipRoof } from './houseParts.js';
+import { wallSlab } from './wallSlab.js';
+import { buildInterior, INTERIOR } from './house62Interior.js';
+import { buildDoors } from './house62Doors.js';
 
 // ----------------------------------------------------------------------------------
 // TWEAKABLES
@@ -223,13 +226,24 @@ export function buildHeroHouse(lot, terrain) {
   const out = { walls: solid, roof: solid, detail: solid, glass: [] };
   const lamps = [];
   const GH = DIM.groundH, Lv = DIM.living, En = DIM.entry, Ga = DIM.garage, U = DIM.upper, UB = DIM.upperBox;
-  const win = (x, y, w, h, face, z, frame = COL.trim) => addWindow(out, { x, y, z, w, h, face, frame, glassColor: COL.glass, frameT: 0.07 });
+  const windows = []; // recorded for the interior's 'view out' panes
+  const win = (x, y, w, h, face, z, frame = COL.trim) => { windows.push({ x, y, z, w, h, face }); addWindow(out, { x, y, z, w, h, face, frame, glassColor: COL.glass, frameT: 0.07 }); };
   const blk = (b, h, y0, color) => solid.push(boxB(b.x1 - b.x0, h, b.z1 - b.z0, (b.x0 + b.x1) / 2, y0, (b.z0 + b.z1) / 2, color, { jitter: 0.02 }));
 
-  // ---- Ground floor walls ---------------------------------------------------------
-  blk(Lv, GH, 0, COL.render);
-  blk(En, GH, 0, COL.render);
-  blk(Ga, GH, 0, COL.render);
+  // ---- Hollow shell: outer skin + inner lining, real openings for the doors ----------------
+  const IW = PALETTE.interior;
+  const shell = { solid, colliders: [] };
+  const W = (axis, at, from, to, y0, y1, inward, outer, inner, openings = []) => wallSlab(shell, { axis, at, from, to, y0, y1, inward, outer, inner, openings });
+  const dO = DIM.door, gO = DIM.garageDoor;
+  W('x', Lv.z1, Lv.x0, Lv.x1, 0, GH, -1, COL.render, IW.wall);                 // living front
+  W('z', Lv.x0, Lv.z0, Lv.z1, 0, GH, 1, COL.render, IW.wall);                  // left side
+  W('x', Lv.z0, Lv.x0, Ga.x0, 0, GH, 1, COL.render, IW.wall);                  // back (living + hall)
+  W('x', Lv.z0, Ga.x0, Ga.x1, 0, GH, 1, COL.render, IW.garageWall);            // back (garage)
+  W('z', Lv.x1, En.z1, Lv.z1, 0, GH, -1, COL.render, IW.wall);                 // living return beside the porch
+  W('x', En.z1, En.x0, En.x1, 0, GH, -1, COL.render, IW.wall, [{ a: dO.x - dO.w / 2, b: dO.x + dO.w / 2, top: dO.h }]); // front door
+  W('x', Ga.z1, Ga.x0, Ga.x1, 0, GH, -1, COL.render, IW.garageWall, [{ a: gO.x - gO.w / 2, b: gO.x + gO.w / 2, top: gO.h }]); // garage door
+  W('z', Ga.x1, Ga.z0, Ga.z1, 0, GH, -1, COL.render, IW.garageWall);           // garage right side
+  W('z', Ga.x0, En.z1, Ga.z1, 0, GH, 1, COL.render, IW.garageWall);            // garage return beside the porch
   // Subtle plinth.
   for (const b of [Lv, Ga]) solid.push(boxB(b.x1 - b.x0 + 0.04, 0.16, 0.04, (b.x0 + b.x1) / 2, 0, b.z1 + 0.01, COL.base));
   // Rendered piers between the three tall living-room windows (gives the bay rhythm).
@@ -238,8 +252,14 @@ export function buildHeroHouse(lot, terrain) {
   piers.forEach((px, i) => solid.push(boxB(i === 0 || i === 3 ? 0.7 : 1.3, GH - 0.02, 0.14, px, 0, Lv.z1 + 0.07, COL.render, { jitter: 0.02 })));
 
   // ---- Upper storey ------------------------------------------------------------------
-  blk(U, U.h, GH, COL.cladding);
-  blk(UB, UB.h, GH, COL.renderBox);
+  W('x', U.z1, U.x0, U.x1, GH, GH + U.h, -1, COL.cladding, IW.wallWarm);       // upstairs front
+  W('z', U.x0, U.z0, U.z1, GH, GH + U.h, 1, COL.cladding, IW.wallWarm);        // upstairs left
+  W('x', U.z0, U.x0, U.x1, GH, GH + U.h, 1, COL.cladding, IW.wallWarm);        // upstairs back
+  W('x', UB.z1, UB.x0, UB.x1, GH, GH + UB.h, -1, COL.renderBox, IW.wallWarm);  // box front
+  W('z', UB.x1, UB.z0, UB.z1, GH, GH + UB.h, -1, COL.renderBox, IW.wallWarm);  // box right
+  W('x', UB.z0, UB.x0, UB.x1, GH, GH + UB.h, 1, COL.renderBox, IW.wallWarm);   // box back
+  W('z', UB.x0, U.z1, UB.z1, GH, GH + UB.h, 1, COL.renderBox, IW.wallWarm);    // box return
+  void blk;
   weatherboards(solid, 'z', U.z1, U.x0, U.x1, GH, GH + U.h);
   weatherboards(solid, 'x', U.x0, U.z0, U.z1, GH, GH + U.h);
   // Corner trims on the weatherboard.
@@ -247,9 +267,11 @@ export function buildHeroHouse(lot, terrain) {
 
   // ---- Roofs: lower wrap-around hip, entry portico hip, upper hips --------------------
   const gx0 = Lv.x0, gx1 = Ga.x1, gz0 = Lv.z0, gz1 = Ga.z1;
-  hipRoof(out, { cx: (gx0 + gx1) / 2, cz: (gz0 + gz1) / 2, y: GH, W: gx1 - gx0, D: gz1 - gz0, pitch: DIM.roofPitch, overhang: DIM.overhang, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps });
+  // The lower roofs are clipped where the (hollow) upstairs sits on them.
+  const upperClip = [[U.x0, UB.x1, U.z0, U.z1], [UB.x0, UB.x1, U.z1 - 0.01, UB.z1]];
+  hipRoof(out, { cx: (gx0 + gx1) / 2, cz: (gz0 + gz1) / 2, y: GH, W: gx1 - gx0, D: gz1 - gz0, pitch: DIM.roofPitch, overhang: DIM.overhang, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps, clip: upperClip });
   const P = DIM.portico;
-  hipRoof(out, { cx: (P.x0 + P.x1) / 2, cz: (P.z0 + P.z1) / 2, y: GH, W: P.x1 - P.x0, D: P.z1 - P.z0, pitch: 27, overhang: 0.45, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps });
+  hipRoof(out, { cx: (P.x0 + P.x1) / 2, cz: (P.z0 + P.z1) / 2, y: GH, W: P.x1 - P.x0, D: P.z1 - P.z0, pitch: 27, overhang: 0.45, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps, clip: upperClip });
   const uy = GH + U.h;
   hipRoof(out, { cx: (U.x0 + UB.x1) / 2, cz: (U.z0 + U.z1) / 2, y: uy, W: UB.x1 - U.x0, D: U.z1 - U.z0, pitch: DIM.upperPitch, overhang: DIM.overhang, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps });
   hipRoof(out, { cx: (UB.x0 + UB.x1) / 2, cz: (UB.z1 + -1.5) / 2, y: uy, W: UB.x1 - UB.x0, D: UB.z1 + 1.5, pitch: DIM.upperPitch, overhang: DIM.overhang, color: COL.roof, fascia: COL.fascia, soffit: COL.soffit, fasciaH: 0.24, caps: COL.caps });
@@ -261,10 +283,10 @@ export function buildHeroHouse(lot, terrain) {
 
   // ---- Entry: recessed door, porch, columns ------------------------------------------
   const dr = DIM.door, ez = En.z1 + 0.005;
-  solid.push(box(dr.w + 0.16, dr.h + 0.08, 0.07, dr.x, (dr.h + 0.08) / 2, ez + 0.02, COL.trim));
-  solid.push(box(dr.w, dr.h, 0.06, dr.x, dr.h / 2, ez + 0.05, COL.door, { jitter: 0.02 }));
-  out.glass.push(box(0.12, dr.h - 0.4, 0.02, dr.x - 0.3, dr.h / 2 + 0.05, ez + 0.085, COL.glass));
-  solid.push(box(0.03, 0.4, 0.05, dr.x + 0.36, 1.05, ez + 0.1, '#b9b6ae')); // pull handle
+  // Door frame (the panel itself is animated - see house62Doors.js).
+  solid.push(boxB(0.08, dr.h + 0.08, 0.26, dr.x - dr.w / 2 - 0.04, 0, ez - 0.08, COL.trim));
+  solid.push(boxB(0.08, dr.h + 0.08, 0.26, dr.x + dr.w / 2 + 0.04, 0, ez - 0.08, COL.trim));
+  solid.push(boxB(dr.w + 0.16, 0.08, 0.26, dr.x, dr.h, ez - 0.08, COL.trim));
   // Narrow sidelight to the right of the door.
   addWindow(out, { x: dr.x + 0.95, y: 1.2, z: ez, w: 0.35, h: 2.1, face: 'z', frame: COL.trim, glassColor: COL.glass, sill: false, mullion: false, frameT: 0.06 });
   for (const cx of DIM.columns) solid.push(boxB(0.38, GH, 0.38, cx, 0, DIM.columnZ, COL.render, { jitter: 0.02 }));
@@ -281,8 +303,10 @@ export function buildHeroHouse(lot, terrain) {
 
   // ---- Garage door (dark, slim horizontal slats) -------------------------------------
   const gd = DIM.garageDoor, gz = Ga.z1 + 0.005;
-  addGarageDoor(out, { x: gd.x, z: gz, w: gd.w, h: gd.h, color: COL.garage, dark: COL.garageLine, frame: COL.trim });
-  for (let y = 0.25; y < gd.h; y += 0.16) solid.push(box(gd.w - 0.12, 0.018, 0.02, gd.x, y, gz + 0.1, COL.garageLine, { jitter: 0.01 }));
+  // Frame only - the roller door is animated in house62Doors.js.
+  solid.push(boxB(0.12, gd.h + 0.12, 0.3, gd.x - gd.w / 2 - 0.06, 0, gz - 0.1, COL.trim));
+  solid.push(boxB(0.12, gd.h + 0.12, 0.3, gd.x + gd.w / 2 + 0.06, 0, gz - 0.1, COL.trim));
+  solid.push(boxB(gd.w + 0.24, 0.12, 0.3, gd.x, gd.h, gz - 0.1, COL.trim));
 
   // ---- Windows (dark charcoal frames, white shutters behind the glass) -----------------
   const wy = 1.38;
@@ -399,11 +423,20 @@ export function buildHeroHouse(lot, terrain) {
   group.rotation.y = lot.rot;
   const solidMesh = new THREE.Mesh(merge(solid), MAT.solid);
   solidMesh.castShadow = solidMesh.receiveShadow = true;
-  const glassMesh = new THREE.Mesh(merge(out.glass), MAT.glass);
+  const glassMesh = new THREE.Mesh(merge(out.glass), MAT.heroGlass);
   glassMesh.receiveShadow = true;
   const lampMesh = new THREE.Mesh(mergePlain(lamps), MAT.lamp);
   const numMesh = new THREE.Mesh(mergePlain(numGeos), new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.4 }));
   group.add(solidMesh, glassMesh, lampMesh, numMesh);
+
+  // ---- Interior + doors -------------------------------------------------------------------
+  const interior = buildInterior(windows);
+  group.add(interior.group, ...interior.lights);
+  const doors = buildDoors({
+    door: { x: dr.x, w: dr.w, h: dr.h, z: ez }, garage: { x: gd.x, w: gd.w, h: gd.h, z: gz },
+    colors: { door: COL.door, frame: COL.trim, garage: COL.garage, line: COL.garageLine, glass: COL.glass },
+  });
+  group.add(doors.group);
   group.updateMatrixWorld(true);
 
   // ---- Colliders (world space boxes) ------------------------------------------------------
@@ -414,13 +447,26 @@ export function buildHeroHouse(lot, terrain) {
     const w = toWorld((x0 + x1) / 2, (z0 + z1) / 2);
     colliders.push({ x: w.x, y: lot.h + (y0 + y1) / 2, z: w.z, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, hz: (z1 - z0) / 2, rot: lot.rot });
   };
-  addBox(Lv.x0, Lv.x1, Lv.z0, Lv.z1 + 0.14, 0, uy + 2);
-  addBox(En.x0, En.x1, En.z0, En.z1, 0, uy + 2);
-  addBox(Ga.x0, Ga.x1, Ga.z0, Ga.z1, 0, uy + 2);
-  // Eaves (above head height): stop cameras from tucking under the roof overhangs.
+  // Shell walls + interior (floors, partitions, stairs ramp, furniture) + the piers outside.
+  const addSpec = (b) => {
+    const w = toWorld((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2);
+    colliders.push({ x: w.x, y: lot.h + (b.y0 + b.y1) / 2, z: w.z, hx: (b.x1 - b.x0) / 2, hy: (b.y1 - b.y0) / 2, hz: (b.z1 - b.z0) / 2, rot: lot.rot, rotX: b.rotX || 0 });
+  };
+  for (const b of shell.colliders) addSpec(b);
+  for (const b of interior.colliders) addSpec(b);
+  addBox(Lv.x0, Lv.x1, Lv.z1, Lv.z1 + 0.14, 0, GH); // living-room piers
+  // Eaves (above head height, outside the walls only): stop cameras tucking under the overhangs.
   const ov = DIM.overhang;
-  addBox(gx0 - ov, gx1 + ov, gz0 - ov, gz1 + ov, GH - 0.15, GH + 0.9);
-  addBox(P.x0 - 0.45, P.x1 + 0.45, P.z0, P.z1 + 0.45, GH - 0.15, GH + 0.9);
+  addBox(gx0 - ov, gx1 + ov, gz1, gz1 + ov, GH - 0.15, GH + 0.9);
+  addBox(gx0 - ov, gx1 + ov, gz0 - ov, gz0, GH - 0.15, GH + 0.9);
+  addBox(gx0 - ov, gx0, gz0, gz1, GH - 0.15, GH + 0.9);
+  addBox(gx1, gx1 + ov, gz0, gz1, GH - 0.15, GH + 0.9);
+  addBox(P.x0 - 0.45, P.x1 + 0.45, En.z1 + 0.2, P.z1 + 0.45, GH - 0.15, GH + 0.9);
+  // Toggle colliders for the doors (world space, created by physicsWorld, handles fed back).
+  const toggles = doors.toggles.map((t) => {
+    const b = t.box, w = toWorld((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2);
+    return { id: t.id, x: w.x, y: lot.h + (b.y0 + b.y1) / 2, z: w.z, hx: (b.x1 - b.x0) / 2, hy: (b.y1 - b.y0) / 2, hz: (b.z1 - b.z0) / 2, rot: lot.rot };
+  });
   for (const cx of DIM.columns) addBox(cx - 0.19, cx + 0.19, DIM.columnZ - 0.19, DIM.columnZ + 0.19, 0, GH);
   addBox(En.x0 - 0.2, En.x1 + 0.2, En.z1, Ga.z1 + 0.25, 0, 0.15); // porch slab (walkable)
   addBox(DIM.letterbox[0] - 0.21, DIM.letterbox[0] + 0.21, DIM.letterbox[1] - 0.18, DIM.letterbox[1] + 0.18, -0.4, 1.2);
@@ -430,5 +476,30 @@ export function buildHeroHouse(lot, terrain) {
   for (const [tx, tz, ts] of DIM.gums) addBox(tx - 0.25 * ts, tx + 0.25 * ts, tz - 0.25 * ts, tz + 0.25 * ts, 0, 5);
   addBox(F.x0 + 0.25, F.x0 + 0.95, -2.3, -0.6, 0, 1.0); // bins
 
-  return { group, colliders, numbersTexture: tex };
+  // ---- Runtime: interior visibility / lights / window glow, door animation ---------------
+  const center = toWorld(0, 0);
+  const localOf = (p) => { const dx = p.x - lot.x, dz = p.z - lot.z; return { x: dx * c - dz * s, y: p.y - lot.h, z: dx * s + dz * c }; };
+  let lit = 0;
+  const update = (dt, { player, night }) => {
+    doors.update(dt);
+    const d = player ? Math.hypot(player.x - center.x, player.z - center.z) : 999;
+    const near = d < INTERIOR.nearDist;
+    const lp = player ? localOf(player) : null;
+    const inside = !!lp && lp.x > Lv.x0 && lp.x < Ga.x1 && lp.z > Lv.z0 && lp.z < Ga.z1 && lp.y > -0.5 && lp.y < 6;
+    interior.group.visible = near;
+    const want = near && (night > 0.5 || inside) ? 1 : 0;
+    lit += (want - lit) * Math.min(1, dt * 3);
+    for (const l of interior.lights) l.intensity = lit * INTERIOR.lightIntensity;
+    MAT.interiorLamp.emissiveIntensity = lit * 1.6;
+    // 62's windows glow with its own lights (plus the usual dusk glow).
+    MAT.heroGlass.emissiveIntensity = Math.max(MAT.glass.emissiveIntensity, (night > 0.5 || inside ? 1 : 0) * 1.1);
+    MAT.innerPane.color.set(night > 0.5 ? PALETTE.interior.paneNight : PALETTE.interior.paneDay);
+    return { inside, near };
+  };
+  // Interaction targets (E): front door, garage door (usable from inside a car too).
+  const targets = [
+    { id: 'frontDoor', key: 'E', range: 2.8, position: () => ({ ...toWorld(dr.x, ez), y: lot.h }), label: () => (doors.state.frontTarget > 0.5 ? 'Press E to close' : 'Press E to open'), action: () => doors.toggleFront() },
+    { id: 'garageDoor', key: 'E', range: 4.2, inCar: true, position: () => ({ ...toWorld(gd.x, gz), y: lot.h }), label: () => (doors.state.garageTarget > 0.5 ? 'Press E to close the garage' : 'Press E to open the garage'), action: () => doors.toggleGarage() },
+  ];
+  return { group, colliders, toggles, numbersTexture: tex, update, targets, doors, attach: (h) => doors.attach(h), localOf };
 }

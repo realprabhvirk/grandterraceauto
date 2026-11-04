@@ -41,6 +41,12 @@ MAT.pool = new THREE.MeshBasicMaterial({
   depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8, fog: true,
 });
 
+// 62 has its own window glass (its glow follows the interior lights, not just the clock),
+// interior lamp shades, and unlit "view out" panes on the inside of its windows.
+MAT.heroGlass = MAT.glass.clone();
+MAT.interiorLamp = new THREE.MeshLambertMaterial({ color: '#f3e6c8', emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0 });
+MAT.innerPane = new THREE.MeshBasicMaterial({ color: '#cfe0ea' });
+
 /** 0 = afternoon, 1 = dusk/night. Drives window, lamp and street-light glow. */
 export function setGlow(dusk) {
   const d = Math.min(1, Math.max(0, dusk));

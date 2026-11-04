@@ -9,19 +9,23 @@ export function createInteractions(prompt) {
     /** t = { id, position() -> {x,y,z}, range, key, label, enabled() -> bool, action() } */
     register(t) { targets.push({ key: 'F', range: 2.5, enabled: () => true, ...t }); },
     get current() { return current; },
-    /** Find the best target near `p` (player position) and update the prompt. */
-    update(p, allowed) {
+    /**
+     * Find the best target near `p` and update the prompt.
+     * mode: 'walk' (everything) | 'car' (only targets with inCar: true) | false (none).
+     */
+    update(p, mode) {
       current = null;
-      if (allowed) {
+      if (mode) {
         let best = Infinity;
         for (const t of targets) {
           if (!t.enabled()) continue;
+          if (mode === 'car' && !t.inCar) continue;
           const q = t.position();
           const d = Math.hypot(q.x - p.x, q.z - p.z);
           if (d < t.range && Math.abs(q.y - p.y) < 2.2 && d < best) { best = d; current = t; }
         }
       }
-      if (current) prompt.show(current.key, current.label); else prompt.hide();
+      if (current) prompt.show(current.key, typeof current.label === 'function' ? current.label() : current.label); else prompt.hide();
       return current;
     },
     /** Call on F: runs the current target's action. */
