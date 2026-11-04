@@ -267,6 +267,12 @@ export function buildHeroHouse(lot, terrain) {
   }
   solid.push(boxB(P.x1 - P.x0 + 0.4, 0.18, P.depth + 0.2, (P.x0 + P.x1) / 2, 0, G.z1 + P.depth / 2 + 0.1, COL.pavers, { jitter: 0.06 }));
   solid.push(boxB(2.0, 0.09, 0.45, DIM.path.x, 0, pz1 + 0.4, COL.pavers));
+  // Potted plants either side of the entry, standing on the porch slab.
+  for (const px of [-0.95, 3.0]) {
+    solid.push(cylinder(0.24, 0.19, 0.52, 8, px, 0.18, G.z1 + 0.55, COL.trim));
+    solid.push(icosa(0.34, 1, px, 0.98, G.z1 + 0.55, PALETTE.tree.leaves[1], { sy: 1.25, jitter: 0.12 }));
+    solid.push(icosa(0.2, 0, px + 0.12, 1.32, G.z1 + 0.5, PALETTE.tree.leaves[3], { jitter: 0.1 }));
+  }
 
   // ---- Windows -----------------------------------------------------------------
   const lw = DIM.livingWindow;
