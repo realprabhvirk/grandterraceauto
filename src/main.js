@@ -30,6 +30,7 @@ import { createWanted } from './police/wanted.js';
 import { createPolice } from './police/policeManager.js';
 import { createTheft } from './police/theft.js';
 import { createMinimap } from './ui/minimap.js';
+import { createCyclists } from './npc/cyclists.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -77,6 +78,7 @@ for (const t of world.town?.targets || []) controls.interact.register(t); // E: 
 const debugDraw = createDebugDraw(scene, physics, world.terrain);
 const peds = createPedestrians({ scene, physics, world });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
+const cyclists = createCyclists({ scene, traffic, terrain: world.terrain });
 /** Everything with wheels that pedestrians should watch out for. */
 const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
 
@@ -96,6 +98,7 @@ if (world.town) { spawns.setPolice(world.town.spawns.police); spawns.setHospital
 world.spawns = spawns;
 const combat = createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud: statusHud, spawns, world });
 peds.onHit((e) => combat.emit('pedHit', e));
+cyclists.onHit((e) => combat.emit('pedHit', e));
 // Quick Stop: E at the counter buys a snack ($20, +25 health).
 if (world.town) world.town.hooks.buySnack = () => {
   if (wallet.cash < 20) { statusHud.message('Not enough cash', 2, '#ff8a7a'); return; }
@@ -125,7 +128,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -136,7 +139,7 @@ renderer.setAnimationLoop(() => {
   physics.step(dt);
   vehicles.sync();
   controls.update(dt);
-  traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: police.movers() });
+  traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: [...police.movers(), ...cyclists.movers()] });
   police.update(dt);
   theft.update(dt, world.terrain);
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
@@ -147,7 +150,7 @@ renderer.setAnimationLoop(() => {
   breakables.update(dt, controls.focus());
   particles.update(dt);
   statusHud.update(dt, { health: combat.hp, carHealth: controls.mode === 'drive' && controls.car ? controls.car.health : null, cash: wallet.cash, stars: world.wanted?.stars || 0, searching: world.wanted?.searching || false });
-  peds.update(dt, { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: movingCars() });
+  { const mc = movingCars(); peds.update(dt, { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: mc }); cyclists.update(dt, { focus: controls.focus(), cars: mc }); }
   const lit = controls.car && controls.car.lights ? controls.car : vehicles.cars.find((c) => c.lights) || null;
   headlights.update(dt, lit, lighting.dusk);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);

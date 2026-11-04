@@ -179,6 +179,23 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
         p.headX = 0.05 * Math.sin(t * 0.8);
         return p;
       }
+      case 'bench': {
+        // Sitting on a bench / ledge (root on the ground): hands resting on the thighs.
+        p.rootY = -0.45; p.lhx = p.rhx = -1.45; p.lkx = p.rkx = 1.4; p.lhz = 0.06; p.rhz = -0.06;
+        p.lsx = p.rsx = -0.45; p.lsz = 0.15; p.rsz = -0.15; p.lex = p.rex = -0.7;
+        p.headY = 0.35 * Math.sin(t * 0.35); p.torsoX = -0.04;
+        return p;
+      }
+      case 'cycle': {
+        // Riding a bike (root on the ground, saddle ~0.85 m): lean in, hands on the bars, pedalling.
+        phase += s.dt * (1.5 + s.speed * 0.9);
+        const c = Math.sin(phase);
+        p.rootY = -0.08; p.torsoX = 0.42; p.headX = -0.3;
+        p.lsx = p.rsx = -1.05; p.lsz = 0.12; p.rsz = -0.12; p.lex = p.rex = -0.25;
+        p.lhx = -1.0 + c * 0.38; p.rhx = -1.0 - c * 0.38;
+        p.lkx = 1.1 + Math.max(0, -c) * 0.5; p.rkx = 1.1 + Math.max(0, c) * 0.5;
+        return p;
+      }
       case 'wave': {
         p.rsz = -2.55; p.rsx = -0.25; p.rex = -0.35 - 0.45 * (0.5 + 0.5 * Math.sin(t * 9));
         p.headZ = -0.08; p.torsoZ = 0.05; p.lsz = 0.12;
@@ -258,6 +275,8 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
     setHeadVisible(v) { head.scale.setScalar(v ? 1 : 0.001); },
     /** World position of the eyes (for first-person cameras). */
     eyeWorld(out) { head.updateWorldMatrix(true, false); return out.set(0, 0.17, 0.09).applyMatrix4(head.matrixWorld); },
+    /** Bones by name (props such as shopping bags hang off the elbows). */
+    bones: B,
     /**
      * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'look'|'phone'|'seated', steer }
      */

@@ -6,7 +6,7 @@ import { MAT } from '../art/materials.js';
 import { PALETTE } from '../art/palette.js';
 import { buildSwingDoor } from '../world/house62Doors.js';
 import { createCharacter } from '../player/character.js';
-import { randomOutfit } from '../npc/outfits.js';
+import { roleOutfit } from '../npc/outfits.js';
 import { frame, makeChunk } from './townKit.js';
 import { T } from './townPlan.js';
 import { ROW_Z } from './townBuildings.js';
@@ -29,8 +29,8 @@ function shell(ch, F, { w, d, h, wall, doorX = 0, doorW = 2.2, doorH = 2.5, inne
   return { l0, l1, r0, r1 };
 }
 
-function npc(group, rng, x, z, yaw, y) {
-  const ch = createCharacter(randomOutfit(rng), { name: 'shop-npc' });
+function npc(group, rng, x, z, yaw, y, role = 'shopper') {
+  const ch = createCharacter(roleOutfit(role, rng), { name: 'shop-' + role });
   ch.root.position.set(x, y, z);
   ch.root.rotation.y = yaw;
   group.add(ch.root);
@@ -69,9 +69,9 @@ export function buildTownInteriors({ parent, atlas, rng }) {
     const people = new THREE.Group();
     people.name = 'terrace-central-people';
     const p = (lx, lz) => F.toW(lx, lz);
-    const cashier = npc(people, rng, p(-15, -6.2).x, p(-15, -6.2).z, F.rot + Math.PI * 0 + 0, y);
+    const cashier = npc(people, rng, p(-15, -6.2).x, p(-15, -6.2).z, F.rot, y, 'cashier');
     cashier.root.rotation.y = F.rot;               // faces the customers (front)
-    const guard = npc(people, rng, p(3.4, -1.6).x, p(3.4, -1.6).z, F.rot, y);
+    const guard = npc(people, rng, p(3.4, -1.6).x, p(3.4, -1.6).z, F.rot, y, 'guard');
     const shoppers = [0, 1, 2].map((k) => ({ ch: npc(people, rng, 0, 0, 0, y), path: [[-7, -10], [-7, -26], [-1, -26], [-1, -10]].map(([a, b]) => p(a + k * 0.3, b)), i: k, speed: 0.9 + k * 0.15, pause: 0 }));
     shoppers[2].path = [[8, -9], [20, -9], [20, -24], [8, -24]].map(([a, b]) => p(a, b));
     out.people.push({ role: 'cashier', ch: cashier }, { role: 'guard', ch: guard }, ...shoppers.map((s) => ({ role: 'shopper', ch: s.ch })));
@@ -130,7 +130,7 @@ export function buildTownInteriors({ parent, atlas, rng }) {
     for (let x = -6; x <= 6; x += 4) inside.box(F, 2.4, 0.06, 0.6, x, H - 0.12, -6, '#fffbe8');
     const people = new THREE.Group();
     const cp = F.toW(-5, -4.3);
-    const cashier = npc(people, rng, cp.x, cp.z, F.rot, y);
+    const cashier = npc(people, rng, cp.x, cp.z, F.rot, y, 'cashier');
     out.people.push({ role: 'cashier', ch: cashier });
     const insideChunk = inside.finish(parent);
     insideChunk.group.add(people);

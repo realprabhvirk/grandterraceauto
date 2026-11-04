@@ -91,3 +91,7 @@ One line per judgment call made during the autonomous build.
 - P4 step 6: shop interiors have no extra point lights (sunlit through a non-shadow ceiling would need a shadow exception; kept simple: hemisphere-lit, ceiling light panels are just pale boxes).
 - P4 step 6: Wattle Park is auto-sited (flattest open spot 42-72 m from a cul-de-sac head, clear of lots/roads); bush trees there are removed.
 - P4 step 6: traffic 6 -> 10 cars (4 start in town); 10 extra pedestrians walk the town block loops.
+- P4 step 7: 40 pedestrians in one system with roles (walker, jogger, dog walker, shopper with bags, bench sitter, picnicker, police on foot, road worker, paramedic, shopkeeper); stationary roles hold a spot and walk back to it after being knocked down or scared.
+- P4 step 7: cyclists (3) are a separate light system on the traffic lanes, ride 1.1 m left of the lane centre; traffic treats them as slow movers; they can be knocked off (counts as hitting a person for the wanted level).
+- P4 step 7: roadworks are on Grand Terrace (auto-placed away from junctions, parked cars and 62); cones are breakable.
+- P4 step 7: in-store staff (2 cashiers, guard, 3 shoppers) are decorative (not in the ped system) - cars can't reach them.

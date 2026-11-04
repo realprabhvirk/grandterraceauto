@@ -47,7 +47,7 @@ export function buildWorld(scene) {
 
   // Everything else in town (streets, buildings, props); then the road index covers town too.
   network.allRoads = [...network.roads, plan.link, ...plan.roads];
-  const town = buildTown(scene, { network, terrain, plan, wattleSite });
+  const town = buildTown(scene, { network, layout, terrain, plan, wattleSite });
   network.index = new RoadIndex(network.allRoads);
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders];

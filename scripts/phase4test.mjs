@@ -318,6 +318,62 @@ try {
     check('no NaN after town run', s.player.every(Number.isFinite) && (s.car?.pos || []).every(Number.isFinite), s.car);
     check('no page errors (town)', errors.length === 0, errors.slice(0, 3));
   }
+  // ---------------------------------------------------------------- Step 7: NPC variety
+  if (run('npcs')) {
+    await load();
+    const sample = (secs) => ev(async (secs) => {
+      const g = window.__gta, P = g.peds.peds;
+      const s0 = P.map((p) => [p.pos.x, p.pos.z]), c0 = g.cyclists.riders.map((c) => [c.pos.x, c.pos.z]);
+      await new Promise((r) => setTimeout(r, secs * 1000));
+      const moved = P.map((p, i) => ({ role: p.role, awake: p.ch.root.visible, d: Math.hypot(p.pos.x - s0[i][0], p.pos.z - s0[i][1]), home: p.home ? Math.hypot(p.pos.x - p.home.x, p.pos.z - p.home.z) : null }));
+      const walkers = moved.filter((m) => m.awake && ['walker', 'shopper', 'jogger', 'dogWalker'].includes(m.role));
+      return {
+        stats: g.peds.stats(), cyc: g.cyclists.stats(), cycMoved: g.cyclists.riders.filter((c, i) => c.group.visible && Math.hypot(c.pos.x - c0[i][0], c.pos.z - c0[i][1]) > 3).length,
+        walkers: walkers.length, movedFrac: +(walkers.filter((m) => m.d > 1).length / Math.max(1, walkers.length)).toFixed(2),
+        jog: moved.filter((m) => m.role === 'jogger' && m.awake).map((m) => +(m.d / secs).toFixed(1)),
+        homeOk: moved.filter((m) => m.home !== null && m.awake).every((m) => m.home < 0.5), homeAwake: moved.filter((m) => m.home !== null && m.awake).length,
+        staff: g.world.town.interiors.people.map((p) => p.role), dogs: P.filter((p) => p.dog).length,
+        nan: P.some((p) => !Number.isFinite(p.pos.x + p.pos.y + p.pos.z)) || g.cyclists.riders.some((c) => !Number.isFinite(c.pos.x + c.pos.z)),
+      };
+    }, secs);
+    // Town centre (shoppers, police on foot, shopkeepers, cyclists, bench sitters in the gardens).
+    await ev(() => window.__gta.debug.teleport(470, -60, 0));
+    await wait(1500);
+    const a = await sample(3);
+    const roles = a.stats.roles, need = ['walker', 'jogger', 'dogWalker', 'shopper', 'sitter', 'picnic', 'cop', 'worker', 'paramedic', 'shopkeeper'];
+    check('~40 pedestrians, every role present', a.stats.total >= 36 && a.stats.total <= 44 && need.every((r) => roles[r] > 0), roles);
+    check('cyclists + shop staff (cashiers, guard) + dogs', a.cyc.total === 3 && a.staff.includes('cashier') && a.staff.includes('guard') && a.dogs >= 3, { cyc: a.cyc, staff: a.staff, dogs: a.dogs });
+    check('town walkers move, stationary people hold their spots', a.walkers >= 3 && a.movedFrac >= 0.6 && a.homeOk && a.homeAwake >= 6, a);
+    check('a cyclist is riding in town', a.cycMoved >= 1, { cyc: a.cyc, moved: a.cycMoved });
+    // Wattle Park: jogger + dog walker on the loop, sitter, picnickers.
+    const wp = await ev(() => { const w = window.__gta.world.town.wattle.centre; window.__gta.debug.teleport(w.x - 24, w.z, Math.PI / 2); return w; });
+    await wait(1500);
+    const b = await sample(3);
+    check('Wattle Park: jogger runs, picnic + bench people stay put', b.jog.length >= 1 && Math.max(...b.jog) > 3.2 && b.homeOk, { jog: b.jog, homeOk: b.homeOk, wp });
+    check('no NaN in NPC positions', !a.nan && !b.nan, { a: a.nan, b: b.nan });
+    // Knock down a police officer on foot outside the station: falls, gets up, returns to the spot.
+    await ev(() => window.__gta.debug.enter());
+    await wait(800);
+    const k = await ev(async () => {
+      const g = window.__gta, p = g.peds.peds.find((q) => q.role === 'cop');
+      const car = g.controls.car, a = Math.PI;
+      const x = p.home.x, z = p.home.z + 20;
+      car.body.teleport(x, g.world.terrain.getHeight(x, z), z, a);
+      await new Promise((r) => setTimeout(r, 500));
+      const I = g.controls.input; I.setVirtual('KeyW', true);
+      const t0 = performance.now();
+      while (performance.now() - t0 < 6000 && p.state !== 'down') await new Promise((r) => requestAnimationFrame(r));
+      I.setVirtual('KeyW', false); I.setVirtual('KeyS', true);
+      const down = p.state === 'down';
+      await new Promise((r) => setTimeout(r, 1200)); I.setVirtual('KeyS', false);
+      const t1 = performance.now();
+      while (performance.now() - t1 < 14000 && !(p.state === 'home' && Math.hypot(p.pos.x - p.home.x, p.pos.z - p.home.z) < 0.3 && p.flee <= 0)) await new Promise((r) => requestAnimationFrame(r));
+      return { down, state: p.state, back: +Math.hypot(p.pos.x - p.home.x, p.pos.z - p.home.z).toFixed(2), stars: g.wanted.stars };
+    });
+    check('police officer on foot knocked down', k.down, k);
+    check('gets up and walks back to the spot', k.back < 0.3, k);
+    check('no page errors (npcs)', errors.length === 0, errors.slice(0, 3));
+  }
 } finally {
   await context.close();
   await browser.close();

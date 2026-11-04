@@ -31,7 +31,7 @@ export function createMinimap(world) {
     for (const [w, col] of [[ROAD.pathOut * 2, '#b9ad95'], [ROAD.halfW * 2 + 1, '#3e3c42']]) {
       b.strokeStyle = col; b.lineWidth = w;
       for (const r of roads) {
-        b.lineWidth = r.town ? (w > 9 ? (r.halfW + 9.3) : r.halfW * 2 + 1) : w;
+        b.lineWidth = r.town ? (w > 9 ? (r.halfW + 4.8) * 2 : r.halfW * 2 + 1) : w;
         b.beginPath();
         r.samples.forEach((s, i) => (i ? b.lineTo(s.x + half, s.z + half) : b.moveTo(s.x + half, s.z + half)));
         b.stroke();

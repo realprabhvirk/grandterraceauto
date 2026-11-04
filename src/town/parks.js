@@ -119,8 +119,16 @@ export function buildWattlePark(site, terrain, atlas, rng) {
   const signX = cx - rx - 3, signZ = cz, signY = H(signX, signZ);
   S.push(boxB(0.15, 1.6, 0.15, signX, signY, signZ - 2, '#3a3a3c'), boxB(0.15, 1.6, 0.15, signX, signY, signZ + 2, '#3a3a3c'), boxB(0.15, 0.8, 4.4, signX, signY + 1.4, signZ, '#2f6b5a'));
   atlas.sign({ rot: -Math.PI / 2, y: signY, toW: (lx, lz) => ({ x: signX - lz, z: signZ + lx }) }, atlas.row('WATTLE PARK', '#2f6b5a', '#f4f1e8'), 4, 0.6, 0, 1.8, 0.09);
+  // Picnic rug + basket on the lawn inside the loop (two picnickers sit here).
+  const rx0 = cx, rz0 = cz + 5.5, ry = H(rx0, rz0);
+  S.push(box(2.2, 0.03, 1.6, rx0, ry + 0.03, rz0, '#c8553e'), box(2.2, 0.035, 0.18, rx0, ry + 0.035, rz0 - 0.4, '#f4f1e8'), box(2.2, 0.035, 0.18, rx0, ry + 0.035, rz0 + 0.4, '#f4f1e8'));
+  S.push(boxB(0.45, 0.28, 0.3, rx0, ry, rz0 - 0.2, '#a8743f'), box(0.3, 0.04, 0.3, rx0 + 0.4, ry + 0.05, rz0 + 0.3, '#e2c25a'));
+  const picnic = [{ x: rx0 - 1.0, y: ry, z: rz0, yaw: Math.PI / 2 }, { x: rx0 + 1.0, y: ry, z: rz0, yaw: -Math.PI / 2 }];
+  // Jogging line round the loop path (closed polyline for pedestrians).
+  const line = loop.map((p) => { const ox = p.x - cx, oz = p.z - cz, l = Math.hypot(ox, oz) || 1; return { x: p.x, z: p.z, y: p.y, ox: ox / l, oz: oz / l, detour: null }; });
+  line.push({ ...line[0] });
   const mesh = new THREE.Mesh(merge(S), MAT.solid);
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.name = 'wattle-park';
-  return { mesh, trunks, colliders, benches, loop, centre: { x: cx, z: cz } };
+  return { mesh, trunks, colliders, benches, loop, line, picnic, centre: { x: cx, z: cz } };
 }

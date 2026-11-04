@@ -10,12 +10,15 @@ import { buildTownProps } from './townProps.js';
 import { buildCentralGardens, buildWattlePark } from './parks.js';
 import { T } from './townPlan.js';
 import { makeRng } from '../utils/rng.js';
+import { buildRoadworks } from './roadworks.js';
+import { buildSpawns } from '../vehicles/spawns.js';
+import { SHOP_X, ROW_Z } from './townBuildings.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
 const PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '#b98a4a', '#7c2f2f', '#2f4f6b', '#e9e6dc'];
 
-export function buildTown(scene, { plan, terrain, wattleSite }) {
+export function buildTown(scene, { network, layout, plan, terrain, wattleSite }) {
   const rng = makeRng(6262);
   const group = new THREE.Group();
   group.name = 'town';
@@ -80,7 +83,27 @@ export function buildTown(scene, { plan, terrain, wattleSite }) {
     out.benches.push(...w.benches);
     out.wattle = w;
     out.places.push({ kind: 'park', x: w.centre.x, z: w.centre.z, label: 'Wattle Park' });
+    out.parkLines = [w.line];
   }
+  // Small roadworks on Grand Terrace (clear of parked cars and 62).
+  const parked = buildSpawns({ network, layout, terrain }).map((s) => ({ x: s.x, z: s.z, r: 14 }));
+  const rw = buildRoadworks({ network, terrain, atlas, avoid: [...parked, { x: layout.hero.x, z: layout.hero.z, r: 70 }] });
+  group.add(rw.group);
+  out.breakables.push(rw.def);
+  out.roadworks = rw;
+  // Stationary people (pedestrians.js gives them roles): bench sitters, picnickers, police
+  // outside the station, paramedics at the ambulance bay, road workers, shopkeepers.
+  const benchSpot = (b) => ({ role: 'sitter', x: b.x + Math.sin(b.yaw) * 0.12, y: b.y, z: b.z + Math.cos(b.yaw) * 0.12, yaw: b.yaw, action: 'bench' });
+  const gy = T.h + 0.08;
+  out.npcSpots = [
+    benchSpot(gardens.benches[0]), benchSpot(gardens.benches[3]),
+    ...(out.wattle ? [benchSpot(out.wattle.benches[1]), ...out.wattle.picnic.map((p) => ({ role: 'picnic', ...p, action: 'sit' }))] : []),
+    { role: 'cop', x: 355.4, y: gy, z: -92.6, yaw: 0, action: 'look' }, { role: 'cop', x: 360.8, y: gy, z: -92.4, yaw: -0.4, action: null },
+    { role: 'paramedic', x: 594.2, y: gy, z: -63.5, yaw: Math.PI / 2, action: 'look' }, { role: 'paramedic', x: 595.8, y: gy, z: -63.5, yaw: -Math.PI / 2, action: 'phone' },
+    ...rw.spots,
+    { role: 'shopkeeper', x: SHOP_X[0] + 3, y: gy, z: ROW_Z.north + 0.9, yaw: 0, action: 'look' },
+    { role: 'shopkeeper', x: SHOP_X[3] - 3, y: gy, z: ROW_Z.north + 0.9, yaw: 0.3, action: 'phone' },
+  ];
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

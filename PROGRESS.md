@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 00:39)**
-- Done: P4 steps 0-6 (bugs, cameras, damage, police, minimap, Terrace Town Centre)
+**STATUS (2026-11-05 00:49)**
+- Done: P4 steps 0-7 (bugs, cameras, damage, police, minimap, town, NPC variety)
 - Broken: garage 'street exit' check is occasionally flaky with more traffic (passes on rerun)
-- Next: Step 7 NPC variety
+- Next: Step 8 wrap-up (full suite, perf log, README, build)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -164,3 +164,4 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 - 00:06 P4 step 4 done: hold-F break-in (witness check: ped 30 m LOS / cop 60 m), carjack (driver ejected, drivable copy), wanted 0-5 stars from heat, police cars (lights, siren, A*/Dijkstra lane routing, direct chase, box-in), busted (-$500, impound, station), escape (search flash, clear). phase4test police 6/6.
 - 00:07 P4 step 5 done: Tab minimap (north-up canvas, pre-rendered roads, player arrow, police blips, wanted radius, place markers) at ~10 fps; phase4test minimap 2/2.
 - 00:39 P4 step 6 done: Terrace Town Centre (grid + ring road + Terrace Link, 10 shops, Terrace Central + Quick Stop enterable, police station, hospital, petrol, bus stops, breakable trees/lights/bins/signs, Central Gardens + Wattle Park). phase4test town 11/11; town centre 69 draw calls, 60 fps headless; police/garage/cameras/combat/minimap + walk/drive/phase2 regressions pass.
+- 00:49 P4 step 7 done: 40 role-based pedestrians (joggers, dog walkers + low-poly dogs, shoppers with bags, bench sitters, picnickers, police on foot, hi-vis workers at roadworks, paramedics, shopkeepers) + 3 cyclists + shop staff; phase4test npcs 9/9; combat/police/town/minimap regressions 25/25.
