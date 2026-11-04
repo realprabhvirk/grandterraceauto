@@ -38,3 +38,4 @@ One line per judgment call made during the autonomous build.
 
 - Terrain collider: kept the Rapier heightfield (smoother for wheels than a trimesh) and changed the VISUAL triangulation to Rapier's anti-diagonal, so they match exactly. Road surface = the terrain under the corridor (road ribbons are 5-6 cm visual decals); kerbs are visual only, so cars ride over them.
 - Junction corners: fillet circle solved from both roads' local tangent lines (not a straight frame), straight kerbs cut by arc length at the tangent points; capped the Phase 1 fix time, so tiny apex slivers stay.
+- F4 debug draw: terrain drawn as a local 36x36-cell wireframe around the focus instead of Rapier's full heightfield (~350k segments); everything else straight from world.debugRender().

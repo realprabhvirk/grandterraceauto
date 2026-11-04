@@ -3,6 +3,7 @@
 // WASD, Shift to run, Space to jump, orbit camera that pulls in when blocked.
 import * as THREE from 'three';
 import { createCharacter } from './character.js';
+import { G_PLAYER, groups, GROUP } from '../physics/physicsWorld.js';
 
 const RADIUS = 0.32, HALF = 0.55; // capsule: total height 2*(HALF+RADIUS) = 1.74 m
 const WALK = 4.2, RUN = 7.8, JUMP = 5.2, GRAVITY = -18;
@@ -13,7 +14,7 @@ export function createThirdPerson({ physics, scene, spawn }) {
   const body = world.createRigidBody(
     RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(spawn.position.x, spawn.position.y + HALF + RADIUS + 0.05, spawn.position.z),
   );
-  const collider = world.createCollider(RAPIER.ColliderDesc.capsule(HALF, RADIUS), body);
+  const collider = world.createCollider(RAPIER.ColliderDesc.capsule(HALF, RADIUS).setCollisionGroups(G_PLAYER), body);
   const ctrl = world.createCharacterController(0.03);
   ctrl.setUp({ x: 0, y: 1, z: 0 });
   ctrl.setMaxSlopeClimbAngle(THREE.MathUtils.degToRad(50));
@@ -81,7 +82,7 @@ export function createThirdPerson({ physics, scene, spawn }) {
       }
       const dir = move.lengthSq() ? move.clone().multiplyScalar(state.speed * dt) : new THREE.Vector3();
       dir.y = state.vy * dt;
-      ctrl.computeColliderMovement(collider, dir);
+      ctrl.computeColliderMovement(collider, dir, undefined, G_PLAYER);
       const m = ctrl.computedMovement();
       const t = body.translation();
       body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
@@ -108,7 +109,7 @@ export function createThirdPerson({ physics, scene, spawn }) {
       // Pull the camera in if a wall/hedge is between it and the player.
       let dist = state.dist;
       const ray = new RAPIER.Ray(camTarget, desired);
-      const hit = world.castRay(ray, dist, true, undefined, undefined, collider);
+      const hit = world.castRay(ray, dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC), collider);
       if (hit) dist = Math.max(0.6, hit.timeOfImpact - 0.25);
       camera.position.copy(camTarget).addScaledVector(desired, dist);
       camera.lookAt(camTarget);

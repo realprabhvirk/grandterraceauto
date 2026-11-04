@@ -49,6 +49,12 @@ try {
     await page.waitForFunction(() => window.__gta && window.__gta.ready === true, null, { timeout: 90000 });
     // Let a few frames settle (shadows, sign textures).
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n > 20 ? r() : requestAnimationFrame(f)); f(); }));
+    // Optional keys to press before the capture, e.g. SHOT_KEYS=F4 (collider view).
+    for (const key of (process.env.SHOT_KEYS || '').split(',').filter(Boolean)) {
+      await page.keyboard.press(key);
+      await page.waitForTimeout(120);
+    }
+    if (process.env.SHOT_KEYS) await page.waitForTimeout(300);
     const stats = await page.evaluate(() => (window.__gta.stats ? window.__gta.stats() : null));
     const file = path.join(outDir, `${preset}.png`);
     await page.screenshot({ path: file });

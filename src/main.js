@@ -8,7 +8,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { createLighting } from './world/lighting.js';
 import { createOverlay } from './utils/overlay.js';
 import { buildWorld, heroSpawn } from './world/world.js';
-import { createPhysics } from './world/physics.js';
+import { createPhysics } from './physics/physicsWorld.js';
+import { createDebugDraw } from './physics/debugDraw.js';
 import { createControls } from './player/controls.js';
 import { cameraPreset } from './player/presets.js';
 
@@ -44,6 +45,8 @@ const controls = createControls({
   startMode: camName === 'player' ? 'walk' : 'fly',
 });
 if (params.has('shot')) controls.hint.style.display = 'none';
+physics.onStep((h) => controls.fixedUpdate(h));
+const debugDraw = createDebugDraw(scene, physics, world.terrain);
 
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -58,10 +61,11 @@ let frames = 0;
 renderer.setAnimationLoop(() => {
   timer.update();
   const dt = Math.min(timer.getDelta(), 0.1);
-  physics.step(dt, (h) => controls.fixedUpdate(h));
+  physics.step(dt);
   controls.update(dt);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);
   if (preset.noFog && controls.mode === 'fly') scene.fog.far = 1e5;
+  debugDraw.update(controls.focus());
   renderer.render(scene, camera);
   overlay.update(dt, controls.debugText());
   if (++frames > 3) window.__gta.ready = true;
