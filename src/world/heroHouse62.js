@@ -417,6 +417,10 @@ export function buildHeroHouse(lot, terrain) {
   addBox(Lv.x0, Lv.x1, Lv.z0, Lv.z1 + 0.14, 0, uy + 2);
   addBox(En.x0, En.x1, En.z0, En.z1, 0, uy + 2);
   addBox(Ga.x0, Ga.x1, Ga.z0, Ga.z1, 0, uy + 2);
+  // Eaves (above head height): stop cameras from tucking under the roof overhangs.
+  const ov = DIM.overhang;
+  addBox(gx0 - ov, gx1 + ov, gz0 - ov, gz1 + ov, GH - 0.15, GH + 0.9);
+  addBox(P.x0 - 0.45, P.x1 + 0.45, P.z0, P.z1 + 0.45, GH - 0.15, GH + 0.9);
   for (const cx of DIM.columns) addBox(cx - 0.19, cx + 0.19, DIM.columnZ - 0.19, DIM.columnZ + 0.19, 0, GH);
   addBox(En.x0 - 0.2, En.x1 + 0.2, En.z1, Ga.z1 + 0.25, 0, 0.15); // porch slab (walkable)
   addBox(DIM.letterbox[0] - 0.21, DIM.letterbox[0] + 0.21, DIM.letterbox[1] - 0.18, DIM.letterbox[1] + 0.18, -0.4, 1.2);

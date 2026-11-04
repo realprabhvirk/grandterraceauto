@@ -43,18 +43,14 @@ export class Car {
     this.tailMesh = mk(g.tail, CAR_MAT.tailOff, false);
     this.revMesh = mk(g.reverse, CAR_MAT.revOff, false);
 
-    // Soft additive beams in front of the headlights (visible when lights are on).
+    // Headlight wash: a soft additive patch on the road ahead (a cone read as a ghost disc
+    // from behind). The real lighting comes from the single headlight SpotLight rig.
     const a = g.anchors;
     this.beams = new THREE.Group();
-    for (const s of [1, -1]) {
-      const cone = new THREE.ConeGeometry(2.2, 11, 12, 1, true);
-      cone.translate(0, -5.5, 0);
-      cone.rotateX(-Math.PI / 2 - 0.06);
-      const m = new THREE.Mesh(cone, CAR_MAT.beam);
-      m.position.set(s * a.headX, a.headY, a.headZ);
-      m.renderOrder = 5;
-      this.beams.add(m);
-    }
+    const wash = new THREE.PlaneGeometry(4.2, 11).rotateX(-Math.PI / 2).translate(0, 0.08, a.headZ + 6.2);
+    const washMesh = new THREE.Mesh(wash, CAR_MAT.beam);
+    washMesh.renderOrder = 5;
+    this.beams.add(washMesh);
     this.beams.visible = false;
     this.model.add(this.beams);
     this.anchors = a;

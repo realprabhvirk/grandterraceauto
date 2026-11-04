@@ -27,6 +27,8 @@ export function createChaseCamera(camera, physics) {
     const hit = world.castRay(new RAPIER.Ray(outTarget, dir), dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC));
     if (hit) d = Math.max(1.4, hit.timeOfImpact - 0.3);
     outPos.copy(outTarget).addScaledVector(dir, d);
+    // Pulled in by a wall behind the car: rise up so we look over the roof, not into it.
+    if (d < dist) outPos.y += (dist - d) * 0.45;
     return outPos;
   }
 
@@ -34,9 +36,18 @@ export function createChaseCamera(camera, physics) {
     /** Snap behind the car (call when the player gets in). */
     reset(car) {
       smoothYaw = car.body.yaw();
-      state.yawOff = 0;
       state.pitch = 0.2;
       state.inited = true;
+      // Parked nose-out against a garage? Start from the first angle with a clear view
+      // (behind, then swinging round the sides, then from the front).
+      state.yawOff = 0;
+      const p = car.position, from = new THREE.Vector3(p.x, p.y + car.cfg.roof * 0.75, p.z);
+      for (const off of [0, 0.6, -0.6, 1.1, -1.1, 1.7, -1.7, Math.PI]) {
+        const yaw = smoothYaw + off;
+        dir.set(-Math.sin(yaw) * Math.cos(0.2), Math.sin(0.2), -Math.cos(yaw) * Math.cos(0.2));
+        const hit = world.castRay(new RAPIER.Ray(from, dir), state.dist + 1, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC));
+        if (!hit) { state.yawOff = off; break; }
+      }
     },
     pose,
     update(dt, car, input, apply = true) {

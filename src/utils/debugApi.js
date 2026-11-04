@@ -37,6 +37,27 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       const res = await runAutopilot({ car, input: controls.input, terrain: world.terrain, points: route.points, obstacles, ...opts, speed: route.speed || opts.speed || 13 });
       return { route: route.name, ...res };
     },
+    /** Autopilot the driven car out of 62's driveway and along Grand Terrace (no teleport). */
+    async driveOut(waypoints = 40, opts = {}) {
+      const car = controls.car;
+      if (!car) throw new Error('not driving');
+      const hero = world.layout.hero, S = world.network.main.samples;
+      const c = Math.cos(hero.rot), s = Math.sin(hero.rot);
+      const mouth = { x: hero.x + 7.05 * c + 17.5 * s, z: hero.z - 7.05 * s + 17.5 * c };
+      const pts = [mouth];
+      for (let k = 0; k < waypoints; k++) {
+        const p = S[Math.min(S.length - 1, hero.site.i + 10 + k * 6)];
+        pts.push({ x: p.x + p.nx * 1.8, z: p.z + p.nz * 1.8 });
+      }
+      const obstacles = vehicles.cars.filter((o) => o !== car);
+      return runAutopilot({ car, input: controls.input, terrain: world.terrain, points: pts, obstacles, speed: 13, timeout: 90, ...opts });
+    },
+    /** Lot-local position of the walker relative to 62 (x across, z toward the street). */
+    heroLocal() {
+      const p = controls.player.position, lot = world.layout.hero;
+      const dx = p.x - lot.x, dz = p.z - lot.z, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+      return { x: +(dx * c - dz * s).toFixed(2), z: +(dx * s + dz * c).toFixed(2) };
+    },
     state() {
       const p = controls.player.position, c = controls.car;
       return {

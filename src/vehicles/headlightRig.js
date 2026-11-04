@@ -14,7 +14,7 @@ export function createHeadlightRig(scene) {
     spot,
     /** car = car to light (or null), night = 0..1 (beams are brighter at night). */
     update(dt, car, night) {
-      const want = car && car.lights ? 55 + 60 * night : 0;
+      const want = car && car.lights ? 80 + 260 * night : 0;
       level += (want - level) * Math.min(1, dt * 8);
       spot.intensity = level;
       if (!car) return;
