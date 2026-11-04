@@ -40,10 +40,22 @@ export function buildDoors(o) {
   const coil = new THREE.Mesh(box(g.w + 0.1, 0.32, 0.36, g.x, g.h + 0.18, g.z - 0.2, C.frame), MAT.solid);
   group.add(roller, coil);
 
-  const state = { front: 0, frontTarget: 0, garage: 0, garageTarget: 0 };
+  // --- Internal door: garage <-> hall (in the x = 3.9 partition), swings into the hall ---
+  const n = o.inner || { x: 3.9, z0: 1.7, z1: 2.6, h: 2.1, y: 0.15 };
+  const innerPivot = new THREE.Group();
+  innerPivot.position.set(n.x, n.y, n.z0);
+  const innerPanel = new THREE.Mesh(merge([
+    boxB(0.045, n.h - 0.02, n.z1 - n.z0 - 0.04, 0, 0, (n.z1 - n.z0) / 2, C.innerDoor || '#ece6d8', { jitter: 0.02 }),
+    box(0.1, 0.03, 0.12, 0, 1.0 - n.y + 0.05, n.z1 - n.z0 - 0.15, '#b9b6ae'),
+  ]), MAT.solid);
+  innerPivot.add(innerPanel);
+  group.add(innerPivot);
+
+  const state = { front: 0, frontTarget: 0, garage: 0, garageTarget: 0, inner: 0, innerTarget: 0 };
   const toggles = [
     { id: 'frontDoor', box: { x0: d.x - d.w / 2, x1: d.x + d.w / 2, z0: d.z - 0.05, z1: d.z + 0.12, y0: 0.15, y1: d.h } },
     { id: 'garageDoor', box: { x0: g.x - g.w / 2, x1: g.x + g.w / 2, z0: g.z - 0.05, z1: g.z + 0.12, y0: 0.1, y1: g.h } },
+    { id: 'innerDoor', box: { x0: n.x - 0.06, x1: n.x + 0.06, z0: n.z0, z1: n.z1, y0: n.y, y1: n.y + n.h } },
   ];
   let handles = null;
   return {
@@ -52,9 +64,13 @@ export function buildDoors(o) {
     attach(h) { handles = h; },
     toggleFront() { state.frontTarget = state.frontTarget > 0.5 ? 0 : 1; },
     toggleGarage() { state.garageTarget = state.garageTarget > 0.5 ? 0 : 1; },
+    toggleInner() { state.innerTarget = state.innerTarget > 0.5 ? 0 : 1; },
+    inner: n,
     update(dt) {
       state.front += Math.sign(state.frontTarget - state.front) * Math.min(Math.abs(state.frontTarget - state.front), dt / 0.6);
       state.garage += Math.sign(state.garageTarget - state.garage) * Math.min(Math.abs(state.garageTarget - state.garage), dt / 2.2);
+      state.inner += Math.sign(state.innerTarget - state.inner) * Math.min(Math.abs(state.innerTarget - state.inner), dt / 0.6);
+      innerPivot.rotation.y = -1.5 * state.inner * state.inner * (3 - 2 * state.inner); // into the hall
       const ef = state.front * state.front * (3 - 2 * state.front);
       pivot.rotation.y = ef * 1.65; // swings inward
       const eg = state.garage;
@@ -64,6 +80,7 @@ export function buildDoors(o) {
       if (handles) {
         handles.frontDoor?.setEnabled(state.front < 0.3);
         handles.garageDoor?.setEnabled(state.garage < 0.7);
+        handles.innerDoor?.setEnabled(state.inner < 0.3);
       }
     },
   };

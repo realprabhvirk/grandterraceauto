@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-04 23:40)**
-- Done: P4 step 0 baseline green (walk 7/7, phase2 16/16, drive 4/4)
-- Broken: garage: E from car / exit spot (step 1)
-- Next: Step 1 bugs
+**STATUS (2026-11-04 23:44)**
+- Done: P4 step 1 bugs fixed (garage exit, internal door, E from car); phase4test garage 9/9
+- Broken: none known
+- Next: Step 2 cameras (C cycles)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -158,3 +158,4 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 # PHASE 4 (cheap + low-RAM run: no screenshots, numeric asserts)
 
 - 23:40 P4 step 0: dev server restarted, tests switched to 960x540 with screenshots opt-in (SHOTS=1); baseline suite green.
+- 23:44 P4 step 1 done: exit spot search rewritten (cause: capsule test at terrain height overlapped the garage floor slab, so every spot inside was rejected); internal garage->hall door with E; in-car garage prompt worked once the stale server was gone (range 5.5). scripts/phase4test.mjs garage: 9/9 (reverse in, exit inside garage, door, walk to hall, drive out, driveway + street exits).

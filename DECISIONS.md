@@ -67,3 +67,8 @@ One line per judgment call made during the autonomous build.
 - Traffic: kinematic lane-following (no Rapier vehicle per AI car); kinematic colliders so the player's car hits them but they never get knocked off their lane (arcade).
 - Traffic: AI cars ignore pedestrians (pedestrians dodge instead), stop for the walking player in their lane, and treat stationary non-driven cars as parked (swing out round them).
 - Left-hand traffic fix: road sample normals are the RIGHT of travel; lanes/parking now use -n for keep-left. Kerbside parked cars moved to the correct side as a result.
+
+## Phase 4
+
+- Exit spots: candidates must pass a ground raycast (real floor incl. slabs), a capsule overlap test and a line-of-sight ray from the car centre (keeps you in the same room); seat + 1 s ghosted car as last resort.
+- Garage<->hall: hinged internal door added to the existing x=3.9 partition opening (E, same door module).

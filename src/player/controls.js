@@ -34,7 +34,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   let flyReturn = 'walk';
   let car = null;                  // car being entered / driven / left
   let trans = null;                // transition state
-  let message = null, messageT = 0;
+  let message = null, messageT = 0, lastExit = null;
   if (mode === 'fly') fly.syncFromCamera();
   panel.setPage(mode === 'fly' ? 'fly' : 'walk');
 
@@ -82,6 +82,13 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   function beginExit() {
     if (Math.abs(car.body.state.speed) > MAX_EXIT_SPEED) { flash('Slow down to get out'); return; }
     const spot = findExitSpot(physics, car, world.terrain, { radius: RADIUS, half: HALF });
+    lastExit = { local: spot.local.map((v) => +v.toFixed(2)), ghost: !!spot.ghostCar };
+    if (spot.ghostCar) {
+      // Wedged in: stand at the seat and ghost the car's colliders for 1 s so we can walk out.
+      const cols = car.body.colliders;
+      cols.forEach((c) => c.setEnabled(false));
+      setTimeout(() => cols.forEach((c) => c.setEnabled(true)), 1000);
+    }
     captureCamera();
     // Move the (still disabled) walker body to the landing spot now, while the character mesh
     // is still parented to the car, so the walk camera blend aims at the right place.
@@ -118,6 +125,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   return {
     get mode() { return mode; },
     get car() { return car; },
+    get lastExit() { return lastExit; },
     player, input, chase, panel, hud, interact, settings,
     hint: panel.el,
     syncFly() { fly.syncFromCamera(); },

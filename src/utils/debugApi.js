@@ -69,18 +69,43 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       controls.syncFly();
     },
     doors: () => world.hero.doors.state,
+    /** Walk (virtual W, steering the camera yaw) to a 62 lot-local point. Resolves with the final local pos. */
+    async walkTo(lx, lz, timeout = 8000) {
+      const lot = world.layout.hero, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+      const tx = lot.x + lx * c + lz * s, tz = lot.z - lx * s + lz * c;
+      const st = controls.player.state, I = controls.input, t0 = performance.now();
+      I.setVirtual('KeyW', true);
+      while (performance.now() - t0 < timeout) {
+        const p = controls.player.position;
+        if (Math.hypot(tx - p.x, tz - p.z) < 0.45) break;
+        st.yaw = Math.atan2(tx - p.x, tz - p.z);
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      I.setVirtual('KeyW', false);
+      await new Promise((r) => setTimeout(r, 250));
+      return this.heroLocal();
+    },
+    /** Press a key for one frame (virtual). */
+    async tap(code) { controls.input.setVirtual(code, true); await new Promise((r) => setTimeout(r, 80)); controls.input.setVirtual(code, false); await new Promise((r) => setTimeout(r, 60)); },
+    /** Hero car position in 62 lot-local space. */
+    heroCarLocal() {
+      const car = vehicles.cars.find((v) => v.hero), p = car.position, lot = world.layout.hero;
+      const dx = p.x - lot.x, dz = p.z - lot.z, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+      return { x: +(dx * c - dz * s).toFixed(2), y: +(p.y - lot.h).toFixed(2), z: +(dx * s + dz * c).toFixed(2) };
+    },
     /** Lot-local position of the walker relative to 62 (x across, z toward the street). */
     heroLocal() {
       const p = controls.player.position, lot = world.layout.hero;
       const dx = p.x - lot.x, dz = p.z - lot.z, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
-      return { x: +(dx * c - dz * s).toFixed(2), z: +(dx * s + dz * c).toFixed(2) };
+      return { x: +(dx * c - dz * s).toFixed(2), y: +(p.y - lot.h).toFixed(2), z: +(dx * s + dz * c).toFixed(2) };
     },
     state() {
       const p = controls.player.position, c = controls.car;
       return {
         mode: controls.mode, player: [p.x, p.y, p.z].map((v) => +v.toFixed(2)), action: controls.player.state.action,
         car: c ? { type: c.type, speed: +(c.body.state.speed * 3.6).toFixed(1), lights: c.lights, pos: [c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(2)) } : null,
-        prompt: controls.interact.current ? controls.interact.current.label : null,
+        prompt: controls.interact.current ? (typeof controls.interact.current.label === 'function' ? controls.interact.current.label() : controls.interact.current.label) : null,
+        lastExit: controls.lastExit || null,
       };
     },
   };

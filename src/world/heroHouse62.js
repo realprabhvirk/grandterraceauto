@@ -499,7 +499,8 @@ export function buildHeroHouse(lot, terrain) {
   // Interaction targets (E): front door, garage door (usable from inside a car too).
   const targets = [
     { id: 'frontDoor', key: 'E', range: 2.8, position: () => ({ ...toWorld(dr.x, ez), y: lot.h }), label: () => (doors.state.frontTarget > 0.5 ? 'Press E to close' : 'Press E to open'), action: () => doors.toggleFront() },
-    { id: 'garageDoor', key: 'E', range: 4.2, inCar: true, position: () => ({ ...toWorld(gd.x, gz), y: lot.h }), label: () => (doors.state.garageTarget > 0.5 ? 'Press E to close the garage' : 'Press E to open the garage'), action: () => doors.toggleGarage() },
+    { id: 'innerDoor', key: 'E', range: 1.9, position: () => ({ ...toWorld(doors.inner.x, (doors.inner.z0 + doors.inner.z1) / 2), y: lot.h + 0.15 }), label: () => (doors.state.innerTarget > 0.5 ? 'Press E to close' : 'Press E to open'), action: () => doors.toggleInner() },
+    { id: 'garageDoor', key: 'E', range: 5.5, inCar: true, position: () => ({ ...toWorld(gd.x, gz), y: lot.h }), label: () => (doors.state.garageTarget > 0.5 ? 'Press E to close the garage' : 'Press E to open the garage'), action: () => doors.toggleGarage() },
   ];
   return { group, colliders, toggles, numbersTexture: tex, update, targets, doors, attach: (h) => doors.attach(h), localOf };
 }
