@@ -8,7 +8,8 @@ import { buildDriveways } from './driveways.js';
 import { buildSigns } from './signs.js';
 import { buildHouses } from './houses.js';
 import { buildTrees } from './trees.js';
-import { buildHeroHouse } from './heroHouse62.js';
+import { buildHeroHouse, HERO_LOT, HERO_PATH_X } from './heroHouse62.js';
+import { lotToWorld } from './layout.js';
 
 export function buildWorld(scene) {
   const t0 = performance.now();
@@ -38,8 +39,7 @@ export function buildWorld(scene) {
 /** Footpath spawn point outside 62, facing the house. */
 export function heroSpawn(world) {
   const { hero } = world.layout;
-  const s = hero.sample;
-  const lat = 6.05 * hero.side; // footpath centre
-  const x = s.x + s.nx * lat, z = s.z + s.nz * lat;
+  // Footpath centre is 6.05 m from the road centreline; in lot space that's setback - 6.05.
+  const { x, z } = lotToWorld(hero, HERO_PATH_X, HERO_LOT.setback - 6.05);
   return { position: new THREE.Vector3(x, world.terrain.getHeight(x, z), z), yaw: Math.atan2(-hero.fx, -hero.fz) };
 }

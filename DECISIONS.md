@@ -23,3 +23,8 @@ One line per judgment call made during the autonomous build.
 - Hero house: 4 draw calls (merged solid, glass, lamps, numerals texture). Hedge/letterbox bases sunk 0.4 m because the front boundary sits right at the road corridor edge.
 - Terrain: lot pads now override the road blend (except inside the road corridor) - previously raised lots would have floated at their front edge.
 - Exterior lights are emissive geometry only (no extra light sources) to respect the single-shadow-light / iGPU budget.
+- Player: Rapier kinematic capsule (1.74 m) + KinematicCharacterController (50 deg max slope, 0.45 m autostep, snap-to-ground); fixed 60 Hz physics.
+- Player: spawn is on the footpath centreline in line with 62's front path (not the house centreline) so W walks straight up the path.
+- Player: walk 4.2 m/s, Shift run 7.8 m/s, Space jump; orbit camera (mouse/arrow keys, wheel zoom) that ray-casts and pulls in when a wall/hedge blocks it.
+- Debug: C toggles free-fly; in fly mode keys 1-5 jump to presets (hero-front, hero-34, street, overview, top).
+- Physics: invisible boundary walls 40 m inside the map edge keep the player in the playable area.

@@ -67,6 +67,8 @@ export const HERO_LOT = {
   garageFrontZ: DIM.ground.z1,
   driveW: 5.4,
 };
+/** Lot-local X of the front path (the player spawns on the footpath in line with it). */
+export const HERO_PATH_X = DIM.path.x;
 const BOUNDARY_Z = HERO_LOT.setback - 7.3; // front property line in local Z (road boundary = 7.3 m)
 
 // ----------------------------------------------------------------------------------
@@ -389,6 +391,10 @@ export function buildHeroHouse(lot, terrain) {
     colliders.push({ x: w.x, y: lot.h + (y0 + y1) / 2, z: w.z, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, hz: (z1 - z0) / 2, rot: lot.rot });
   };
   addBox(G.x0, G.x1, G.z0, G.z1, 0, roofY + 2);
+  // Walkable slabs so feet sit on them (character controller auto-steps these).
+  addBox(P.x0 - 0.2, P.x1 + 0.2, G.z1, pz1 + 0.2, 0, 0.18);
+  addBox(DIM.path.x - 1.0, DIM.path.x + 1.0, pz1 + 0.18, pz1 + 0.62, 0, 0.09);
+  addBox(-0.25, 6.25, G.z0 - 3.2, G.z0, 0, 0.12);
   for (const px of [P.x0 + 0.2, P.x1 - 0.2]) addBox(px - 0.17, px + 0.17, pz1 - 0.39, pz1 - 0.05, 0, P.h);
   addBox(DIM.letterboxX - 0.3, DIM.letterboxX + 0.3, bz - 0.28, bz + 0.28, 0, 1.25);
   for (const [x0, x1] of [[F.x0 + 0.3, dwX0 - 0.4], [DIM.letterboxX + 0.5, DIM.path.x - DIM.path.w / 2 - 0.15], [DIM.path.x + DIM.path.w / 2 + 0.15, F.x1 - 0.3]]) {
