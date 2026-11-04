@@ -29,7 +29,7 @@ export function buildSpawns(world) {
   for (const pad of network.pads) {
     const back = Math.atan2(-pad.inZ, -pad.inX); // direction toward the incoming road
     for (const off of [Math.PI, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 0.55, Math.PI * 1.45]) {
-      const a = back + off, r = pad.r - 1.4;
+      const a = back + off, r = pad.r - 1.05; // tight to the kerb ring so the loop stays clear
       const x = pad.x + Math.cos(a) * r, z = pad.z + Math.sin(a) * r;
       if (!clearOfCuts(x, z, 3.2) || !clearOfCars(x, z)) continue;
       // Tangent to the ring (counter-clockwise travel keeps the kerb on the left).

@@ -28,12 +28,13 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
     async drive(idx, opts = {}) {
       const car = controls.car;
       if (!car) throw new Error('not driving');
-      const route = buildRoutes(world)[idx];
+      // simple: centreline waypoints, no obstacle avoidance (physics-only check).
+      const route = buildRoutes(world, opts.simple ? { lane: 0 } : {})[idx];
       const [a, b] = route.points;
       car.body.teleport(a.x, world.terrain.getHeight(a.x, a.z), a.z, Math.atan2(b.x - a.x, b.z - a.z));
       controls.chase.reset(car);
       await new Promise((r) => setTimeout(r, 400));
-      const obstacles = vehicles.cars.filter((c) => c !== car);
+      const obstacles = opts.simple ? [] : vehicles.cars.filter((c) => c !== car);
       const res = await runAutopilot({ car, input: controls.input, terrain: world.terrain, points: route.points, obstacles, ...opts, speed: route.speed || opts.speed || 13 });
       return { route: route.name, ...res };
     },

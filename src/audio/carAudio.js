@@ -5,7 +5,8 @@
 export function createCarAudio() {
   let ctx = null, master = null;
   let engine = null, horn = null, screech = null;
-  let muted = false;
+  let muted = false, volume = 0.8;
+  const level = () => (muted ? 0 : 0.55 * volume);
 
   function noiseBuffer(sec) {
     const b = ctx.createBuffer(1, ctx.sampleRate * sec, ctx.sampleRate);
@@ -21,7 +22,7 @@ export function createCarAudio() {
     if (!AC) return;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.55;
+    master.gain.value = level();
     master.connect(ctx.destination);
 
     // Engine: detuned saw + square an octave down, through a lowpass, into a gain.
@@ -63,7 +64,14 @@ export function createCarAudio() {
 
   return {
     get ready() { return !!ctx; },
-    toggleMute() { muted = !muted; if (master) set(master.gain, muted ? 0 : 0.55, 0.05); return muted; },
+    get muted() { return muted; },
+    get volume() { return volume; },
+    /** Shared output node so other sound modules (ambience) follow the same volume/mute. */
+    get master() { return master; },
+    get ctx() { return ctx; },
+    toggleMute() { muted = !muted; if (master) set(master.gain, level(), 0.05); return muted; },
+    setMuted(m) { muted = !!m; if (master) set(master.gain, level(), 0.05); },
+    setVolume(v) { volume = Math.max(0, Math.min(1, v)); if (master) set(master.gain, level(), 0.05); },
     /** Per frame while a car is driven. speed m/s, throttle 0..1, top m/s. */
     engine(on, speed, throttle, top) {
       if (!ctx) return;
@@ -76,12 +84,12 @@ export function createCarAudio() {
       set(engine.o1.frequency, f, 0.04);
       set(engine.o2.frequency, f * 0.5 * 1.006, 0.04);
       set(engine.lp.frequency, 380 + rpm * 900 + throttle * 600, 0.06);
-      set(engine.g.gain, on ? 0.11 + throttle * 0.1 + rpm * 0.05 : 0, on ? 0.08 : 0.25);
+      set(engine.g.gain, on ? (0.11 + throttle * 0.1 + rpm * 0.05) * 0.7 : 0, on ? 0.08 : 0.25); // -30% (untested by ear)
     },
     horn(on) { if (ctx) set(horn.g.gain, on ? 0.16 : 0, 0.015); },
     screech(amount) {
       if (!ctx) return;
-      set(screech.g.gain, Math.max(0, amount) * 0.12, 0.06);
+      set(screech.g.gain, Math.max(0, amount) * 0.084, 0.06);
       set(screech.f.frequency, 1800 + amount * 900, 0.1);
     },
     /** One-shot low thud, strength 0..1. */

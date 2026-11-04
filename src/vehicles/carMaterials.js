@@ -26,7 +26,7 @@ const lens = (color, emissive, intensity) => new THREE.MeshLambertMaterial({
 });
 
 export const CAR_MAT = {
-  glass: new THREE.MeshLambertMaterial({ color: C.glass, transparent: true, opacity: 0.58, flatShading: true, depthWrite: false }),
+  glass: new THREE.MeshLambertMaterial({ color: C.glassLight, transparent: true, opacity: 0.3, flatShading: true, depthWrite: false }),
   headOff: lens(C.head, C.headGlow, 0.0),
   headOn: lens(C.head, C.headGlow, 2.4),
   tailOff: lens(C.tail, C.tailGlow, 0.0),

@@ -11,6 +11,7 @@ import { createInteractions } from './interact.js';
 import { createPrompt } from '../ui/prompt.js';
 import { createHud } from '../ui/hud.js';
 import { createControlsPanel } from '../ui/controlsPanel.js';
+import { createSettingsPanel } from '../ui/settingsPanel.js';
 import { createChaseCamera } from '../vehicles/chaseCamera.js';
 import { findExitSpot, carLocalToWorld } from '../vehicles/exitSpot.js';
 
@@ -26,6 +27,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   const interact = createInteractions(prompt);
   const hud = createHud();
   const panel = createControlsPanel();
+  const settings = createSettingsPanel(audio);
   const ch = player.character;
 
   let mode = startMode;            // 'walk' | 'drive' | 'fly' | 'enter' | 'exit'
@@ -116,7 +118,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   return {
     get mode() { return mode; },
     get car() { return car; },
-    player, input, chase, panel, hud, interact,
+    player, input, chase, panel, hud, interact, settings,
     hint: panel.el,
     syncFly() { fly.syncFromCamera(); },
 
@@ -140,7 +142,8 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
         if (car && (mode === 'drive' || mode === 'enter')) car.setLights(night);
       }
       if (input.pressed('Help') || (mode === 'walk' && input.pressed('KeyH'))) panel.toggle();
-      if (input.pressed('KeyM')) flash(audio.toggleMute() ? 'Sound off' : 'Sound on');
+      if (input.pressed('KeyM')) { flash(audio.toggleMute() ? 'Sound off' : 'Sound on'); settings.syncMute(); }
+      if (input.pressed('Escape')) settings.toggle();
 
       // ---- modes ----
       if (mode === 'walk') {

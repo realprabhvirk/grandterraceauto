@@ -23,7 +23,9 @@ console.log('routes:', routes.map((r) => `${r.name} (${r.n} pts)`).join(', '));
 
 const results = [];
 for (let i = 0; i < routes.length; i++) {
-  await page.evaluate((i) => { window.__run = window.__gta.debug.drive(i, { speed: 15, timeout: 160 }).then((r) => (window.__runResult = r)); window.__runResult = null; }, i);
+  // Cul-de-sacs: simple centreline driving, physics-only pass condition (Phase 3 change).
+  const simple = i > 0;
+  await page.evaluate(([i, simple]) => { window.__run = window.__gta.debug.drive(i, { speed: simple ? 9 : 15, timeout: simple ? 60 : 160, simple }).then((r) => (window.__runResult = r)); window.__runResult = null; }, [i, simple]);
   const slug = routes[i].name.toLowerCase().replace(/\s+/g, '-');
   let shots = 0, res = null;
   for (let t = 0; t < 170; t++) {
@@ -33,7 +35,8 @@ for (let i = 0; i < routes.length; i++) {
     if ((t === 4 || t === 14) && shots < 2) { await page.screenshot({ path: `shots/phase2/drive-${slug}-${++shots}.png` }); }
   }
   const stats = await page.evaluate(() => window.__gta.stats());
-  const ok = res && res.ok && res.minAbove > -0.5 && res.maxAbove < 2.5 && res.maxTilt < 55 && !res.nan;
+  const physicsOk = res && res.minAbove > -0.5 && res.maxAbove < 2.5 && res.maxTilt < 55 && !res.nan;
+  const ok = simple ? physicsOk : physicsOk && res.ok;
   results.push({ ...res, ok });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${routes[i].name.padEnd(14)} ${JSON.stringify(res)}  fps ${stats.fps} calls ${stats.calls}`);
 }

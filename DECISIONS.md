@@ -57,3 +57,8 @@ One line per judgment call made during the autonomous build.
 - Crouch keeps the standing capsule (camera and speed drop) - simpler and avoids getting stuck when standing up under things.
 - Seated driver is visible through semi-transparent car glass (hands on wheel, head follows the steering).
 - Drive test autopilot is debug-only (src/vehicles/autopilot.js) and uses the same virtual-key path as the keyboard, so the real driving code is what's tested.
+
+## Phase 3
+
+- Settings: Esc toggles the settings panel (the first Esc only releases pointer lock - browser rule); volume/mute persist in localStorage (per-viewer convenience only).
+- Drive test: cul-de-sac routes use centreline waypoints with no avoidance and pass on physics (height band, tilt, NaN); Grand Terrace keeps the lane + overtaking test.

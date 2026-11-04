@@ -119,6 +119,7 @@ export const PALETTE = {
     trim: '#2a2b2e',          // bumpers, grille, cladding
     chrome: '#c8ccc9',
     glass: '#2b3a46',
+    glassLight: '#5a6f7d',  // lighter tint so the driver reads from the chase camera
     tyre: '#232325',
     rim: '#b9bdbb',
     rimHero: '#d8d4c8',

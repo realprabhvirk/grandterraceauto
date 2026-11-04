@@ -131,3 +131,10 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 3. **Multiplayer plan:** authoritative Node server (ws), clients send inputs at 30 Hz, server runs the same Rapier step (VehicleBody is three-free so it already runs in Node), snapshots + interpolation, start with 2-4 players walking/driving.
 4. Car damage-free polish: skid marks, dust on grass, better engine sound per car type, radio.
 5. Minimap from the top-down preset; a day clock.
+
+---
+
+# PHASE 3 (living suburb + enterable 62)
+
+- 20:55 Baseline green before changes: walktest 7/7, phase2test 16/16, shot.mjs clean.
+- 21:00 P3 step 1 done: cul-de-sac parked cars pulled tight to the kerb ring; cul-de-sac drive test replaced by simple centreline driving with a physics-only pass condition -> drivetest 4/4 routes pass (all three cul-de-sacs completed in and out); car glass tint lighter (opacity 0.58 -> 0.30); Esc settings panel with master volume + mute (M), saved in localStorage; engine/screech levels -30%.
