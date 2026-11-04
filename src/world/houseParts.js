@@ -49,7 +49,7 @@ export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0
   }
   out.roof.push(trisGeometry(tris, color, 0.05));
   // Soffit (underside) and fascia band around the eaves.
-  if (soffit) out.detail.push(box(w * 2, 0.04, d * 2, cx, y - 0.02, cz, soffit, { jitter: 0.02 }));
+  if (soffit) out.detail.push(soffitPlane(w * 2, d * 2, cx, y - 0.01, cz, soffit));
   if (fascia) {
     out.detail.push(box(w * 2 + 0.04, fasciaH, 0.05, cx, y - fasciaH / 2 + 0.03, cz + d, fascia));
     out.detail.push(box(w * 2 + 0.04, fasciaH, 0.05, cx, y - fasciaH / 2 + 0.03, cz - d, fascia));
@@ -75,7 +75,7 @@ export function gableRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 22, overhang =
     [v(gw, y, gd), v(gw, y, -gd), v(gw, gTop, 0)],
     [v(-gw, y, -gd), v(-gw, y, gd), v(-gw, gTop, 0)],
   ], '#ffffff', 0.03));
-  if (soffit) out.detail.push(box(w * 2, 0.04, d * 2, cx, y - 0.02, cz, soffit, { jitter: 0.02 }));
+  if (soffit) out.detail.push(soffitPlane(w * 2, d * 2, cx, y - 0.01, cz, soffit));
   if (fascia) {
     out.detail.push(box(w * 2 + 0.04, 0.2, 0.05, cx, y - 0.07, cz + d, fascia));
     out.detail.push(box(w * 2 + 0.04, 0.2, 0.05, cx, y - 0.07, cz - d, fascia));
@@ -89,6 +89,13 @@ export function gableRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 22, overhang =
     }
   }
   return top;
+}
+
+/** Downward-facing soffit plane under the eaves. */
+function soffitPlane(w, d, x, y, z, color) {
+  const g = new THREE.PlaneGeometry(w, d);
+  g.rotateX(Math.PI / 2);
+  return painted(g, color, x, y, z, 0.01);
 }
 
 /** Panelled garage door (recessed), centre x at the wall plane z. */

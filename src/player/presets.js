@@ -34,7 +34,11 @@ export function cameraPreset(name, world, spawn) {
       p.y = T.getHeight(p.x, p.z) + 3.4;
       return { position: p, target: H.clone().add(new THREE.Vector3(0, 2.6, 0)).addScaledVector(t, -1.5) };
     }
-    case 'hero-front':
+    case 'hero-front': {
+      // Standing on the opposite verge, looking straight at 62.
+      const p = at({ x: s.x - s.nx * hero.side * 4.6, z: s.z - s.nz * hero.side * 4.6 }, 1.7);
+      return { position: p, target: H.clone().add(new THREE.Vector3(0, 2.7, 0)) };
+    }
     case 'player':
     default: {
       const p = spawn.position.clone().addScaledVector(f, 2.5);

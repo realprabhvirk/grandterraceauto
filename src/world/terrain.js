@@ -76,7 +76,16 @@ export class Terrain {
     // Pads: treat as a road whose "centreline" is a disc of radius r - halfW.
     for (const p of pads) stamp(p.x, p.z, p.h, Math.max(0, p.r - 3.6), p.r);
 
-    // --- Lot pads (house footprints stay perfectly flat) ---------------------------
+    // --- Roads: exact road height inside the corridor, eased outside ---------------
+    for (let k = 0; k < vn * vn; k++) {
+      const d = roadDist[k];
+      if (d > R) continue;
+      const w = 1 - smoothstep(CORRIDOR.flat, R, d);
+      H[k] = H[k] * (1 - w) + roadH[k] * w;
+    }
+
+    // --- Lot pads win over the road blend (house footprints stay perfectly flat),
+    //     but never inside the road corridor itself. -------------------------------
     for (const lot of lots) {
       const c = Math.cos(lot.rot), s = Math.sin(lot.rot);
       const fall = lot.fall ?? 6;
@@ -92,23 +101,15 @@ export class Terrain {
           const lx = dx * c - dz * s, lz = dx * s + dz * c;
           const ox = Math.max(0, Math.abs(lx) - lot.hw);
           const oz = Math.max(0, Math.abs(lz) - lot.hd);
-          const w = 1 - smoothstep(0, fall, Math.hypot(ox, oz));
           const k = iz * vn + ix;
+          const core = smoothstep(CORRIDOR.flat, CORRIDOR.flat + 1.5, roadDist[k]);
+          const w = (1 - smoothstep(0, fall, Math.hypot(ox, oz))) * core;
           if (w > lotMask[k]) {
             lotMask[k] = w;
             H[k] = H[k] * (1 - w) + lot.h * w; // lots never overlap meaningfully
           }
         }
       }
-    }
-
-    // --- Roads win: exact road height inside the corridor, eased outside ----------
-    for (let k = 0; k < vn * vn; k++) {
-      const d = roadDist[k];
-      if (d > R) continue;
-      const w = 1 - smoothstep(CORRIDOR.flat, R, d);
-      H[k] = H[k] * (1 - w) + roadH[k] * w;
-      if (d < CORRIDOR.flat) lotMask[k] = Math.min(lotMask[k], 0.5);
     }
 
     this.mesh = this._buildMesh();

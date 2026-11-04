@@ -18,3 +18,8 @@ One line per judgment call made during the autonomous build.
 - Lighting: three.js physical light units divide Lambert by pi, so sun=3.7 / hemi=1.95 to land ~1.0x on the ground; NeutralToneMapping (keeps palette hues; ACES muddied them).
 - Look: asphalt is a stylised mid grey (#716e73) - realistic dark asphalt fell into the tone-mapper toe and read as black-purple.
 - Time of day: default is warm late afternoon; T toggles a smooth blend to dusk, which turns on window glow and wall lamps.
+- Hero house: no chimney (rare on modern QLD homes and the brief said only if the real one has one); added QLD-typical solar panels, Colorbond side fences, wheelie bins and a Hills hoist instead.
+- Hero house: modern massing = two-storey hip-roof block + flat-roofed double-garage wing + front ledge; garage wing render is a shade darker for articulation.
+- Hero house: 4 draw calls (merged solid, glass, lamps, numerals texture). Hedge/letterbox bases sunk 0.4 m because the front boundary sits right at the road corridor edge.
+- Terrain: lot pads now override the road blend (except inside the road corridor) - previously raised lots would have floated at their front edge.
+- Exterior lights are emissive geometry only (no extra light sources) to respect the single-shadow-light / iGPU budget.
