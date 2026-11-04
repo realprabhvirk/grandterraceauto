@@ -10,6 +10,8 @@ import { buildHouses } from './houses.js';
 import { buildTrees } from './trees.js';
 import { buildHeroHouse, HERO_LOT, HERO_PATH_X } from './heroHouse62.js';
 import { lotToWorld } from './layout.js';
+import { makeRng } from '../utils/rng.js';
+import { fbm } from '../utils/noise.js';
 
 export function buildWorld(scene) {
   const t0 = performance.now();
@@ -24,16 +26,35 @@ export function buildWorld(scene) {
   const houses = buildHouses(layout.regular);
   scene.add(houses.group);
 
-  const trees = buildTrees(layout.treeSpots, terrain);
+  const trees = buildTrees([...layout.treeSpots, ...bushSpots(network, layout)], terrain);
   scene.add(trees.group);
 
-  const hero = buildHeroHouse(layout.hero, terrain, layout);
+  const hero = buildHeroHouse(layout.hero, terrain);
   if (hero) scene.add(hero.group);
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : [])];
   const trunks = trees.trunks;
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
   return { network, layout, terrain, colliders, trunks, hero };
+}
+
+/**
+ * Scattered bushland groves on the hills around the suburb (same instanced meshes as the
+ * yard trees, so they cost no extra draw calls). Kept clear of roads and lots.
+ */
+function bushSpots(network, layout) {
+  const rng = makeRng(7788);
+  const out = [];
+  for (let tries = 0; tries < 4000 && out.length < 110; tries++) {
+    const x = rng.range(-245, 245), z = rng.range(-245, 245);
+    if (fbm(x / 70 + 9, z / 70 - 3, 3, 21) < 0.08) continue; // groves, not a uniform carpet
+    if (network.index.nearest(x, z, 15)) continue;
+    if (network.pads.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 16)) continue;
+    if (layout.lots.some((l) => Math.hypot(x - l.x, z - l.z) < (l.kind === 'hero' ? 34 : 17))) continue;
+    if (out.some((o) => Math.hypot(o.x - x, o.z - z) < 5)) continue;
+    out.push({ x, z, bush: true });
+  }
+  return out;
 }
 
 /** Footpath spawn point outside 62, facing the house. */

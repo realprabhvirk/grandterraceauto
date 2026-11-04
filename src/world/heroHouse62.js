@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
-import { box, boxB, cylinder, icosa, painted, merge } from '../utils/geom.js';
+import { box, boxB, cylinder, icosa, painted, trisGeometry, merge } from '../utils/geom.js';
 import { addWindow, addDoor, addGarageDoor, hipRoof } from './houseParts.js';
 
 // ----------------------------------------------------------------------------------
@@ -150,9 +150,13 @@ function frangipani(out, x, z) {
     g.rotateZ(-dx * 0.55);
     g.rotateX(dz * 0.55);
     out.push(painted(g, PALETTE.tree.trunkPale, x, 1.3, z, 0.05));
-    out.push(icosa(1.05, 0, x + dx * 1.3, 2.7, z + dz * 1.3, PALETTE.hero.frangipaniLeaf, { sy: 0.55, jitter: 0.1 }));
-    for (let k = 0; k < 4; k++) {
-      out.push(icosa(0.13, 0, x + dx * 1.3 + Math.cos(k * 1.7) * 0.7, 3.1, z + dz * 1.3 + Math.sin(k * 1.7) * 0.7, PALETTE.hero.frangipaniFlower, { jitter: 0.04 }));
+    const bx = x + dx * 1.3, bz = z + dz * 1.3;
+    out.push(icosa(0.8, 1, bx, 2.75, bz, PALETTE.hero.frangipaniLeaf, { sy: 0.62, jitter: 0.12 }));
+    out.push(icosa(0.6, 1, bx + 0.45, 2.6, bz - 0.3, PALETTE.hero.frangipaniLeaf, { sy: 0.6, jitter: 0.12 }));
+    out.push(icosa(0.55, 1, bx - 0.4, 2.65, bz + 0.35, PALETTE.hero.frangipaniLeaf, { sy: 0.6, jitter: 0.12 }));
+    for (let k = 0; k < 7; k++) {
+      const a = k * 0.9 + dx * 3;
+      out.push(icosa(0.11, 0, bx + Math.cos(a) * 0.62, 3.08 + (k % 2) * 0.06, bz + Math.sin(a) * 0.62, PALETTE.hero.frangipaniFlower, { jitter: 0.04 }));
     }
   }
 }
@@ -359,6 +363,21 @@ export function buildHeroHouse(lot, terrain) {
   wheelieBin(solid, G.x0 - 0.65, 2.6, PALETTE.hero.binLidRed);
   wheelieBin(solid, G.x0 - 0.65, 1.7, PALETTE.hero.binLidYellow);
 
+  // ---- Mowing stripes on the front lawn + saw-cut joints in the driveway (draped) ----
+  {
+    const lawnA = PALETTE.hero.lawn, lawnB = PALETTE.hero.lawnStripe;
+    const z0 = pz1 + 0.6, z1 = BOUNDARY_Z - DIM.hedge.d - 0.2;
+    const spans = [[DIM.sideFence.x0 + 0.3, dwX0 - 0.15], [dwX1 + 0.15, DIM.path.x - DIM.path.w / 2 - 0.05], [DIM.path.x + DIM.path.w / 2 + 0.05, DIM.sideFence.x1 - 0.3]];
+    let k = 0;
+    for (const [a, b] of spans) {
+      for (let x = a; x < b - 0.05; x += 1.3, k++) {
+        draped(solid, terrain, lot, x, Math.min(b, x + 1.3), z0, z1, k % 2 ? lawnA : lawnB, 0.025);
+      }
+    }
+    for (const jz of [7.6, 10.4, 13.2, 15.8]) draped(solid, terrain, lot, dwX0 + 0.1, dwX1 - 0.1, jz, jz + 0.05, PALETTE.hero.joint, 0.1, 6);
+    draped(solid, terrain, lot, HERO_LOT.garageX - 0.025, HERO_LOT.garageX + 0.025, G.z1 + 0.3, HERO_LOT.setback - 3.9, PALETTE.hero.joint, 0.1, 1);
+  }
+
   // ---- Front path: pavers from the porch step to the footpath, draped on terrain --
   const c = Math.cos(lot.rot), s = Math.sin(lot.rot);
   const toWorld = (lx, lz) => ({ x: lot.x + lx * c + lz * s, z: lot.z - lx * s + lz * c });
@@ -406,6 +425,24 @@ export function buildHeroHouse(lot, terrain) {
   addBox(G.x0 - 1.0, G.x0 - 0.3, 1.3, 3.0, 0, 1.0);
 
   return { group, colliders, numbersTexture: tex };
+}
+
+/**
+ * Ground-hugging rectangle in lot space, draped over the real terrain (cells of step m).
+ * lift = metres above the ground.
+ */
+function draped(list, terrain, lot, x0, x1, z0, z1, color, lift, step = 1.2) {
+  const c = Math.cos(lot.rot), s = Math.sin(lot.rot);
+  const y = (lx, lz) => terrain.getHeight(lot.x + lx * c + lz * s, lot.z - lx * s + lz * c) + lift - lot.h;
+  const nx = Math.max(1, Math.ceil((x1 - x0) / step)), nz = Math.max(1, Math.ceil((z1 - z0) / step));
+  const tris = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    const xa = x0 + ((x1 - x0) * i) / nx, xb = x0 + ((x1 - x0) * (i + 1)) / nx;
+    const za = z0 + ((z1 - z0) * j) / nz, zb = z0 + ((z1 - z0) * (j + 1)) / nz;
+    const A = [xa, y(xa, za), za], B = [xb, y(xb, za), za], C = [xb, y(xb, zb), zb], D = [xa, y(xa, zb), zb];
+    tris.push([A, D, C], [A, C, B]); // counter-clockwise from above
+  }
+  list.push(trisGeometry(tris, color, 0.03));
 }
 
 /** Flat downward-facing plane (soffits) - no edge faces to shimmer. */

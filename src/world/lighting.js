@@ -6,7 +6,7 @@ import { PALETTE } from '../art/palette.js';
 import { setGlow } from '../art/materials.js';
 
 const SHADOW_SIZE = 2048;
-const SHADOW_EXTENT = 55; // metres either side of the focus point
+const SHADOW_EXTENT = 42; // metres either side of the focus point
 
 const C = (hex) => new THREE.Color(hex);
 
@@ -14,14 +14,14 @@ const PRESETS = {
   afternoon: {
     sun: C(PALETTE.light.sun), sunI: 3.7, elev: 24, azim: 250,
     hemiSky: C(PALETTE.light.hemiSky), hemiGround: C(PALETTE.light.hemiGround), hemiI: 1.95,
-    fog: C(PALETTE.fog), fogNear: 90, fogFar: 520,
+    fog: C(PALETTE.fog), fogNear: 130, fogFar: 700,
     zenith: C(PALETTE.sky.zenith), mid: C(PALETTE.sky.mid), horizon: C(PALETTE.sky.horizon),
     exposure: 1.0,
   },
   dusk: {
     sun: C(PALETTE.light.sunDusk), sunI: 1.7, elev: 5, azim: 262,
     hemiSky: C(PALETTE.light.hemiSkyDusk), hemiGround: C(PALETTE.light.hemiGroundDusk), hemiI: 1.05,
-    fog: C(PALETTE.fogDusk), fogNear: 60, fogFar: 420,
+    fog: C(PALETTE.fogDusk), fogNear: 90, fogFar: 520,
     zenith: C(PALETTE.sky.duskZenith), mid: C(PALETTE.sky.duskMid), horizon: C(PALETTE.sky.duskHorizon),
     exposure: 1.0,
   },
@@ -35,8 +35,9 @@ export function createLighting(scene, renderer) {
   sc.left = -SHADOW_EXTENT; sc.right = SHADOW_EXTENT;
   sc.top = SHADOW_EXTENT; sc.bottom = -SHADOW_EXTENT;
   sc.near = 1; sc.far = 400;
-  sun.shadow.bias = -0.0004;
-  sun.shadow.normalBias = 0.04;
+  sun.shadow.bias = -0.0003;
+  sun.shadow.normalBias = 0.03;
+  sun.shadow.radius = 3; // wider PCF kernel: soft edges instead of stair-steps
   scene.add(sun, sun.target);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1);

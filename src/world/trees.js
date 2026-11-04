@@ -44,7 +44,7 @@ export function buildTrees(spots, terrain) {
   group.name = 'trees';
   const species = [roundTree(), pineTree()];
   const buckets = [[], []];
-  for (const s of spots) buckets[rng.chance(0.68) ? 0 : 1].push({ ...s, scale: rng.range(0.85, 1.3), rot: rng.range(0, Math.PI * 2), leaf: rng.int(0, 99), trunkPale: rng.chance(0.35) });
+  for (const s of spots) buckets[rng.chance(s.bush ? 0.8 : 0.68) ? 0 : 1].push({ ...s, scale: s.bush ? rng.range(1.15, 1.9) : rng.range(0.85, 1.3), rot: rng.range(0, Math.PI * 2), leaf: rng.int(0, 99), trunkPale: rng.chance(s.bush ? 0.6 : 0.35) });
   const trunks = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
   const col = new THREE.Color();

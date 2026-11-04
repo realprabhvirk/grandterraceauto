@@ -34,6 +34,12 @@ export function cameraPreset(name, world, spawn) {
       p.y = T.getHeight(p.x, p.z) + 3.4;
       return { position: p, target: H.clone().add(new THREE.Vector3(0, 2.6, 0)).addScaledVector(t, -1.5) };
     }
+    case 'hero-porch': {
+      // Close-up of the entry (good for judging shadow quality and detail).
+      const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
+      const L = (lx, ly, lz) => new THREE.Vector3(hero.x + lx * c + lz * sn, hero.h + ly, hero.z - lx * sn + lz * c);
+      return { position: L(3.4, 1.9, 11.5), target: L(0.8, 2.1, 5) };
+    }
     case 'hero-front': {
       // Standing on the opposite verge, looking straight at 62.
       const p = at({ x: s.x - s.nx * hero.side * 4.6, z: s.z - s.nz * hero.side * 4.6 }, 1.7);
