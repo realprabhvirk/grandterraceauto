@@ -50,3 +50,10 @@ One line per judgment call made during the autonomous build.
 - 62 from photo: player spawn moved in line with the front door (x = 2.2) since there is no front path any more.
 - Debug fly camera moved from C to F2 (C freed up; crouch is Ctrl as specified).
 - Night: street-light pools are additive textured discs (no real lights) so the 1-shadow-light rule and the iGPU budget hold; they fade in after sunset (night factor > 0.35).
+- Exit: F gets out only below ~30 km/h ("Slow down to get out" otherwise) so you are never dropped beside a fast car; the car then brakes to a stop on its own.
+- Exit spot: driver's door (right-hand drive) first, then passenger side, behind, front, further out; each tested with the player capsule against walls and cars; roof as last resort.
+- Keys: H is the horn in a car and toggles the help panel on foot (? works everywhere); T kept as an alias for N; M mutes (extra).
+- Headlights: switch on automatically when you get in at night or press N while driving; L toggles any time. Parked cars keep their lights off.
+- Crouch keeps the standing capsule (camera and speed drop) - simpler and avoids getting stuck when standing up under things.
+- Seated driver is visible through semi-transparent car glass (hands on wheel, head follows the steering).
+- Drive test autopilot is debug-only (src/vehicles/autopilot.js) and uses the same virtual-key path as the keyboard, so the real driving code is what's tested.

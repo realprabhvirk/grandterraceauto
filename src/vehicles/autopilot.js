@@ -23,7 +23,7 @@ export function buildRoutes(world) {
     const pts = along(br, 6, lastI);
     // Loop around the turning circle starting where we arrive, continuing forward (which
     // follows the left kerb in left-hand traffic), then back out.
-    const pad = br.pad, R = 7.4;
+    const pad = br.pad, R = 6.4; // well inside the car parked against the kerb ring
     const A = pts[pts.length - 1], hs = br.samples[lastI];
     const a0 = Math.atan2(A.z - pad.z, A.x - pad.x);
     const fwd = (sg) => { const a = a0 + sg * 0.4; return (pad.x + Math.cos(a) * R - A.x) * hs.tx + (pad.z + Math.sin(a) * R - A.z) * hs.tz; };
@@ -98,13 +98,18 @@ export function runAutopilot({ car, input, terrain, points, speed = 13, timeout 
         for (const o of obstacles) {
           const r = rel(o);
           if (r.ahead > 0) m.nearest = Math.min(m.nearest, +Math.hypot(r.ahead, r.lat).toFixed(1));
-          if (r.ahead > 0 && r.ahead < 24 && Math.abs(r.lat) < 2.0) { engaged = { car: o, side: r.lat > 0 ? 3.6 : -3.6 }; break; }
+          if (r.ahead > 0 && r.ahead < 24 && Math.abs(r.lat) < 1.7) { // genuine overlap only (two half-widths)
+            // Fix the passing point in WORLD space now (3.6 m beside it, away from it, 2 m past),
+            // so it doesn't swing outward as we turn (e.g. around a turning circle).
+            const s = r.lat > 0 ? 3.6 : -3.6; // right = (-fz, fx)
+            engaged = { car: o, pass: { x: r.q.x - fz * s + fx * 2, z: r.q.z + fx * s + fz * 2 } };
+            break;
+          }
         }
       }
       if (engaged) {
-        // Aim at a point 3.6 m beside it (away from it), 2 m past it. right = (-fz, fx).
-        const { q } = rel(engaged.car), s = engaged.side;
-        tgt = { x: q.x - fz * s + fx * 2, z: q.z + fx * s + fz * 2 };
+        tgt = engaged.pass;
+        if (Math.hypot(tgt.x - p.x, tgt.z - p.z) < 3) engaged = null; // reached the passing point
         m.avoid++;
       }
       const want = Math.atan2(tgt.x - p.x, tgt.z - p.z);

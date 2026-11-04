@@ -82,3 +82,52 @@ The dev server was left running at **http://127.0.0.1:5173/**.
 - ~ Fixed: horn/screech audio passed GainNode instead of its .gain param (errored every frame once audio unlocked).
 - ~ P2 step 6 done: N toggles a smooth afternoon <-> dusk/night blend (T still works). Night now darker; street lights (poles every 30 m, instanced heads + additive road light pools tilted to the road grade, 3 draw calls, pole colliders), hero/house windows glow, driven car's headlights switch on automatically. No extra shadow-casting lights (headlights = 1 non-shadow SpotLight that always exists).
 - 20:40 Fixes from the end-to-end test: headlight cones (read as grey ghost discs from behind) replaced by an additive road wash + stronger night SpotLight; chase camera rises when pulled in and, on entering, picks the first unobstructed angle; 62 got eave colliders (above head height) so cameras can't tuck under the roof. scripts/phase2test.mjs: 16/16 pass (walk to hero car, F, drive out 239 m, look-behind, stop, F out 2.2 m beside the car, car stops, 4 emotes + interrupt, crouch, N night + auto headlights; 60 fps, 74-76 draw calls). Walk test 7/7, screenshots clean.
+- 20:45 README rewritten for Phase 2 (controls, URL presets, self-tests, structure). Production build OK.
+- 20:45 Drive test autopilot: one more fix (passing point fixed in world space, wider loop); still wedges in the Hillcrest Ct / Wattle Rise turning circles. Stopped iterating (well past the 3-fix rule). Physics checks pass on every route.
+
+## PHASE 2 SUMMARY (2026-11-04, 20:45)
+
+### How to run
+```powershell
+.\dev.cmd npm run dev        # http://127.0.0.1:5173/
+```
+The dev server is left running at **http://127.0.0.1:5173/**. Click once in the game (captures the mouse, unlocks sound).
+
+### Controls (full list in README.md)
+- On foot: WASD, Shift run, Space jump, Ctrl crouch, 1-4 emotes (wave, dance, sit, point), F get in.
+- Driving: W/S, A/D, Space handbrake, Shift boost, H horn, L lights, B look behind, R flip upright, F get out.
+- Anywhere: N day/night, ? help, M mute, F2 debug fly, F3 stats, F4 colliders.
+
+### What to test first
+1. You spawn outside 62 (now matching your photo). Walk up the lawn to the teal hero sedan in the driveway, wait for "Press F to drive", press F.
+2. Drive out (W, A/D), try Space handbrake turns and Shift boost on Grand Terrace, drive into a cul-de-sac and around the turning circle.
+3. Press N for night: street lights, window glow, headlights. Press L to toggle the lights, B to look behind.
+4. Stop, press F to get out, try the emotes 1-4 and Ctrl crouch.
+5. F4 shows every collider; F3 shows FPS + draw calls.
+
+### Finished
+- Collision: Rapier heightfield that matches the visual terrain exactly (0.000 m error over 2000 probes), boxes for houses, 62, fences, letterbox, eaves; cylinders for trunks and street-light poles; STATIC/CAR/PLAYER groups; F4 debug view.
+- Cars: 4 procedural types (hatch, sedan, ute, 4WD), 8 seeded spawns (hero teal sedan in 62's driveway, 1 per cul-de-sac, 4 kerbside). Raycast-vehicle physics with arcade assists, per-type tuning (0-100 km/h 5-8 s).
+- Driving: eased speed-sensitive steering, handbrake drift, boost, flip-upright, grass grip 0.78 vs asphalt, car-vs-house/tree/fence/car collisions, chase cam (auto-swing, look-behind, speed FOV, collision pull-in, clear start angle), headlights / brake / reverse lights, WebAudio engine/horn/screech/thud, HUD speedo + tacho, controls panel.
+- Enter/exit with smooth character + camera blends, safe exit spot, car brakes when left, one driven car at a time.
+- Character: jointed low-poly figure, walk/run/jump/crouch, 4 emotes, seated pose (hands on wheel, head follows steering), interaction prompt system.
+- Day/night (N): smooth blend, street lights with road light pools, window glow, auto headlights; still one shadow-casting light.
+- 62 Grand Terrace rebuilt from your photo (reference/house62/front-dusk.png).
+- Phase 1 fixes: terrain/physics triangulation mismatch (was up to 26 cm), curved junction corner kerbs.
+- Tests: phase2test.mjs 16/16, walktest.mjs 7/7, shot.mjs clean, drivetest.mjs 2/4 routes (see known issues). 60 fps headless, 57-100 draw calls.
+
+### Known issues
+- drivetest.mjs: the test autopilot (not the car) wedges inside the Hillcrest Ct and Wattle Rise turning circles when passing the parked car; heights and tilt stay sane on every route. A human can drive them fine.
+- Seated driver is hard to see through the tinted glass from the chase camera.
+- Exiting is blocked above ~30 km/h by design.
+- Pointer lock can't be tested headless (camera orbit was tested via code paths only).
+- Audio is synthesised and verified to run without errors, but nobody has listened to it yet - levels may need tuning.
+- Tiny grass slivers remain at the apex of the junction corner fillets.
+- Regular houses still use the 4 generic variants (no letterboxes/fences).
+
+### Suggested Phase 3
+1. **Traffic + NPCs:** lane graph from the road splines (left-hand traffic, give way at T-junctions), simple AI drivers reusing VehicleBody + the autopilot steering; pedestrians on the footpaths using the character rig with waypoint walking.
+2. **Doors + interiors:** register doors with the interaction system (F to open), a walkable ground floor for 62 (living, kitchen, garage), garage door that opens for the hero car.
+3. **Multiplayer plan:** authoritative Node server (ws), clients send inputs at 30 Hz, server runs the same Rapier step (VehicleBody is three-free so it already runs in Node), snapshots + interpolation, start with 2-4 players walking/driving.
+4. Car damage-free polish: skid marks, dust on grass, better engine sound per car type, radio.
+5. Minimap from the top-down preset; a day clock.
