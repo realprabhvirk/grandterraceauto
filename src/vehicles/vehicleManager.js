@@ -26,15 +26,14 @@ export function createVehicles({ physics, scene, world }) {
 
   let active = null; // the car being driven
   let input = null;
-  physics.onStep((dt) => {
-    for (const car of cars) car.body.update(dt, car === active ? input : null);
-  });
 
   return {
     cars,
     get active() { return active; },
     setActive(car) { active = car; if (!car) input = null; },
     setInput(i) { input = i; },
+    /** Fixed-step physics for every car (call after the controls set this step's input). */
+    fixedUpdate(dt) { for (const car of cars) car.body.update(dt, car === active ? input : null); },
     sync() { for (const car of cars) car.sync(); },
     nearest(p, maxD) {
       let best = null, bd = maxD;

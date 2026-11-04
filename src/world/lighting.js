@@ -98,6 +98,7 @@ export function createLighting(scene, renderer) {
   return {
     sun, hemi, sky,
     get dusk() { return dusk; },
+    get target() { return target; },
     toggleDusk() { target = target > 0.5 ? 0 : 1; },
     setDusk(f) { dusk = target = f; apply(f); },
     /** Follow the focus point (player or debug camera) and ease time of day. */

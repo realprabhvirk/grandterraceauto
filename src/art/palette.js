@@ -124,9 +124,16 @@ export const PALETTE = {
   },
 
   player: {
-    shirt: '#d86c3d',
-    shorts: '#3d4f63',
+    shirt: '#d86c3d',      // terracotta tee
+    shirtTrim: '#f2e6cf',
+    shorts: '#3d4f63',     // slate shorts
+    belt: '#4a3a2e',
     skin: '#d9a47e',
+    skinShade: '#c8916c',
     hair: '#3b2a20',
+    eyes: '#2b2420',
+    socks: '#efe9de',
+    shoes: '#e9e4da',
+    soles: '#6d655c',
   },
 };

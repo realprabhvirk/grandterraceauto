@@ -1,13 +1,16 @@
-// Third-person walking: Rapier kinematic capsule + KinematicCharacterController
-// (slopes, steps, snap-to-ground, collision with houses/fences/trunks), camera-relative
-// WASD, Shift to run, Space to jump, orbit camera that pulls in when blocked.
+// Third-person on foot: Rapier kinematic capsule + KinematicCharacterController
+// (slopes, steps, snap-to-ground, collision with houses/fences/trunks/cars),
+// camera-relative movement with smooth acceleration, Shift run, Space jump, Ctrl crouch,
+// emotes on 1-4 (wave, dance, sit, point - any movement interrupts), orbit camera that
+// pulls in when blocked.
 import * as THREE from 'three';
 import { createCharacter } from './character.js';
 import { G_PLAYER, groups, GROUP } from '../physics/physicsWorld.js';
 
-const RADIUS = 0.32, HALF = 0.55; // capsule: total height 2*(HALF+RADIUS) = 1.74 m
-const WALK = 4.2, RUN = 7.8, JUMP = 5.2, GRAVITY = -18;
-const CAM = { dist: 5.2, min: 1.6, max: 11, height: 1.55, pitchMin: -0.35, pitchMax: 1.2 };
+export const RADIUS = 0.32, HALF = 0.55; // capsule: total height 2*(HALF+RADIUS) = 1.74 m
+const WALK = 4.2, RUN = 7.6, CROUCH = 1.9, ACCEL = 9, JUMP = 5.4, GRAVITY = -18;
+const CAM = { dist: 5.2, min: 1.6, max: 11, height: 1.55, crouchHeight: 1.05, pitchMin: -0.35, pitchMax: 1.2 };
+const EMOTES = { Digit1: 'wave', Digit2: 'dance', Digit3: 'sit', Digit4: 'point' };
 
 export function createThirdPerson({ physics, scene, spawn }) {
   const { world, RAPIER } = physics;
@@ -33,7 +36,13 @@ export function createThirdPerson({ physics, scene, spawn }) {
     vy: 0,
     grounded: true,
     speed: 0,
+    vel: new THREE.Vector3(),
     dist: CAM.dist,
+    crouch: false,
+    action: null,             // current emote
+    jumpQueued: false,
+    enabled: true,
+    camHeight: CAM.height,
   };
   const pos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
@@ -43,18 +52,49 @@ export function createThirdPerson({ physics, scene, spawn }) {
   function syncVisual() {
     const t = body.translation();
     pos.set(t.x, t.y - HALF - RADIUS, t.z);
-    character.root.position.copy(pos);
-    character.root.rotation.y = state.facing;
+    if (character.root.parent === scene) {
+      character.root.position.copy(pos);
+      character.root.rotation.set(0, state.facing, 0);
+    }
   }
   syncVisual();
+
+  /** Where the walk camera wants to be (no side effects except the blocked-ray test). */
+  function cameraPose(outPos, outTarget) {
+    outTarget.copy(pos).y += state.camHeight;
+    const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    desired.set(-Math.sin(state.yaw) * cp, sp, -Math.cos(state.yaw) * cp);
+    let dist = state.dist;
+    const hit = world.castRay(new RAPIER.Ray(outTarget, desired), dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC), collider);
+    if (hit) dist = Math.max(0.6, hit.timeOfImpact - 0.25);
+    outPos.copy(outTarget).addScaledVector(desired, dist);
+  }
 
   return {
     get position() { return pos; },
     get state() { return state; },
-    setVisible(v) { character.root.visible = v; },
+    character,
+    collider,
+    cameraPose,
+
+    /** Turn the walker on/off (off while driving: collider disabled, no movement). */
+    setEnabled(on) {
+      state.enabled = on;
+      collider.setEnabled(on);
+      if (!on) { state.action = null; state.speed = 0; state.vel.set(0, 0, 0); }
+    },
+    /** Put the walker at a ground position facing yaw (used when leaving a car). */
+    teleport(p, yaw) {
+      body.setTranslation({ x: p.x, y: p.y + HALF + RADIUS + 0.03, z: p.z }, true);
+      body.setNextKinematicTranslation({ x: p.x, y: p.y + HALF + RADIUS + 0.03, z: p.z });
+      state.facing = yaw; state.yaw = yaw; state.vy = -1; state.grounded = true;
+      syncVisual();
+      pos.set(p.x, p.y, p.z);
+    },
 
     /** Fixed-step physics update. */
     fixedUpdate(dt, input, active) {
+      if (!state.enabled) return;
       move.set(0, 0, 0);
       if (active) {
         const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
@@ -64,11 +104,19 @@ export function createThirdPerson({ physics, scene, spawn }) {
           // forward (sin, cos); right = (-cos, sin) for a camera looking along forward
           move.set(sy * f - cy * r, 0, cy * f + sy * r).normalize();
         }
+        state.crouch = input.down('ControlLeft') || input.down('ControlRight');
       }
-      const run = active && (input.down('ShiftLeft') || input.down('ShiftRight'));
-      const speed = move.lengthSq() ? (run ? RUN : WALK) : 0;
-      state.speed += (speed - state.speed) * Math.min(1, dt * 10);
-      if (move.lengthSq()) {
+      const moving = move.lengthSq() > 0;
+      const jump = active && state.jumpQueued;
+      state.jumpQueued = false;
+      if (moving || jump) state.action = null; // movement interrupts emotes
+      const run = active && !state.crouch && (input.down('ShiftLeft') || input.down('ShiftRight'));
+      const top = !moving || state.action ? 0 : state.crouch ? CROUCH : run ? RUN : WALK;
+      // Smooth acceleration toward the target velocity.
+      const tv = move.clone().multiplyScalar(top);
+      state.vel.lerp(tv, Math.min(1, dt * ACCEL));
+      state.speed = Math.hypot(state.vel.x, state.vel.z);
+      if (moving) {
         const target = Math.atan2(move.x, move.z);
         let d = target - state.facing;
         d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -76,12 +124,11 @@ export function createThirdPerson({ physics, scene, spawn }) {
       }
       if (state.grounded) {
         state.vy = -1;
-        if (active && input.pressed('Space')) { state.vy = JUMP; state.grounded = false; }
+        if (jump && !state.crouch) { state.vy = JUMP; state.grounded = false; }
       } else {
         state.vy += GRAVITY * dt;
       }
-      const dir = move.lengthSq() ? move.clone().multiplyScalar(state.speed * dt) : new THREE.Vector3();
-      dir.y = state.vy * dt;
+      const dir = new THREE.Vector3(state.vel.x * dt, state.vy * dt, state.vel.z * dt);
       ctrl.computeColliderMovement(collider, dir, undefined, G_PLAYER);
       const m = ctrl.computedMovement();
       const t = body.translation();
@@ -93,25 +140,25 @@ export function createThirdPerson({ physics, scene, spawn }) {
       if (t.y < -60) body.setNextKinematicTranslation({ x: spawn.position.x, y: spawn.position.y + 2, z: spawn.position.z });
     },
 
-    /** Per-frame: animation + camera. */
-    update(dt, input, camera, active) {
+    /** Per-frame: animation + camera (when `active` drives the camera). */
+    update(dt, input, camera, active, seated = null) {
       syncVisual();
-      character.animate(dt, state.speed, !state.grounded);
+      state.camHeight += ((state.crouch ? CAM.crouchHeight : CAM.height) - state.camHeight) * Math.min(1, dt * 8);
+      character.animate({
+        dt, speed: state.speed, grounded: state.grounded, crouch: state.crouch,
+        action: seated ? 'seated' : state.action, steer: seated ? seated.steer : 0,
+      });
       if (!active) return;
+      // Edge-triggered keys are read per frame (physics may run 0 or 2 steps in a frame).
+      if (input.pressed('Space')) state.jumpQueued = true;
+      for (const [code, name] of Object.entries(EMOTES)) {
+        if (input.pressed(code)) state.action = state.action === name ? null : name;
+      }
       const look = input.look(dt);
       state.yaw -= look.x * 0.0028;
       state.pitch = THREE.MathUtils.clamp(state.pitch + look.y * 0.0022, CAM.pitchMin, CAM.pitchMax);
       state.dist = THREE.MathUtils.clamp(state.dist + input.wheel() * 0.6, CAM.min, CAM.max);
-
-      camTarget.copy(pos).y += CAM.height;
-      const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
-      desired.set(-Math.sin(state.yaw) * cp, sp, -Math.cos(state.yaw) * cp);
-      // Pull the camera in if a wall/hedge is between it and the player.
-      let dist = state.dist;
-      const ray = new RAPIER.Ray(camTarget, desired);
-      const hit = world.castRay(ray, dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC), collider);
-      if (hit) dist = Math.max(0.6, hit.timeOfImpact - 0.25);
-      camera.position.copy(camTarget).addScaledVector(desired, dist);
+      cameraPose(camera.position, camTarget);
       camera.lookAt(camTarget);
     },
   };
