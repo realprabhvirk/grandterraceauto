@@ -18,6 +18,7 @@ import { createCarAudio } from './audio/carAudio.js';
 import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
 import { createTraffic } from './traffic/trafficManager.js';
+import { createMirrors } from './camera/mirrors.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -51,8 +52,9 @@ camera.position.copy(preset.position);
 camera.lookAt(preset.target);
 if ((params.get('cam') || '').endsWith('-dusk')) lighting.setDusk(1);
 
+const mirrors = createMirrors();
 const controls = createControls({
-  camera, dom: renderer.domElement, physics, scene, world, spawn, lighting, vehicles, audio,
+  camera, dom: renderer.domElement, physics, scene, world, spawn, lighting, vehicles, audio, mirrors,
   startMode: camName === 'player' ? 'walk' : 'fly',
 });
 if (params.has('shot')) controls.panel.hide();
@@ -73,7 +75,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -92,6 +94,7 @@ renderer.setAnimationLoop(() => {
   headlights.update(dt, lit, lighting.dusk);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);
   if (preset.noFog && controls.mode === 'fly') scene.fog.far = 1e5;
+  if (controls.cameraMode === 'cabin') mirrors.update(renderer, scene, controls.car, dt); else mirrors.resetGuard();
   debugDraw.update(controls.focus());
   renderer.render(scene, camera);
   overlay.update(dt, controls.debugText());

@@ -72,3 +72,6 @@ One line per judgment call made during the autonomous build.
 
 - Exit spots: candidates must pass a ground raycast (real floor incl. slabs), a capsule overlap test and a line-of-sight ray from the car centre (keeps you in the same room); seat + 1 s ghosted car as last resort.
 - Garage<->hall: hinged internal door added to the existing x=3.9 partition opening (E, same door module).
+- Cameras: C cycles third/first person on foot and chase/cabin/cinematic in a car (remembered separately); F2 stays the debug fly cam.
+- Cabin: one shared cabin builder sized from CAR_TYPES (dash, binnacle, pillars, lining, door cards, seats); steering wheel = 450 deg lock-to-lock scaled by steer/maxSteer; gauges from a simulated 5-speed gearbox (src/vehicles/drivetrain.js).
+- Mirrors: 3x 256x128 render targets updated round-robin (one per frame), shadow map not re-rendered; perf guard compares 1.5 s frozen vs 2 s live and falls back to a static tint if >10 fps lost or <40 fps.

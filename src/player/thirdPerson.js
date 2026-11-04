@@ -43,6 +43,9 @@ export function createThirdPerson({ physics, scene, spawn }) {
     jumpQueued: false,
     enabled: true,
     camHeight: CAM.height,
+    firstPerson: false,
+    fpPitch: 0,
+    bob: 0,
   };
   const pos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
@@ -78,6 +81,8 @@ export function createThirdPerson({ physics, scene, spawn }) {
     cameraPose,
 
     /** Turn the walker on/off (off while driving: collider disabled, no movement). */
+    /** Switch first-person on/off (hides the head, tighter near plane is set by the caller). */
+    setFirstPerson(on) { state.firstPerson = on; character.setHeadVisible(!on); if (on) state.fpPitch = 0; },
     setEnabled(on) {
       state.enabled = on;
       collider.setEnabled(on);
@@ -116,7 +121,9 @@ export function createThirdPerson({ physics, scene, spawn }) {
       const tv = move.clone().multiplyScalar(top);
       state.vel.lerp(tv, Math.min(1, dt * ACCEL));
       state.speed = Math.hypot(state.vel.x, state.vel.z);
-      if (moving) {
+      if (state.firstPerson) {
+        state.facing = state.yaw; // first person: body always faces where you look
+      } else if (moving) {
         const target = Math.atan2(move.x, move.z);
         let d = target - state.facing;
         d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -156,6 +163,17 @@ export function createThirdPerson({ physics, scene, spawn }) {
       }
       const look = input.look(dt);
       state.yaw -= look.x * 0.0028;
+      if (state.firstPerson) {
+        // First person: eye at the head (head bone hidden), pitch +-85 deg, subtle walk bob.
+        state.fpPitch = THREE.MathUtils.clamp(state.fpPitch + look.y * 0.0022, -1.48, 1.48);
+        state.bob += dt * state.speed * 2.2;
+        character.eyeWorld(camera.position);
+        camera.position.y += Math.sin(state.bob) * 0.025 * Math.min(1, state.speed / 4);
+        const cp = Math.cos(state.fpPitch);
+        camTarget.set(camera.position.x + Math.sin(state.yaw) * cp, camera.position.y - Math.sin(state.fpPitch), camera.position.z + Math.cos(state.yaw) * cp);
+        camera.lookAt(camTarget);
+        return;
+      }
       state.pitch = THREE.MathUtils.clamp(state.pitch + look.y * 0.0022, CAM.pitchMin, CAM.pitchMax);
       state.dist = THREE.MathUtils.clamp(state.dist + input.wheel() * 0.6, CAM.min, CAM.max);
       cameraPose(camera.position, camTarget);

@@ -13,16 +13,34 @@ import { createHud } from '../ui/hud.js';
 import { createControlsPanel } from '../ui/controlsPanel.js';
 import { createSettingsPanel } from '../ui/settingsPanel.js';
 import { createChaseCamera } from '../vehicles/chaseCamera.js';
+import { createCabinView } from '../camera/cabinView.js';
+import { createCinematic } from '../camera/cinematic.js';
 import { findExitSpot, carLocalToWorld } from '../vehicles/exitSpot.js';
 
 const ENTER_T = 1.0, EXIT_T = 0.8, MAX_EXIT_SPEED = 30 / 3.6;
 const ease = (t) => t * t * (3 - 2 * t);
 
-export function createControls({ camera, dom, physics, scene, world, spawn, lighting, vehicles, audio, startMode = 'walk' }) {
+export function createControls({ camera, dom, physics, scene, world, spawn, lighting, vehicles, audio, mirrors = null, startMode = 'walk' }) {
   const input = createInput(dom);
   const player = createThirdPerson({ physics, scene, spawn });
   const fly = createFlyCam(camera);
   const chase = createChaseCamera(camera, physics);
+  const cabin = createCabinView(camera, mirrors);
+  const cinematic = createCinematic(camera, physics);
+  // Camera choice is remembered separately on foot and in a car. C cycles.
+  const FOOT_CAMS = ['third', 'first'], CAR_CAMS = ['chase', 'cabin', 'cinematic'];
+  let footCam = 'third', carCam = 'chase';
+  const setNear = (n) => { if (camera.near !== n) { camera.near = n; camera.updateProjectionMatrix(); } };
+  /** Apply the remembered camera for the current mode (call on any mode/camera change). */
+  function applyCam() {
+    const inCar = mode === 'drive' && car;
+    player.setFirstPerson(mode === 'walk' && footCam === 'first');
+    if (inCar && carCam === 'cabin') { cabin.enter(car); player.character.setHeadVisible(false); } else cabin.exit();
+    if (inCar && carCam === 'cinematic') cinematic.enter(); else cinematic.exit();
+    if (inCar && carCam !== 'cabin') player.character.setHeadVisible(true);
+    setNear((mode === 'walk' && footCam === 'first') || (inCar && carCam === 'cabin') ? 0.05 : 0.25);
+    hud.setVisible(!!inCar && carCam !== 'cinematic');
+  }
   const prompt = createPrompt();
   const interact = createInteractions(prompt);
   const hud = createHud();
@@ -107,6 +125,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     car.setLights(car.lights && lighting.dusk > 0.5); // leave lights on at night only
     audio.horn(false);
     mode = 'exit';
+    applyCam();
     panel.setPage('walk');
   }
 
@@ -126,6 +145,9 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     get mode() { return mode; },
     get car() { return car; },
     get lastExit() { return lastExit; },
+    /** Current camera: third/first on foot, chase/cabin/cinematic in a car, else the mode. */
+    get cameraMode() { return mode === 'walk' ? footCam : mode === 'drive' ? carCam : mode; },
+    cabin, cinematic,
     player, input, chase, panel, hud, interact, settings,
     hint: panel.el,
     syncFly() { fly.syncFromCamera(); },
@@ -150,6 +172,12 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
         if (car && (mode === 'drive' || mode === 'enter')) car.setLights(night);
       }
       if (input.pressed('Help') || (mode === 'walk' && input.pressed('KeyH'))) panel.toggle();
+      if (input.pressed('KeyC') && (mode === 'walk' || mode === 'drive')) {
+        if (mode === 'walk') footCam = FOOT_CAMS[(FOOT_CAMS.indexOf(footCam) + 1) % FOOT_CAMS.length];
+        else carCam = CAR_CAMS[(CAR_CAMS.indexOf(carCam) + 1) % CAR_CAMS.length];
+        applyCam();
+        if (mode === 'drive' && carCam === 'chase') { chase.reset(car); chase.seed(camera.position); }
+      }
       if (input.pressed('KeyM')) { flash(audio.toggleMute() ? 'Sound off' : 'Sound on'); settings.syncMute(); }
       if (input.pressed('Escape')) settings.toggle();
 
@@ -163,7 +191,9 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
         if (ct && input.pressed('Key' + ct.key)) interact.fire();
         if (input.pressed('KeyL')) car.setLights(!car.lights);
         if (input.pressed('KeyR')) car.body.resetUpright(world.terrain.getHeight(car.position.x, car.position.z));
-        chase.update(dt, car, input);
+        if (carCam === 'cabin') cabin.update(dt, car, input, car.health ?? 100);
+        else if (carCam === 'cinematic') cinematic.update(dt, car);
+        else chase.update(dt, car, input);
         player.update(dt, input, camera, false, { steer: car.body.steer / car.cfg.steer });
         if (input.pressed('KeyF')) beginExit();
       } else if (mode === 'fly') {
@@ -216,6 +246,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           vehicles.setActive(car);
           if (lighting.dusk > 0.5) car.setLights(true);
           mode = 'drive';
+          applyCam();
         }
       } else if (mode === 'exit') {
         trans.t += dt / EXIT_T;
@@ -245,6 +276,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           player.state.yaw = trans.startYaw;
           player.setEnabled(true);
           chase.restoreFov();
+          applyCam();
           car = null;
           mode = 'walk';
         }
@@ -252,7 +284,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
 
       // ---- HUD, audio ----
       const driving = mode === 'drive' ? car : null;
-      hud.setVisible(!!driving);
+      hud.setVisible(!!driving && carCam !== 'cinematic');
       if (driving) hud.update(driving);
       const st = driving ? driving.body.state : null;
       audio.engine(!!driving, st ? st.speed : 0, st ? st.throttle : 0, driving ? driving.cfg.top : 1);

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-04 23:44)**
-- Done: P4 step 1 bugs fixed (garage exit, internal door, E from car); phase4test garage 9/9
+**STATUS (2026-11-04 23:49)**
+- Done: P4 steps 0-2 (bugs, cameras incl. cabin + mirrors + cinematic); phase4test garage 9/9, cameras 8/8
 - Broken: none known
-- Next: Step 2 cameras (C cycles)
+- Next: Step 3 health/cash/destruction
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -159,3 +159,4 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 
 - 23:40 P4 step 0: dev server restarted, tests switched to 960x540 with screenshots opt-in (SHOTS=1); baseline suite green.
 - 23:44 P4 step 1 done: exit spot search rewritten (cause: capsule test at terrain height overlapped the garage floor slab, so every spot inside was rejected); internal garage->hall door with E; in-car garage prompt worked once the stale server was gone (range 5.5). scripts/phase4test.mjs garage: 9/9 (reverse in, exit inside garage, door, walk to hall, drive out, driveway + street exits).
+- 23:49 P4 step 2 done: C camera modes (third/first person; chase/cabin/cinematic), cabin interior with working gauges, dash lamps, 450-deg wheel, limited look + auto-recentre, impact shake, crack overlay (<35 car health), cinematic auto-director with ray-checked shots + letterbox, live mirrors (60 fps headless, no drop). phase4test cameras 8/8.

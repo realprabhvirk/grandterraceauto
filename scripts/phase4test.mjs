@@ -86,6 +86,45 @@ try {
     const st = await ev(() => { const g = window.__gta, p = g.controls.player.position, c = g.vehicles.cars.find((v) => v.hero).position; return { mode: g.controls.mode, d: Math.hypot(p.x - c.x, p.z - c.z), exit: g.controls.lastExit }; });
     check('street exit next to the car', st.mode === 'walk' && st.d > 1 && st.d < 4.5, st);
   }
+  // ---------------------------------------------------------------- Step 2: cameras
+  if (run('cameras')) {
+    await load();
+    const cam = () => ev(() => ({ m: window.__gta.debug.state().cameraMode, inside: window.__gta.debug.cameraInside(), w: window.__gta.debug.state().wheelAngle }));
+    const seq = [];
+    for (let i = 0; i < 2; i++) { await ev(() => window.__gta.debug.tap('KeyC')); await wait(500); seq.push(await cam()); }
+    check('on foot: C cycles first -> third', seq.map((s) => s.m).join() === 'first,third', seq);
+    check('on foot: camera never inside a collider', seq.every((s) => !s.inside), seq);
+    // First person indoors (62's hall).
+    await ev(() => window.__gta.debug.teleportLocal(1.5, 0.16, 0.5, Math.PI));
+    await ev(() => window.__gta.debug.tap('KeyC')); await wait(500);
+    const fpIn = await cam();
+    check('first person works indoors', fpIn.m === 'first' && !fpIn.inside, fpIn);
+    await ev(() => window.__gta.debug.tap('KeyC')); await wait(300);
+    // In a car.
+    await ev(() => window.__gta.debug.enter()); await wait(1500);
+    const carSeq = [await cam()];
+    for (let i = 0; i < 3; i++) { await ev(() => window.__gta.debug.tap('KeyC')); await wait(700); carSeq.push(await cam()); }
+    check('in car: chase -> cabin -> cinematic -> chase', carSeq.map((s) => s.m).join() === 'chase,cabin,cinematic,chase', carSeq.map((s) => s.m));
+    check('in car: camera never inside a collider', carSeq.every((s) => !s.inside), carSeq);
+    await ev(() => window.__gta.debug.tap('KeyC')); await wait(500); // cabin
+    await ev(() => { window.__gta.controls.input.setVirtual('KeyA', true); }); await wait(900);
+    const left = await cam();
+    await ev(() => { const I = window.__gta.controls.input; I.setVirtual('KeyA', false); I.setVirtual('KeyD', true); }); await wait(1400);
+    const right = await cam();
+    await ev(() => window.__gta.controls.input.setVirtual('KeyD', false));
+    await wait(4000);
+    const mir = await ev(() => ({ ...window.__gta.mirrors.state, stats: window.__gta.stats() }));
+    check('cabin mirrors live (or auto-disabled to the fallback)', (mir.phase === 'run' && !mir.disabled && mir.stats.fps >= 40) || mir.disabled, { phase: mir.phase, disabled: mir.disabled, base: Math.round(mir.fpsBase), on: Math.round(mir.fpsOn), fps: mir.stats.fps, calls: mir.stats.calls });
+    check('cabin steering wheel tracks steering', left.m === 'cabin' && left.w < -0.5 && right.w > 0.5, { left: left.w, right: right.w });
+    // Cinematic: drive a bit and sample the director for 9 s.
+    await ev(() => window.__gta.debug.tap('KeyC')); await wait(300);
+    await ev(() => window.__gta.controls.input.setVirtual('KeyW', true));
+    let bad = 0;
+    const shots = new Set();
+    for (let i = 0; i < 18; i++) { await wait(500); const s = await ev(() => ({ inside: window.__gta.debug.cameraInside(), shot: window.__gta.controls.cinematic.shot })); if (s.inside) bad++; shots.add(s.shot); }
+    await ev(() => window.__gta.controls.input.setVirtual('KeyW', false));
+    check('cinematic: shots change and never clip', bad === 0 && shots.size >= 2, { bad, shots: [...shots] });
+  }
 } finally {
   await context.close();
   await browser.close();

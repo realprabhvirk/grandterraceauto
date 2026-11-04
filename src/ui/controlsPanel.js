@@ -7,12 +7,12 @@ const PAGES = {
   walk: `<b>On foot</b><br>
     ${k('WASD')}move ${k('Shift')}run ${k('Space')}jump ${k('Ctrl')}crouch<br>
     ${k('1')}wave ${k('2')}dance ${k('3')}sit ${k('4')}point<br>
-    ${k('F')}get in car ${k('N')}day / night ${k('M')}mute<br>
+    ${k('F')}get in car ${k('E')}doors ${k('C')}camera ${k('N')}day / night ${k('M')}mute<br>
     ${k('F2')}debug fly cam ${k('F3')}stats ${k('F4')}colliders ${k('?')}hide`,
   drive: `<b>Driving</b><br>
     ${k('W')}accelerate ${k('S')}brake / reverse ${k('A D')}steer<br>
     ${k('Space')}handbrake ${k('Shift')}boost ${k('H')}horn ${k('L')}lights<br>
-    ${k('B')}look behind ${k('R')}flip upright ${k('F')}get out<br>
+    ${k('B')}look behind ${k('R')}flip upright ${k('F')}get out ${k('C')}camera<br>
     ${k('N')}day / night ${k('M')}mute ${k('?')}hide`,
   fly: `<b>Debug fly</b><br>
     ${k('WASD')}fly ${k('Space/E')}up ${k('Ctrl/Q')}down ${k('Shift')}fast<br>

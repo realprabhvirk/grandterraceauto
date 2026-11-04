@@ -254,6 +254,10 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
   return {
     root,
     mesh,
+    /** Hide the head (first-person / cabin views) by collapsing its bone. */
+    setHeadVisible(v) { head.scale.setScalar(v ? 1 : 0.001); },
+    /** World position of the eyes (for first-person cameras). */
+    eyeWorld(out) { head.updateWorldMatrix(true, false); return out.set(0, 0.17, 0.09).applyMatrix4(head.matrixWorld); },
     /**
      * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'look'|'phone'|'seated', steer }
      */

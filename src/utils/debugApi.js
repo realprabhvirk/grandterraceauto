@@ -69,6 +69,13 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       controls.syncFly();
     },
     doors: () => world.hero.doors.state,
+    /** Is the camera inside any static collider or car (other than the one being driven)? */
+    cameraInside() {
+      const { world: w, RAPIER } = window.__gta.physics, p = camera.position, own = controls.car ? new Set(controls.car.body.colliders.map((c) => c.handle)) : new Set();
+      const hit = w.intersectionWithShape({ x: p.x, y: p.y, z: p.z }, { x: 0, y: 0, z: 0, w: 1 }, new RAPIER.Ball(0.08), undefined, ((0x4 << 16) | 0x3), undefined, undefined, (c) => !own.has(c.handle) && c.shape.type !== RAPIER.ShapeType.HeightField);
+      const below = p.y < world.terrain.getHeight(p.x, p.z) - 0.05;
+      return !!hit || below;
+    },
     /** Walk (virtual W, steering the camera yaw) to a 62 lot-local point. Resolves with the final local pos. */
     async walkTo(lx, lz, timeout = 8000) {
       const lot = world.layout.hero, c = Math.cos(lot.rot), s = Math.sin(lot.rot);
@@ -106,6 +113,8 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
         car: c ? { type: c.type, speed: +(c.body.state.speed * 3.6).toFixed(1), lights: c.lights, pos: [c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(2)) } : null,
         prompt: controls.interact.current ? (typeof controls.interact.current.label === 'function' ? controls.interact.current.label() : controls.interact.current.label) : null,
         lastExit: controls.lastExit || null,
+        cameraMode: controls.cameraMode,
+        wheelAngle: +controls.cabin.wheelAngle().toFixed(3),
       };
     },
   };
