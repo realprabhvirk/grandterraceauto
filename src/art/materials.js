@@ -34,9 +34,20 @@ export const MAT = {
   }),
 };
 
-/** 0 = afternoon, 1 = dusk. Drives window and lamp glow. */
+// Street light heads and the soft additive pools they throw on the road.
+MAT.streetHead = new THREE.MeshLambertMaterial({ color: '#e9e2cf', emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0 });
+MAT.pool = new THREE.MeshBasicMaterial({
+  color: '#ffd7a0', transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8, fog: true,
+});
+
+/** 0 = afternoon, 1 = dusk/night. Drives window, lamp and street-light glow. */
 export function setGlow(dusk) {
   const d = Math.min(1, Math.max(0, dusk));
   MAT.glass.emissiveIntensity = d * d * 1.25;
   MAT.lamp.emissiveIntensity = 0.15 + d * 1.6;
+  const s = Math.max(0, (d - 0.35) / 0.65); // street lights come on a little after sunset
+  MAT.streetHead.emissiveIntensity = s * 2.4;
+  MAT.pool.opacity = s * 0.85;
+  MAT.pool.visible = s > 0.01;
 }

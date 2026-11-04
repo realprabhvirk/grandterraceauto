@@ -19,8 +19,8 @@ const PRESETS = {
     exposure: 1.0,
   },
   dusk: {
-    sun: C(PALETTE.light.sunDusk), sunI: 2.2, elev: 5, azim: 262,
-    hemiSky: C(PALETTE.light.hemiSkyDusk), hemiGround: C(PALETTE.light.hemiGroundDusk), hemiI: 1.6,
+    sun: C(PALETTE.light.sunDusk), sunI: 1.5, elev: 5, azim: 262,
+    hemiSky: C(PALETTE.light.hemiSkyDusk), hemiGround: C(PALETTE.light.hemiGroundDusk), hemiI: 1.25,
     fog: C(PALETTE.fogDusk), fogNear: 90, fogFar: 520,
     zenith: C(PALETTE.sky.duskZenith), mid: C(PALETTE.sky.duskMid), horizon: C(PALETTE.sky.duskHorizon),
     exposure: 1.0,

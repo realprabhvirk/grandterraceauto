@@ -49,3 +49,4 @@ One line per judgment call made during the autonomous build.
 - 62 from photo: roof tiles shown as faceted charcoal planes with ridge/hip capping (no per-tile geometry); shutters are thin white slats just behind the glass so they read by day and glow at dusk.
 - 62 from photo: player spawn moved in line with the front door (x = 2.2) since there is no front path any more.
 - Debug fly camera moved from C to F2 (C freed up; crouch is Ctrl as specified).
+- Night: street-light pools are additive textured discs (no real lights) so the 1-shadow-light rule and the iGPU budget hold; they fade in after sunset (night factor > 0.35).

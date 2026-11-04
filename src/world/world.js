@@ -9,6 +9,7 @@ import { buildSigns } from './signs.js';
 import { buildHouses } from './houses.js';
 import { buildTrees } from './trees.js';
 import { buildHeroHouse, HERO_LOT, HERO_PATH_X } from './heroHouse62.js';
+import { buildStreetLights } from './streetLights.js';
 import { lotToWorld } from './layout.js';
 import { makeRng } from '../utils/rng.js';
 import { fbm } from '../utils/noise.js';
@@ -32,10 +33,13 @@ export function buildWorld(scene) {
   const hero = buildHeroHouse(layout.hero, terrain);
   if (hero) scene.add(hero.group);
 
+  const lights = buildStreetLights(network, layout);
+  scene.add(lights.group);
+
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : [])];
   const trunks = trees.trunks;
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero };
+  return { network, layout, terrain, colliders, trunks, hero, poles: lights.poles };
 }
 
 /**
