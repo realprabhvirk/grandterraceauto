@@ -127,7 +127,8 @@ export class Terrain {
     const H = this.heights;
     const a = H[iz * vn + ix], b = H[iz * vn + ix + 1];
     const c = H[(iz + 1) * vn + ix + 1], d = H[(iz + 1) * vn + ix];
-    return tx >= tz ? a + (b - a) * tx + (c - b) * tz : a + (d - a) * tz + (c - d) * tx;
+    // Same split as Rapier's heightfield (anti-diagonal b-d), verified by ray-cast probe.
+    return tx + tz <= 1 ? a + (b - a) * tx + (d - a) * tz : c + (d - c) * (1 - tx) + (b - c) * (1 - tz);
   }
 
   /** Heights in Rapier's layout: index = ix * (nz + 1) + iz. */
@@ -177,13 +178,14 @@ export class Terrain {
       for (let ix = 0; ix < n; ix++) {
         const a = iz * vn + ix, b = a + 1, cc = a + vn + 1, d = a + vn;
         const x = -half + (ix + 0.5) * cell, z = -half + (iz + 0.5) * cell;
-        const slope1 = Math.max(Math.abs(H[b] - H[a]), Math.abs(H[cc] - H[b])) / cell;
-        const slope2 = Math.max(Math.abs(H[d] - H[a]), Math.abs(H[cc] - H[d])) / cell;
-        // Triangle (a, d, c) then (a, c, b): counter-clockwise from above.
-        put(ix, iz); put(ix, iz + 1); put(ix + 1, iz + 1);
-        colour(a, d, cc, x - 0.4, z + 0.4, slope2);
-        put(ix, iz); put(ix + 1, iz + 1); put(ix + 1, iz);
-        colour(a, cc, b, x + 0.4, z - 0.4, slope1);
+        const slope1 = Math.max(Math.abs(H[b] - H[a]), Math.abs(H[d] - H[a])) / cell;
+        const slope2 = Math.max(Math.abs(H[cc] - H[b]), Math.abs(H[cc] - H[d])) / cell;
+        // Split along the b-d anti-diagonal to match Rapier's heightfield exactly.
+        // Triangles (a, d, b) then (b, d, c): counter-clockwise from above.
+        put(ix, iz); put(ix, iz + 1); put(ix + 1, iz);
+        colour(a, d, b, x - 0.4, z - 0.4, slope1);
+        put(ix + 1, iz); put(ix, iz + 1); put(ix + 1, iz + 1);
+        colour(b, d, cc, x + 0.4, z + 0.4, slope2);
       }
     }
     const geo = new THREE.BufferGeometry();

@@ -52,7 +52,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-window.__gta = { ready: false, stats: () => overlay.stats(), world, scene, renderer, controls };
+window.__gta = { ready: false, stats: () => overlay.stats(), world, scene, renderer, controls, physics, RAPIER };
 const timer = new THREE.Timer();
 let frames = 0;
 renderer.setAnimationLoop(() => {

@@ -38,10 +38,17 @@ export function cameraPreset(name, world, spawn) {
       // Close look at the street sign on the corner of Grand Terrace / Banksia Cl.
       const j = world.network.junctions[1];
       const m = j.main.samples[j.mainIndex];
-      const sx = m.x + m.tx * (j.branch.halfW + 2.6) + m.nx * j.side * 4.6;
-      const sz = m.z + m.tz * (j.branch.halfW + 2.6) + m.nz * j.side * 4.6;
+      const sx = m.x + m.tx * (j.branch.halfW + 8.2) + m.nx * j.side * 4.6;
+      const sz = m.z + m.tz * (j.branch.halfW + 8.2) + m.nz * j.side * 4.6;
       const p = new THREE.Vector3(sx + m.tx * 6 - m.nx * j.side * 5, m.h + 2.3, sz + m.tz * 6 - m.nz * j.side * 5);
       return { position: p, target: new THREE.Vector3(sx, m.h + 2.6, sz) };
+    }
+    case 'junction': {
+      // Straight down onto the Grand Terrace / Banksia Cl junction (debugging road geometry).
+      const j = world.network.junctions[1];
+      const m = j.main.samples[j.mainIndex];
+      const c = new THREE.Vector3(m.x + m.nx * j.side * 6, m.h, m.z + m.nz * j.side * 6);
+      return { position: c.clone().add(new THREE.Vector3(0, 34, 0.01)), target: c };
     }
     case 'culdesac': {
       // Standing at the mouth of Banksia Cl's turning circle, looking at the houses around it.

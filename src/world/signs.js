@@ -67,7 +67,7 @@ export function buildSigns(network) {
   const mainRow = network.roads.indexOf(network.main);
   for (const j of network.junctions) {
     const s = j.main.samples[j.mainIndex];
-    const along = j.branch.halfW + 2.6;
+    const along = j.branch.halfW + 5 + 3.2; // past the corner fillet (radius 5)
     const lat = (ROAD.curbOut + ROAD.pathIn) / 2; // middle of the grass verge
     const x = s.x + s.tx * along + s.nx * j.side * lat;
     const z = s.z + s.tz * along + s.nz * j.side * lat;

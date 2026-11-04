@@ -63,49 +63,116 @@ function filletFrame(pad) {
   return pad._fillet;
 }
 
-/** Fillet kerbs, footpaths and asphalt infill on both sides of a cul-de-sac mouth. */
+/**
+ * One fillet arc (kerb + footpath + asphalt infill) in a local (u, v) frame.
+ * toW(u, v) -> world {x, z}; hAt(w) -> road height there; (cu, cv) = arc centre; the arc
+ * sweeps phi0 -> phi1. A strip at lateral offset `lat` from a centreline sits at radius
+ * (halfW + FILLET_R - lat) around the centre. fanOrigin = local point the asphalt fan starts from.
+ */
+function filletArc(out, { toW, hAt, cu, cv, phi0, phi1, fanOrigin, lift }) {
+  const N = 12;
+  const pt = (phi, r, dy) => {
+    const w = toW(cu + Math.cos(phi) * r, cv + Math.sin(phi) * r);
+    return P(w.x, hAt(w) + dy, w.z);
+  };
+  const o = toW(0, 0);
+  const radial = (phi, sign) => { const w = toW(Math.cos(phi), Math.sin(phi)); return P((w.x - o.x) * sign, 0, (w.z - o.z) * sign); };
+  const R = (lat) => ROAD.halfW + FILLET_R - lat;
+  const fo = toW(fanOrigin[0], fanOrigin[1]), fc = P(fo.x, hAt(fo) + lift - 0.008, fo.z);
+  for (let k = 0; k < N; k++) {
+    const a = phi0 + ((phi1 - phi0) * k) / N, b = phi0 + ((phi1 - phi0) * (k + 1)) / N, m = (a + b) / 2;
+    const rr = R(ROAD.halfW), ro = R(ROAD.curbOut);
+    // Kerb: road face (normal away from the fillet centre), top, back face.
+    quad(out.curb, pt(a, rr, lift - 0.04), pt(b, rr, lift - 0.04), pt(b, rr, ROAD.curbH), pt(a, rr, ROAD.curbH), radial(m, 1));
+    quad(out.curb, pt(a, rr, ROAD.curbH), pt(b, rr, ROAD.curbH), pt(b, ro, ROAD.curbH), pt(a, ro, ROAD.curbH), UP);
+    quad(out.curb, pt(a, ro, ROAD.curbH), pt(b, ro, ROAD.curbH), pt(b, ro, -0.05), pt(a, ro, -0.05), radial(m, -1));
+    // Footpath.
+    const pi = R(ROAD.pathIn), po = R(ROAD.pathOut);
+    quad(out.path, pt(a, pi, 0.05), pt(b, pi, 0.05), pt(b, po, 0.05), pt(a, po, 0.05), UP);
+    quad(out.path, pt(a, po, 0.05), pt(b, po, 0.05), pt(b, po, -0.06), pt(a, po, -0.06), radial(m, -1));
+    quad(out.path, pt(a, pi, -0.06), pt(b, pi, -0.06), pt(b, pi, 0.05), pt(a, pi, 0.05), radial(m, 1));
+    // Asphalt infill fan (just under the road ribbons, so it only shows in the flare).
+    const pa = pt(a, rr, lift - 0.008), pb = pt(b, rr, lift - 0.008);
+    _a.subVectors(pa, fc); _b.subVectors(pb, fc); _n.crossVectors(_a, _b);
+    if (_n.y < 0) out.asphalt.push(fc, pb, pa); else out.asphalt.push(fc, pa, pb);
+  }
+}
+
+/** Fillets on both sides of a cul-de-sac mouth (tangent to the straight kerb and the circle). */
 function buildFillets(pad, F, index, out, liftBranch) {
   const toW = (u, v) => ({ x: pad.x + u * pad.inX + v * F.px, z: pad.z + u * pad.inZ + v * F.pz });
   const hAt = (w) => {
     const n = index.nearest(w.x, w.z, 20, (r) => r === pad.road);
     return n ? n.sample.h : pad.h;
   };
-  const N = 12;
   for (const side of [-1, 1]) {
-    const cu = F.uf, cv = side * F.vf; // fillet centre (local)
-    const phi0 = -side * Math.PI / 2; // pointing from the centre back to the straight kerb line
-    const phi1 = Math.atan2(-cv, -cu); // pointing at the pad centre (tangent with the circle)
-    const pt = (phi, r, dy) => {
-      const w = toW(cu + Math.cos(phi) * r, cv + Math.sin(phi) * r);
-      return P(w.x, hAt(w) + dy, w.z);
-    };
-    const radial = (phi, sign) => { const w = toW(Math.cos(phi), Math.sin(phi)); const o = toW(0, 0); return P((w.x - o.x) * sign, 0, (w.z - o.z) * sign); };
-    // Lateral offset L from the centreline -> radius around the fillet centre.
-    const R = (lat) => F.vf - lat;
-    const fan = [];
-    for (let k = 0; k < N; k++) {
-      const a = phi0 + ((phi1 - phi0) * k) / N, b = phi0 + ((phi1 - phi0) * (k + 1)) / N, m = (a + b) / 2;
-      const rr = R(ROAD.halfW), ro = R(ROAD.curbOut);
-      // Kerb: road face (normal away from the fillet centre), top, back face.
-      quad(out.curb, pt(a, rr, liftBranch - 0.04), pt(b, rr, liftBranch - 0.04), pt(b, rr, ROAD.curbH), pt(a, rr, ROAD.curbH), radial(m, 1));
-      quad(out.curb, pt(a, rr, ROAD.curbH), pt(b, rr, ROAD.curbH), pt(b, ro, ROAD.curbH), pt(a, ro, ROAD.curbH), UP);
-      quad(out.curb, pt(a, ro, ROAD.curbH), pt(b, ro, ROAD.curbH), pt(b, ro, -0.05), pt(a, ro, -0.05), radial(m, -1));
-      // Footpath.
-      const pi = R(ROAD.pathIn), po = R(ROAD.pathOut);
-      quad(out.path, pt(a, pi, 0.05), pt(b, pi, 0.05), pt(b, po, 0.05), pt(a, po, 0.05), UP);
-      quad(out.path, pt(a, po, 0.05), pt(b, po, 0.05), pt(b, po, -0.06), pt(a, po, -0.06), radial(m, -1));
-      quad(out.path, pt(a, pi, -0.06), pt(b, pi, -0.06), pt(b, pi, 0.05), pt(a, pi, 0.05), radial(m, 1));
-      fan.push([a, b]);
+    const cu = F.uf, cv = side * F.vf;
+    filletArc(out, { toW, hAt, cu, cv, phi0: -side * Math.PI / 2, phi1: Math.atan2(-cv, -cu), fanOrigin: [0, 0], lift: liftBranch });
+  }
+}
+
+/** Sample of `road` nearest to arc length s. */
+const sampleAt = (road, s) => road.samples[Math.max(0, Math.min(road.samples.length - 1, Math.round(s / ROAD.step)))];
+/** Arc length of the road sample nearest to (x, z). */
+function arcLengthNear(road, x, z) {
+  let best = Infinity, s = 0;
+  for (const p of road.samples) { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < best) { best = d; s = p.s; } }
+  return s;
+}
+
+/**
+ * Corner fillets for a cul-de-sac leaving Grand Terrace, built from the real geometry:
+ * each corner circle (radius FILLET_R at the kerb face) is tangent to Grand Terrace's kerb
+ * line and the branch's kerb line, using each road's local tangent near the corner (both
+ * roads curve here). Results are cached on the junction:
+ *   j._corners = [{ cx, cz, mainS, branchS, branchSign }]  - straight kerbs are cut at
+ *   mainS (on Grand Terrace) and branchS (on the branch kerb with lateral sign branchSign).
+ */
+function junctionCorners(j) {
+  if (j._corners) return j._corners;
+  const main = j.main, br = j.branch, sj = main.samples[j.mainIndex].s;
+  const L = ROAD.halfW + FILLET_R, rho = FILLET_R;
+  j._corners = [];
+  for (const su of [-1, 1]) {
+    let mainS = sj + su * L, branchS = L;
+    let c = null;
+    for (let iter = 0; iter < 3; iter++) {
+      const a = sampleAt(main, mainS), b = sampleAt(br, branchS);
+      // Branch kerb on this corner's side: the one whose normal points along su * main tangent.
+      const sigma = Math.sign(b.nx * a.tx + b.nz * a.tz) * su || 1;
+      // Offset lines (kerb face lines pushed rho outward); their intersection = circle centre.
+      const p1x = a.x + a.nx * j.side * (ROAD.halfW + rho), p1z = a.z + a.nz * j.side * (ROAD.halfW + rho);
+      const p2x = b.x + b.nx * sigma * (ROAD.halfW + rho), p2z = b.z + b.nz * sigma * (ROAD.halfW + rho);
+      const det = a.tx * -b.tz - a.tz * -b.tx;
+      if (Math.abs(det) < 1e-4) break;
+      const t = ((p2x - p1x) * -b.tz - (p2z - p1z) * -b.tx) / det;
+      const cx = p1x + a.tx * t, cz = p1z + a.tz * t;
+      // Tangent points on each kerb face line -> new arc-length estimates.
+      const t1x = cx - a.nx * j.side * rho, t1z = cz - a.nz * j.side * rho;
+      const t2x = cx - b.nx * sigma * rho, t2z = cz - b.nz * sigma * rho;
+      mainS = arcLengthNear(main, t1x - a.nx * j.side * ROAD.halfW, t1z - a.nz * j.side * ROAD.halfW);
+      branchS = arcLengthNear(br, t2x - b.nx * sigma * ROAD.halfW, t2z - b.nz * sigma * ROAD.halfW);
+      c = { cx, cz, mainS, branchS, branchSign: sigma, t1: [t1x, t1z], t2: [t2x, t2z] };
     }
-    // Asphalt infill: fan from the pad centre to the kerb's road-face arc (sits just under
-    // the road ribbon and pad disc, so it only shows in the flare).
-    const o = toW(0, 0), oc = P(o.x, pad.h + liftBranch - 0.008, o.z);
-    for (const [a, b] of fan) {
-      const pa = pt(a, R(ROAD.halfW), liftBranch - 0.008), pb = pt(b, R(ROAD.halfW), liftBranch - 0.008);
-      const tri = [oc, pa, pb];
-      _a.subVectors(tri[1], tri[0]); _b.subVectors(tri[2], tri[0]); _n.crossVectors(_a, _b);
-      if (_n.y < 0) out.asphalt.push(oc, pb, pa); else out.asphalt.push(oc, pa, pb);
-    }
+    if (c) j._corners.push(c);
+  }
+  return j._corners;
+}
+
+function buildJunctionFillets(j, index, out, liftBranch) {
+  const hAt = (w) => { const n = index.nearest(w.x, w.z, 20); return n ? n.sample.h : j.main.samples[j.mainIndex].h; };
+  for (const c of junctionCorners(j)) {
+    // World-space frame centred on the circle: u = +X, v = +Z.
+    const toW = (u, v) => ({ x: c.cx + u, z: c.cz + v });
+    let phi0 = Math.atan2(c.t1[1] - c.cz, c.t1[0] - c.cx);
+    let phi1 = Math.atan2(c.t2[1] - c.cz, c.t2[0] - c.cx);
+    if (phi1 - phi0 > Math.PI) phi1 -= Math.PI * 2;
+    if (phi0 - phi1 > Math.PI) phi1 += Math.PI * 2;
+    // Fan from the road-side corner point (where the two kerb face lines would meet).
+    const mx = (c.t1[0] + c.t2[0]) / 2 - c.cx, mz = (c.t1[1] + c.t2[1]) / 2 - c.cz;
+    const ml = Math.hypot(mx, mz) || 1;
+    const reach = FILLET_R * Math.SQRT2 + 2.5; // a little inside the junction: hidden under the road ribbons
+    filletArc(out, { toW, hAt, cu: 0, cv: 0, phi0, phi1, fanOrigin: [(mx / ml) * reach, (mz / ml) * reach], lift: liftBranch });
   }
 }
 
@@ -128,18 +195,19 @@ export function buildRoads(network, cuts = []) {
     const blocked = (i, lat, clearOther) => {
       const s = S[i], s1 = S[Math.min(i + 1, S.length - 1)];
       const x = (s.x + s1.x) / 2 + s.nx * lat, z = (s.z + s1.z) / 2 + s.nz * lat;
-      // Other roads: only consider their samples that are outside THIS road's asphalt.
-      const hit = index.nearest(x, z, clearOther + 0.01, (r, os) => {
-        if (r === road) return false;
-        const own = index.nearest(os.x, os.z, road.halfW + 0.5, (rr) => rr === road);
-        return !own;
-      });
-      if (hit) return true;
-      // Branch roads: suppress kerbs/paths while still inside the main road's corridor.
-      if (!road.main) {
-        const m = index.nearest(x, z, Math.abs(lat) + 0.2, (r) => r.main);
-        if (m) return true;
+      // Junction mouths: corner fillets take over between their tangent points.
+      const sMid = (s.s + s1.s) / 2, latSign = Math.sign(lat);
+      for (const j of network.junctions) {
+        const cs = junctionCorners(j);
+        if (road === j.main && latSign === j.side && cs.length === 2) {
+          const lo = Math.min(cs[0].mainS, cs[1].mainS), hi = Math.max(cs[0].mainS, cs[1].mainS);
+          if (sMid > lo && sMid < hi) return true;
+        }
+        if (road === j.branch) {
+          for (const c of cs) if (latSign === c.branchSign && sMid < c.branchS) return true;
+        }
       }
+      void clearOther; void x; void z;
       // Approaching this road's own cul-de-sac: the fillet + ring take over once the quad
       // starts past the fillet tangent point (u_f along the approach direction).
       if (road.pad) {
@@ -168,6 +236,8 @@ export function buildRoads(network, cuts = []) {
       ribbon(path, S, pi, pi, -0.06, 0.05, 'in', keepPath);
     }
   }
+
+  for (const j of network.junctions) buildJunctionFillets(j, index, { asphalt, curb, path }, lift.branch);
 
   // Cul-de-sac pads: asphalt disc + kerb ring + footpath ring, joined to the straight road
   // by curved fillets (5 m radius, tangent to both the straight kerb and the circle).
