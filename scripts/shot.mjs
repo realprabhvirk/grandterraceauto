@@ -3,6 +3,7 @@
 // and exits non-zero if the page logged any console errors.
 //
 // Usage: .\dev.cmd node scripts/shot.mjs [preset ...]   (no presets = all)
+//        set SHOT_EXTRA=&hud to append URL flags (e.g. the F3 overlay)
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -44,7 +45,7 @@ try {
     });
     page.on('pageerror', (e) => errors.push(`[${preset}] pageerror: ${e.message}`));
     const t0 = Date.now();
-    await page.goto(`${URL_BASE}?cam=${preset}&shot=1`, { waitUntil: 'load' });
+    await page.goto(`${URL_BASE}?cam=${preset}&shot=1${process.env.SHOT_EXTRA || ''}`, { waitUntil: 'load' });
     await page.waitForFunction(() => window.__gta && window.__gta.ready === true, null, { timeout: 90000 });
     // Let a few frames settle (shadows, sign textures).
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n > 20 ? r() : requestAnimationFrame(f)); f(); }));
