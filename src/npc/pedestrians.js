@@ -84,7 +84,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
     ped.yaw += dy * Math.min(1, dt * 5);
   }
 
-  const hitListeners = [];
+  const hitListeners = [], scareListeners = [];
   function knockDown(ped, car) {
     ped.state = 'down'; ped.downT = 0; ped.dodge = null; ped.action = null;
     ped.yaw = Math.atan2(-car.fx * Math.sign(car.speed), -car.fz * Math.sign(car.speed)); // falls away from the car
@@ -136,6 +136,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
           const closing = (dx * c.fx + dz * c.fz) * Math.sign(v) > 0;
           if (closing) {
             ped.dodge = { x: ped.pos.x + here.ox * 1.7, z: ped.pos.z + here.oz * 1.7, back: { x: ped.pos.x, z: ped.pos.z }, t: 2.2 };
+            scareListeners.forEach((f) => f({ ped, car: c }));
             ped.action = null;
             break;
           }
@@ -206,6 +207,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT }) {
     update,
     /** Debug: count awake / waving etc. */
     onHit(f) { hitListeners.push(f); },
+    onScare(f) { scareListeners.push(f); },
     stats() {
       return { total: peds.length, awake: peds.filter((p) => p.ch.root.visible).length, paused: peds.filter((p) => p.state === 'pause').length, down: peds.filter((p) => p.state === 'down').length, fleeing: peds.filter((p) => p.flee > 0).length };
     },

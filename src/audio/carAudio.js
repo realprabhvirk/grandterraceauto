@@ -109,6 +109,20 @@ export function createCarAudio() {
       }
     },
     setListener(p) { listener = p; },
+    /** Police siren (wailing), level 0..1 from distance; created lazily. */
+    siren(level) {
+      if (!ctx) return;
+      if (!this._siren) {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 760;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 0.45;
+        const lg = ctx.createGain(); lg.gain.value = 330; lfo.connect(lg); lg.connect(o.frequency);
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+        const g = ctx.createGain(); g.gain.value = 0;
+        o.connect(lp); lp.connect(g); g.connect(master); o.start(); lfo.start();
+        this._siren = g;
+      }
+      set(this._siren.gain, Math.max(0, Math.min(1, level)) * 0.07, 0.15);
+    },
     /** Crunch: filtered noise burst + low thump, strength 0..1. */
     crash(strength) {
       if (!ctx || strength <= 0.02) return;

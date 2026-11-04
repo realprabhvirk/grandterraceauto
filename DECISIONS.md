@@ -79,3 +79,7 @@ One line per judgment call made during the autonomous build.
 - Car damage visuals reuse each car's own merged geometry (vertex-colour darkening in bands) plus a loose bumper bar, popped hood, pooled smoke and emissive flame cones - no extra lights.
 - Breakables: props break BEFORE their collider stops the car (prediction from speed/heading vs toughness); timber fence sections and the street-name signs stay unbreakable (merged geometry) - logged as rough.
 - Respawn points are temporary footpath spots near 62 until the town exists (src/world/spawnPoints.js).
+- Police: kinematic PoliceCar extends TrafficCar (cheap); flashing via swapped MeshBasic materials, no real lights; route = Dijkstra over lanes to the lane point nearest the LAST-SEEN position; direct chase within 40 m with line of sight; box in at half a car length + 3 m, ram only if the player keeps moving.
+- Escape: no reinforcements spawn while the stars flash; routing to last-seen (not true) position.
+- Footpath-scare heat only counts when the player's car is off the road (>4.6 m from any centreline).
+- Carjack swaps the kinematic traffic car for a drivable Rapier copy (8 spare wheel slots in the instanced wheel mesh).

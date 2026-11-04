@@ -57,14 +57,31 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   panel.setPage(mode === 'fly' ? 'fly' : 'walk');
 
   // Every car offers "Press F to drive" at its driver's door.
-  for (const c of vehicles.cars) {
+  // Hooks set by main.js (theft / carjack -> wanted level).
+  const hooks = { onTheft: null, onCarjack: null };
+  let breakT = 0;
+  /** Drivable cars: hero (owned) = F; anything else = hold F to break in (stolen). */
+  function registerCar(c) {
     interact.register({
-      id: `car-${c.type}`,
+      id: `car-${c.type}`, car: c,
       range: c.cfg.L / 2 + 0.9,
-      label: c.hero ? 'Press F to drive the hero car' : `Press F to drive the ${c.cfg.label.toLowerCase()}`,
+      label: () => (c.hero ? 'Press F to drive the hero car' : c.unlocked ? `Press F to drive the ${c.cfg.label.toLowerCase()}` : 'Hold F to break in'),
       position: () => carLocalToWorld(c, -(c.cfg.W / 2), 0, c.cfg.seat[2]),
-      enabled: () => mode === 'walk' && !player.state.action,
+      enabled: () => mode === 'walk' && !player.state.action && !c.impounded && !c.dead,
       action: () => beginEnter(c),
+    });
+  }
+  for (const c of vehicles.cars) registerCar(c);
+  vehicles.onAdded?.(registerCar);
+  /** Traffic cars can be carjacked (police cars can't). */
+  function registerTraffic(t, list) {
+    interact.register({
+      id: `carjack-${t.id}`,
+      range: t.cfg.L / 2 + 1.0,
+      label: 'Press F to carjack',
+      position: () => carLocalToWorld(t, -(t.cfg.W / 2), 0, t.cfg.seat[2]),
+      enabled: () => mode === 'walk' && !player.state.action && list.includes(t) && !t.isPolice && !t.dead,
+      action: () => hooks.onCarjack?.(t),
     });
   }
 
@@ -147,7 +164,9 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     get lastExit() { return lastExit; },
     /** Current camera: third/first on foot, chase/cabin/cinematic in a car, else the mode. */
     get cameraMode() { return mode === 'walk' ? footCam : mode === 'drive' ? carCam : mode; },
-    cabin, cinematic,
+    cabin, cinematic, hooks, registerTraffic,
+    /** Get into a car (used by carjacking). */
+    enterCar(c) { beginEnter(c); },
     player, input, chase, panel, hud, interact, settings,
     hint: panel.el,
     syncFly() { fly.syncFromCamera(); },
@@ -185,7 +204,17 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       if (mode === 'walk') {
         player.update(dt, input, camera, true);
         const target = interact.update(player.position, 'walk');
-        if (target && input.pressed('Key' + target.key)) interact.fire();
+        if (target?.car && !target.car.hero && !target.car.unlocked) {
+          // Break-in: hold F for 1.2 s.
+          if (input.down('KeyF')) {
+            breakT += dt;
+            prompt.show('F', `Breaking in... ${Math.min(100, Math.floor((breakT / 1.2) * 100))}%`);
+            if (breakT >= 1.2) { breakT = 0; target.car.unlocked = target.car.stolen = true; hooks.onTheft?.(target.car); beginEnter(target.car); }
+          } else breakT = 0;
+        } else {
+          breakT = 0;
+          if (target && input.pressed('Key' + target.key)) interact.fire();
+        }
       } else if (mode === 'drive') {
         const ct = interact.update(car.position, 'car'); // e.g. 'Press E to open the garage'
         if (ct && input.pressed('Key' + ct.key)) interact.fire();

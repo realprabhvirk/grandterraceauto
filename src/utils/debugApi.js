@@ -118,6 +118,10 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
         carHealth: controls.car ? +(controls.car.health ?? 100).toFixed(1) : null,
         cash: window.__gta.wallet?.cash,
         stars: window.__gta.world.wanted?.stars || 0,
+        heat: window.__gta.world.wanted?.heat || 0,
+        searching: !!window.__gta.world.wanted?.searching,
+        police: window.__gta.police ? window.__gta.police.cars.map((c) => ({ mode: c.mode, d: +Math.hypot(c.pos.x - controls.focus().x, c.pos.z - controls.focus().z).toFixed(1) })) : [],
+        stolen: !!controls.car?.stolen,
         ko: !!window.__gta.combat?.ko,
         wheelAngle: +controls.cabin.wheelAngle().toFixed(3),
       };

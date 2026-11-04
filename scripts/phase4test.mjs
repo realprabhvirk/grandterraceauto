@@ -180,6 +180,72 @@ try {
     });
     check('knocked out -> hospital respawn, -$200, full health', ko.cash === ko.cash0 - 200 && ko.mode === 'walk' && ko.d < 2 && ko.hp === 100, ko);
   }
+  // ---------------------------------------------------------------- Step 4: theft / wanted / police
+  if (run('police')) {
+    await load();
+    // Witnessed theft of a parked car: stand at its driver's door with a pedestrian watching.
+    await ev(() => {
+      const g = window.__gta, car = g.vehicles.cars.find((c) => !c.hero && !c.impounded);
+      const lot = g.world.layout.hero;
+      const c = car.position, yaw = car.body.yaw();
+      const dx = -Math.cos(yaw) * (car.cfg.W / 2 + 0.7), dz = Math.sin(yaw) * (car.cfg.W / 2 + 0.7);
+      g.controls.player.teleport({ x: c.x + dx, y: g.world.terrain.getHeight(c.x + dx, c.z + dz), z: c.z + dz }, yaw);
+      const p = g.peds.peds[0];
+      p.pos.set(c.x + Math.sin(yaw) * 10, g.world.terrain.getHeight(c.x + Math.sin(yaw) * 10, c.z + Math.cos(yaw) * 10), c.z + Math.cos(yaw) * 10);
+      p.state = 'pause'; p.timer = 30;
+      window.__theftCar = car; void lot;
+    });
+    await wait(700);
+    const pre = await ev(() => window.__gta.debug.state());
+    await ev(async () => { const I = window.__gta.controls.input; I.setVirtual('KeyF', true); await new Promise((r) => setTimeout(r, 1500)); I.setVirtual('KeyF', false); });
+    await wait(1400);
+    let s = await ev(() => window.__gta.debug.state());
+    check('hold F breaks into a parked car', s.mode === 'drive' && s.stolen, { prompt: pre.prompt, mode: s.mode, stolen: s.stolen });
+    check('witnessed theft -> wanted >= 1 star', s.stars >= 1, { stars: s.stars, heat: s.heat });
+    await wait(7000);
+    s = await ev(() => window.__gta.debug.state());
+    check('police spawn and pursue', s.police.length >= 2 && s.police.some((p) => p.mode === 'route' || p.mode === 'chase'), s.police);
+    // Busted: bring a cop right up to the stopped car.
+    const bust = await ev(async () => {
+      const g = window.__gta, cop = g.police.cars[0], p = g.controls.car.position, f = g.controls.car.body.forward();
+      cop.pos.set(p.x + f.x * 7, p.y, p.z + f.z * 7); cop.mode = 'chase';
+      const cash0 = g.wallet.cash, stolen = g.controls.car;
+      await new Promise((r) => setTimeout(r, 6000));
+      const sp = g.spawns.police().position, q = g.controls.player.position;
+      return { cash0, cash: g.wallet.cash, stars: g.wanted.stars, mode: g.controls.mode, d: +Math.hypot(q.x - sp.x, q.z - sp.z).toFixed(1), impounded: !!stolen.impounded };
+    });
+    check('busted: -$500, wanted cleared, at the station, car impounded', bust.cash === bust.cash0 - 500 && bust.stars === 0 && bust.mode === 'walk' && bust.d < 3 && bust.impounded, bust);
+    // Escape: get wanted, go far away, fast-forward the search timer.
+    const esc = await ev(async () => {
+      const g = window.__gta;
+      g.wanted.add('carjack'); g.wanted.add('pedHit');
+      await new Promise((r) => setTimeout(r, 3000));
+      const S = g.world.network.main.samples, far = S[S.length - 10];
+      g.controls.player.teleport({ x: far.x, y: far.h, z: far.z }, 0);
+      for (const c of g.police.cars) { c.pos.set(S[10].x, S[10].h, S[10].z); c.mode = 'route'; c.lane = g.traffic.graph.lanes[0]; c.s = 1; }
+      const stars0 = g.wanted.stars;
+      g.wanted.fastForward(60);
+      await new Promise((r) => setTimeout(r, 1500));
+      const searching = g.wanted.searching;
+      await new Promise((r) => setTimeout(r, 11000));
+      return { stars0, searching, stars: g.wanted.stars };
+    });
+    check('escape: stars flash then clear', esc.stars0 >= 1 && esc.searching && esc.stars === 0, esc);
+    // Carjack a traffic car.
+    const cj = await ev(async () => {
+      const g = window.__gta, t = g.traffic.cars[0];
+      const yaw = Math.atan2(t.fwd.x, t.fwd.z), x = t.pos.x - Math.cos(yaw) * 2.2, z = t.pos.z + Math.sin(yaw) * 2.2;
+      g.controls.player.teleport({ x, y: g.world.terrain.getHeight(x, z), z }, yaw);
+      t.v = 0; t.cruise = 0.01;
+      await new Promise((r) => setTimeout(r, 400));
+      const prompt = g.debug.state().prompt;
+      await g.debug.tap('KeyF');
+      await new Promise((r) => setTimeout(r, 1500));
+      const s = g.debug.state();
+      return { prompt, mode: s.mode, stolen: s.stolen, stars: s.stars, trafficLeft: g.traffic.cars.length };
+    });
+    check('carjack: driver pulled out, you drive off, wanted up', cj.mode === 'drive' && cj.stolen && cj.stars >= 1 && cj.trafficLeft === 5, cj);
+  }
 } finally {
   await context.close();
   await browser.close();

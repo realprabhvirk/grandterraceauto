@@ -26,6 +26,9 @@ import { createWallet } from './combat/wallet.js';
 import { createStatusHud } from './ui/statusHud.js';
 import { buildStreetProps } from './world/streetProps.js';
 import { createSpawnPoints } from './world/spawnPoints.js';
+import { createWanted } from './police/wanted.js';
+import { createPolice } from './police/policeManager.js';
+import { createTheft } from './police/theft.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -72,7 +75,7 @@ const debugDraw = createDebugDraw(scene, physics, world.terrain);
 const peds = createPedestrians({ scene, physics, world });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
 /** Everything with wheels that pedestrians should watch out for. */
-const movingCars = () => [...vehicles.cars.map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W }; }), ...traffic.movers()];
+const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
 
 // --- Damage, destruction, cash -------------------------------------------------------------
 const particles = createParticles(scene);
@@ -89,6 +92,13 @@ world.spawns = spawns;
 const combat = createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud: statusHud, spawns, world });
 peds.onHit((e) => combat.emit('pedHit', e));
 
+// --- Wanted level, police, theft ------------------------------------------------------------
+const wanted = createWanted(statusHud);
+world.wanted = wanted;
+const police = createPolice({ scene, physics, world, traffic, vehicles, controls, audio, wanted, hud: statusHud, wallet, spawns, camera });
+world.police = police;
+const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world });
+
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -97,7 +107,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -108,7 +118,9 @@ renderer.setAnimationLoop(() => {
   physics.step(dt);
   vehicles.sync();
   controls.update(dt);
-  traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5 });
+  traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: police.movers() });
+  police.update(dt);
+  theft.update(dt, world.terrain);
   audio.setListener(controls.focus());
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   combat.update(dt);

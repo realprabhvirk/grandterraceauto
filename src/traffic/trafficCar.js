@@ -15,7 +15,7 @@ const P0 = {}, P1 = {};
 
 export class TrafficCar {
   constructor({ id, type, cfg, paint, lane, s, cruise, physics, scene, wheels, wheelOffset, terrain, rng }) {
-    Object.assign(this, { id, type, cfg, lane, s, cruise, terrain, wheels, wheelOffset, rng });
+    Object.assign(this, { id, type, cfg, paint, lane, s, cruise, terrain, wheels, wheelOffset, rng });
     this.v = cruise * 0.6;
     this.latOff = 0;      // sideways shift to pass kerb-parked cars
     this.blockedT = 0;
@@ -106,7 +106,7 @@ export class TrafficCar {
     // --- Move along the lane (and onto the next one) --------------------------------------
     this.s += this.v * dt;
     for (const b of this.lane.branches) {
-      if (b.atS > this.s - this.v * dt && b.atS <= this.s && this.rng.next() < b.prob) {
+      if (b.atS > this.s - this.v * dt && b.atS <= this.s && (this.pickBranch ? this.pickBranch(b) : this.rng.next() < b.prob)) {
         this.s = this.s - b.atS;
         this.lane = ctx.lanes[b.lane];
         break;
@@ -117,6 +117,7 @@ export class TrafficCar {
       const exits = this.lane.exits;
       let pick = exits[0], r = this.rng.next();
       for (const e of exits) { if (r < e.prob) { pick = e; break; } r -= e.prob; }
+      if (this.pickExit) pick = this.pickExit(exits) || pick; // police follow their A* route
       this.lane = ctx.lanes[pick.lane];
       this.s = pick.s + over;
     }
@@ -154,7 +155,12 @@ export class TrafficCar {
     this.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
     this.tailMesh.material = this.braking ? CAR_MAT.tailBrake : this.lights ? CAR_MAT.tailRun : CAR_MAT.tailOff;
 
-    // Wheels.
+    this.syncWheels(dt);
+  }
+
+  /** Wheel instances follow the body (also used by police cars chasing off-lane). */
+  syncWheels(dt) {
+    const cfg = this.cfg;
     this.spin += (this.v * dt) / cfg.wheelR;
     const pts = [[cfg.track / 2, cfg.wheelBase / 2], [-cfg.track / 2, cfg.wheelBase / 2], [cfg.track / 2, -cfg.wheelBase / 2], [-cfg.track / 2, -cfg.wheelBase / 2]];
     pts.forEach(([wx, wz], i) => {

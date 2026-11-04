@@ -1,5 +1,6 @@
 // Ambient traffic: 6 seeded AI cars on the lane graph. They see each other, the player's
 // car, the parked cars (which they swing out around) and the walking player on the road.
+import * as THREE from 'three';
 import { CAR_TYPES } from '../vehicles/carTypes.js';
 import { createWheelInstances } from '../vehicles/wheels.js';
 import { PALETTE } from '../art/palette.js';
@@ -31,11 +32,24 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
   }
 
   const honk = (car) => audio.honk?.(car.pos);
+  /** Take a traffic car off the road (carjacked: replaced by a drivable copy). */
+  function removeCar(c) {
+    const i = cars.indexOf(c);
+    if (i < 0) return;
+    cars.splice(i, 1);
+    c.group.visible = false;
+    c.body.setEnabled(false);
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    for (let k = 0; k < 4; k++) wheels.setMatrixAt(c.wheelOffset + k, zero);
+    wheels.instanceMatrix.needsUpdate = true;
+  }
   return {
     cars,
     graph,
+    removeCar,
+    honk,
     /** ctx: { player (walker position or null), night } */
-    update(dt, { player, night }) {
+    update(dt, { player, night, extra = [] }) {
       const obstacles = [];
       for (const c of cars) obstacles.push({ self: c, x: c.pos.x, z: c.pos.z, speed: c.v, len: c.cfg.L });
       for (const c of vehicles.cars) {
@@ -43,6 +57,7 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
         obstacles.push({ x: p.x, z: p.z, speed: Math.abs(c.body.state.speed), len: c.cfg.L, parked: !driven && Math.abs(c.body.state.speed) < 0.5, player: driven });
       }
       if (player) obstacles.push({ x: player.x, z: player.z, speed: 0, len: 0.6, player: true });
+      for (const o of extra) obstacles.push(o); // police cars
       const lanes = graph.lanes;
       for (const c of cars) {
         if (c.lights !== night) c.setLights(night);
