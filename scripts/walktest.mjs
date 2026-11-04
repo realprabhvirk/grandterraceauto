@@ -36,7 +36,7 @@ console.log('after W', fmt(atDoor));
 check('walked up the path to the house', atDoor.z < 8, fmt(atDoor));
 check('stopped by the house wall (no clipping)', atDoor.z > 3.3, fmt(atDoor)); // front door is recessed at z = 3.2
 check('standing on the porch slab', atDoor.y > 0.1 && atDoor.y < 0.35, fmt(atDoor));
-await page.screenshot({ path: 'shots/walk-porch.png' });
+if (process.env.SHOTS) await page.screenshot({ path: 'shots/walk-porch.png' });
 
 // Walk back out to the footpath, then strafe left along the hedge line.
 await hold('KeyS', 2600);

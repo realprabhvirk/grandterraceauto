@@ -9,7 +9,7 @@ import { mkdirSync } from 'node:fs';
 
 mkdirSync('shots/phase2', { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -32,7 +32,7 @@ for (let i = 0; i < routes.length; i++) {
     await page.waitForTimeout(1000);
     res = await page.evaluate(() => window.__runResult);
     if (res) break;
-    if ((t === 4 || t === 14) && shots < 2) { await page.screenshot({ path: `shots/phase2/drive-${slug}-${++shots}.png` }); }
+    if ((t === 4 || t === 14) && shots < 2 && process.env.SHOTS) { await page.screenshot({ path: `shots/phase2/drive-${slug}-${++shots}.png` }); }
   }
   const stats = await page.evaluate(() => window.__gta.stats());
   const physicsOk = res && res.minAbove > -0.5 && res.maxAbove < 2.5 && res.maxTilt < 55 && !res.nan;

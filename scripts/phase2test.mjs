@@ -10,7 +10,7 @@ import { mkdirSync } from 'node:fs';
 
 mkdirSync('shots/phase2', { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -23,7 +23,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ?
 const state = () => page.evaluate(() => window.__gta.debug.state());
 const local = () => page.evaluate(() => window.__gta.debug.heroLocal());
 const stats = () => page.evaluate(() => window.__gta.stats());
-const shot = async (name) => { await page.screenshot({ path: `shots/phase2/${name}.png` }); console.log(`      shot shots/phase2/${name}.png`); };
+const shot = async (name) => { if (!process.env.SHOTS) return; await page.screenshot({ path: `shots/phase2/${name}.png` }); console.log(`      shot shots/phase2/${name}.png`); };
 const holdUntil = async (key, cond, maxMs) => {
   await page.keyboard.down(key);
   const t0 = Date.now();

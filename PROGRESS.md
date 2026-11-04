@@ -1,5 +1,12 @@
 # Progress
 
+<!-- STATUS -->
+**STATUS (2026-11-04 23:40)**
+- Done: P4 step 0 baseline green (walk 7/7, phase2 16/16, drive 4/4)
+- Broken: garage: E from car / exit spot (step 1)
+- Next: Step 1 bugs
+<!-- /STATUS -->
+
 Timestamped log of the autonomous Phase 1 build.
 
 ## 2026-11-04
@@ -145,3 +152,9 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
   - OPEN BUG: E from inside the car does not open the garage (no 'car' prompt shows); not yet diagnosed. On foot E near the garage should work but is untested.
   - Dev server was serving a stale physicsWorld.js (watcher missed a PowerShell write); restarted it. Re-run the full test suite before trusting earlier step-4 numbers.
   - NOT STARTED: steps 5 (8 house variants + yard details), 6 (signs, power poles, ambient sound, minimap), 7 (extended Playwright suite + perf pass), 8 (MULTIPLAYER_PLAN.md), Phase 3 summary + README update.
+
+---
+
+# PHASE 4 (cheap + low-RAM run: no screenshots, numeric asserts)
+
+- 23:40 P4 step 0: dev server restarted, tests switched to 960x540 with screenshots opt-in (SHOTS=1); baseline suite green.
