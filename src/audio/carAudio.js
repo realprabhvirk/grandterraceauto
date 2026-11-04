@@ -3,7 +3,7 @@
 // click/keypress (browser autoplay rule); before that every call is a no-op.
 
 export function createCarAudio() {
-  let ctx = null, master = null;
+  let ctx = null, master = null, listener = null;
   let engine = null, horn = null, screech = null;
   let muted = false, volume = 0.8;
   const level = () => (muted ? 0 : 0.55 * volume);
@@ -92,6 +92,23 @@ export function createCarAudio() {
       set(screech.g.gain, Math.max(0, amount) * 0.084, 0.06);
       set(screech.f.frequency, 1800 + amount * 900, 0.1);
     },
+    /** One-shot short double-toot from an AI car (volume falls off with distance to the listener). */
+    honk(pos) {
+      if (!ctx) return;
+      const d = listener ? Math.hypot(pos.x - listener.x, pos.z - listener.z) : 10;
+      const vol = Math.max(0, 0.14 * (1 - d / 70));
+      if (vol <= 0.005) return;
+      const g = ctx.createGain(); g.gain.value = 0; g.connect(master);
+      for (const [f, t0] of [[440, 0], [440, 0.22]]) {
+        const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f;
+        const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = f * 1.26;
+        o.connect(g); o2.connect(g);
+        o.start(ctx.currentTime + t0); o.stop(ctx.currentTime + t0 + 0.16);
+        o2.start(ctx.currentTime + t0); o2.stop(ctx.currentTime + t0 + 0.16);
+        g.gain.setValueAtTime(vol, ctx.currentTime + t0); g.gain.setValueAtTime(0, ctx.currentTime + t0 + 0.16);
+      }
+    },
+    setListener(p) { listener = p; },
     /** One-shot low thud, strength 0..1. */
     thud(strength) {
       if (!ctx || strength <= 0.05) return;

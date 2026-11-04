@@ -64,3 +64,6 @@ One line per judgment call made during the autonomous build.
 - Drive test: cul-de-sac routes use centreline waypoints with no avoidance and pass on physics (height band, tilt, NaN); Grand Terrace keeps the lane + overtaking test.
 - Characters: switched from 11 meshes per character to one SkinnedMesh with rigid one-bone-per-part skinning (same pose code), so 20 pedestrians cost ~20 draw calls instead of ~220.
 - Pedestrians: kinematic capsules in a new NPC collision group (blocks the player and cars, ignored by wheel rays and cameras); no damage or reactions beyond dodging.
+- Traffic: kinematic lane-following (no Rapier vehicle per AI car); kinematic colliders so the player's car hits them but they never get knocked off their lane (arcade).
+- Traffic: AI cars ignore pedestrians (pedestrians dodge instead), stop for the walking player in their lane, and treat stationary non-driven cars as parked (swing out round them).
+- Left-hand traffic fix: road sample normals are the RIGHT of travel; lanes/parking now use -n for keep-left. Kerbside parked cars moved to the correct side as a result.

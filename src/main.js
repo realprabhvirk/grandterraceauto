@@ -17,6 +17,7 @@ import { createHeadlightRig } from './vehicles/headlightRig.js';
 import { createCarAudio } from './audio/carAudio.js';
 import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
+import { createTraffic } from './traffic/trafficManager.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -58,8 +59,9 @@ if (params.has('shot')) controls.panel.hide();
 physics.onStep((h) => { controls.fixedUpdate(h); vehicles.fixedUpdate(h); });
 const debugDraw = createDebugDraw(scene, physics, world.terrain);
 const peds = createPedestrians({ scene, physics, world });
+const traffic = createTraffic({ scene, physics, world, vehicles, audio });
 /** Everything with wheels that pedestrians should watch out for. */
-const movingCars = () => vehicles.cars.map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed }; });
+const movingCars = () => [...vehicles.cars.map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed }; }), ...traffic.movers()];
 
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -69,7 +71,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -80,6 +82,8 @@ renderer.setAnimationLoop(() => {
   physics.step(dt);
   vehicles.sync();
   controls.update(dt);
+  traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5 });
+  audio.setListener(controls.focus());
   peds.update(dt, { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: movingCars() });
   const lit = controls.car && controls.car.lights ? controls.car : vehicles.cars.find((c) => c.lights) || null;
   headlights.update(dt, lit, lighting.dusk);

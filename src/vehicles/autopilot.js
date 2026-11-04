@@ -8,7 +8,8 @@ const LANE = 1.8; // keep left (Australia)
 /** Waypoint routes: the full length of Grand Terrace, and in-and-out of each cul-de-sac. */
 export function buildRoutes(world, { lane = LANE } = {}) {
   const { network } = world;
-  const lanePt = (s, dir) => ({ x: s.x + s.nx * lane * dir, z: s.z + s.nz * lane * dir });
+  // Sample normals point to the right of travel, so keep-left = -n for travel along +t.
+  const lanePt = (s, dir) => ({ x: s.x - s.nx * lane * dir, z: s.z - s.nz * lane * dir });
   const along = (road, i0, i1, stride = 6) => {
     const pts = [], dir = Math.sign(i1 - i0) || 1;
     for (let i = i0; dir > 0 ? i <= i1 : i >= i1; i += stride * dir) pts.push(lanePt(road.samples[i], dir));

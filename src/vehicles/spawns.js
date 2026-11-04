@@ -50,8 +50,9 @@ export function buildSpawns(world) {
       const nearHero = Math.hypot(hero.sample.x - x, hero.sample.z - z) < 20;
       const nearPad = network.pads.some((p) => Math.hypot(p.x - x, p.z - z) < p.r + 8);
       if (nearJunction || nearHero || nearPad || !clearOfCuts(x, z, 4.2) || !clearOfCars(x, z)) continue;
-      // Left normal = side +1, so a car on side +1 faces along the tangent.
-      const dir = side > 0 ? 1 : -1;
+      // Sample normals point to the RIGHT of +t, so a car on side +1 parks on its left kerb
+      // facing -t (keep left), and one on side -1 faces +t.
+      const dir = side > 0 ? -1 : 1;
       spots.push({ x, z, yaw: Math.atan2(s.tx * dir, s.tz * dir) });
       break;
     }

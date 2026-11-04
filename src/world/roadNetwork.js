@@ -50,7 +50,8 @@ function sampleCurve(curve) {
     const t = curve.getTangentAt(i / count);
     const tl = Math.hypot(t.x, t.z) || 1;
     const tx = t.x / tl, tz = t.z / tl;
-    // Left-hand normal in the XZ plane.
+    // Normal in the XZ plane. NOTE: (-tz, tx) points to the RIGHT of travel (three.js is
+    // right-handed with Y up); 'side +1' lots/footpaths are on the right of +t.
     return { x: p.x, z: p.z, h: 0, tx, tz, nx: -tz, nz: tx, s: (i / count) * len };
   });
   return { samples, length: len };

@@ -48,7 +48,7 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       const pts = [mouth];
       for (let k = 0; k < waypoints; k++) {
         const p = S[Math.min(S.length - 1, hero.site.i + 10 + k * 6)];
-        pts.push({ x: p.x + p.nx * 1.8, z: p.z + p.nz * 1.8 });
+        pts.push({ x: p.x - p.nx * 1.8, z: p.z - p.nz * 1.8 }); // keep left (normals point right)
       }
       const obstacles = vehicles.cars.filter((o) => o !== car);
       return runAutopilot({ car, input: controls.input, terrain: world.terrain, points: pts, obstacles, speed: 13, timeout: 90, ...opts });
