@@ -25,6 +25,8 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
 
   return {
     get mode() { return mode; },
+    /** Re-read the camera orientation into the fly cam (after code moved the camera). */
+    syncFly() { fly.syncFromCamera(); },
     player,
     hint,
     fixedUpdate(dt) { player.fixedUpdate(dt, input, mode === 'walk'); },

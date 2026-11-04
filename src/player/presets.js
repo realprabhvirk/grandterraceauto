@@ -43,6 +43,25 @@ export function cameraPreset(name, world, spawn) {
       const p = new THREE.Vector3(sx + m.tx * 6 - m.nx * j.side * 5, m.h + 2.3, sz + m.tz * 6 - m.nz * j.side * 5);
       return { position: p, target: new THREE.Vector3(sx, m.h + 2.6, sz) };
     }
+    case 'hero-car': {
+      // 3/4 front view of the hero car in 62's driveway.
+      const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
+      const L = (lx, ly, lz) => new THREE.Vector3(hero.x + lx * c + lz * sn, hero.h + ly, hero.z - lx * sn + lz * c);
+      return { position: L(-1.2, 1.55, 13.2), target: L(-6.1, 0.75, 8.0) };
+    }
+    case 'cars': {
+      // Kerbside car on Grand Terrace, low 3/4 angle.
+      const v = world.vehicles?.cars?.[4];
+      if (v) {
+        const p = v.position, yaw = v.body.yaw();
+        const f = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+        const side = new THREE.Vector3(f.z, 0, -f.x);
+        const cam = new THREE.Vector3(p.x, p.y, p.z).addScaledVector(f, 5.5).addScaledVector(side, -3.5);
+        cam.y = T.getHeight(cam.x, cam.z) + 1.4;
+        return { position: cam, target: new THREE.Vector3(p.x, p.y + 0.6, p.z) };
+      }
+      return { position: new THREE.Vector3(0, 50, 0), target: new THREE.Vector3(0, 0, 1) };
+    }
     case 'junction': {
       // Straight down onto the Grand Terrace / Banksia Cl junction (debugging road geometry).
       const j = world.network.junctions[1];

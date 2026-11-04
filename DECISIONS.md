@@ -39,3 +39,9 @@ One line per judgment call made during the autonomous build.
 - Terrain collider: kept the Rapier heightfield (smoother for wheels than a trimesh) and changed the VISUAL triangulation to Rapier's anti-diagonal, so they match exactly. Road surface = the terrain under the corridor (road ribbons are 5-6 cm visual decals); kerbs are visual only, so cars ride over them.
 - Junction corners: fillet circle solved from both roads' local tangent lines (not a straight frame), straight kerbs cut by arc length at the tangent points; capped the Phase 1 fix time, so tiny apex slivers stay.
 - F4 debug draw: terrain drawn as a local 36x36-cell wireframe around the focus instead of Rapier's full heightfield (~350k segments); everything else straight from world.debugRender().
+- Cars: hero car = sedan in 'Grand Terrace teal' (#1f6e73) with boot spoiler, twin exhausts and lighter rims; other 7 cars cycle hatch/ute/4WD/sedan with non-repeating palette paints.
+- Cars: Australian right-hand drive (driver seat on the car's right) and left-side kerb parking facing the direction of travel.
+- Cars: physics wheels are 4 cm bigger than the visual tyres so tyres sit on the 5 cm road decal; the visual body is lifted by suspension sag + 4 cm so arches centre on the wheels.
+- Cars: per-car materials avoided - light states swap between shared off/on/brake materials (no shader recompiles); all 28 regular wheels are one InstancedMesh (+1 for the hero's rims).
+- Cars: ute has a black tonneau cover instead of an open tray (cheaper, reads well); 4WD has roof rails, cladding and a rear spare.
+- Vehicle physics: low centre of mass + 1.8x roll inertia + upright torque + roll damping + downforce + 4.5 m/s upward-velocity clamp = hard to flip, no launching off crests.

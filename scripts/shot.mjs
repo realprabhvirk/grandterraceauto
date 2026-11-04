@@ -49,6 +49,11 @@ try {
     await page.waitForFunction(() => window.__gta && window.__gta.ready === true, null, { timeout: 90000 });
     // Let a few frames settle (shadows, sign textures).
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n > 20 ? r() : requestAnimationFrame(f)); f(); }));
+    // Optional JS to run in the page first (SHOT_EVAL="..."), e.g. debug lineups.
+    if (process.env.SHOT_EVAL) {
+      await page.evaluate(process.env.SHOT_EVAL);
+      await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n > 30 ? r() : requestAnimationFrame(f)); f(); }));
+    }
     // Optional keys to press before the capture, e.g. SHOT_KEYS=F4 (collider view).
     for (const key of (process.env.SHOT_KEYS || '').split(',').filter(Boolean)) {
       await page.keyboard.press(key);

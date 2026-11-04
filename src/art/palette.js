@@ -103,6 +103,26 @@ export const PALETTE = {
     frangipaniFlower: '#f7f0dc',
   },
 
+  // Car paints: warm, slightly chalky, so they sit inside the suburb palette.
+  cars: {
+    paints: ['#c4473a', '#2f5d8c', '#ece7dc', '#3a3e44', '#c99a2e', '#5f7f5a', '#8fa9bb', '#b4b7b2'],
+    hero: '#1f6e73',          // 'Grand Terrace teal' for the hero car in 62's driveway
+    trim: '#2a2b2e',          // bumpers, grille, cladding
+    chrome: '#c8ccc9',
+    glass: '#2b3a46',
+    tyre: '#232325',
+    rim: '#b9bdbb',
+    rimHero: '#d8d4c8',
+    hub: '#6d7174',
+    head: '#dfe6ea',
+    headGlow: '#fff0c8',
+    tail: '#8a2420',
+    tailGlow: '#ff3a26',
+    reverse: '#dcdcd6',
+    plate: '#f2efe6',
+    beam: '#ffe9b8',
+  },
+
   player: {
     shirt: '#d86c3d',
     shorts: '#3d4f63',

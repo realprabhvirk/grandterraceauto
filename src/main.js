@@ -12,6 +12,7 @@ import { createPhysics } from './physics/physicsWorld.js';
 import { createDebugDraw } from './physics/debugDraw.js';
 import { createControls } from './player/controls.js';
 import { cameraPreset } from './player/presets.js';
+import { createVehicles } from './vehicles/vehicleManager.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -33,6 +34,8 @@ const lighting = createLighting(scene, renderer);
 const world = buildWorld(scene);
 const spawn = heroSpawn(world);
 const physics = createPhysics(world);
+const vehicles = createVehicles({ physics, scene, world });
+world.vehicles = vehicles;
 
 const camName = (params.get('cam') || 'player').replace(/-dusk$/, '');
 const preset = cameraPreset(camName, world, spawn);
@@ -55,13 +58,34 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-window.__gta = { ready: false, stats: () => overlay.stats(), world, scene, renderer, controls, physics, RAPIER };
+// Debug helpers (used by the Playwright scripts).
+const debug = {
+  /** Park one car of each type in a row on Grand Terrace near 62, for a group photo. */
+  lineup() {
+    const S = world.network.main.samples, i0 = world.layout.hero.site.i + 30;
+    const seen = new Set(), out = [];
+    for (const car of vehicles.cars) { if (!seen.has(car.type)) { seen.add(car.type); out.push(car); } }
+    out.forEach((car, k) => {
+      const s = S[i0 + k * 6], x = s.x - s.nx * 1.6, z = s.z - s.nz * 1.6;
+      car.body.teleport(x, world.terrain.getHeight(x, z), z, Math.atan2(s.tx, s.tz));
+    });
+    const a = S[i0 + 9];
+    const side = { x: a.nx * 8, z: a.nz * 8 }; // across the road from the parked row
+    camera.position.set(a.x + side.x + a.tx * 9, a.h + 2.4, a.z + side.z + a.tz * 9);
+    camera.lookAt(a.x, a.h + 0.6, a.z);
+    controls.syncFly?.();
+    return out.map((c) => c.type);
+  },
+};
+
+window.__gta = { debug, ready: false, stats: () => overlay.stats(), world, scene, renderer, controls, physics, RAPIER, vehicles };
 const timer = new THREE.Timer();
 let frames = 0;
 renderer.setAnimationLoop(() => {
   timer.update();
   const dt = Math.min(timer.getDelta(), 0.1);
   physics.step(dt);
+  vehicles.sync();
   controls.update(dt);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);
   if (preset.noFog && controls.mode === 'fly') scene.fog.far = 1e5;
