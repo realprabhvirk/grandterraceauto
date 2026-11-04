@@ -80,7 +80,7 @@ try {
     const dw = await ev(() => { const g = window.__gta, p = g.controls.player.position, c = g.vehicles.cars.find((v) => v.hero).position; return { mode: g.controls.mode, d: Math.hypot(p.x - c.x, p.z - c.z), dy: p.y - g.world.terrain.getHeight(p.x, p.z) }; });
     check('driveway exit next to the car', dw.mode === 'walk' && dw.d > 1 && dw.d < 4.5 && Math.abs(dw.dy) < 0.6, dw);
     // Exit on the street.
-    await ev(async () => { const g = window.__gta; g.debug.enter(); await new Promise((r) => setTimeout(r, 1500)); const S = g.world.network.main.samples[200]; g.controls.car.body.teleport(S.x - S.nx * 1.8, S.h, S.z - S.nz * 1.8, Math.atan2(S.tx, S.tz)); await new Promise((r) => setTimeout(r, 1200)); });
+    await ev(async () => { const g = window.__gta; g.debug.enter(); await new Promise((r) => setTimeout(r, 1500)); const M = g.world.network.main.samples, clear = (s) => g.vehicles.cars.every((v) => v === g.controls.car || Math.hypot(v.position.x - s.x, v.position.z - s.z) > 12); let i = 200; while (i < M.length - 20 && !clear(M[i])) i += 4; const S = M[i]; g.controls.car.body.teleport(S.x - S.nx * 1.8, S.h, S.z - S.nz * 1.8, Math.atan2(S.tx, S.tz)); await new Promise((r) => setTimeout(r, 1200)); });
     await ev(() => window.__gta.debug.tap('KeyF'));
     await wait(1500);
     const st = await ev(() => { const g = window.__gta, p = g.controls.player.position, c = g.vehicles.cars.find((v) => v.hero).position; return { mode: g.controls.mode, d: Math.hypot(p.x - c.x, p.z - c.z), exit: g.controls.lastExit }; });

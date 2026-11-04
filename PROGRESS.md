@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 00:49)**
-- Done: P4 steps 0-7 (bugs, cameras, damage, police, minimap, town, NPC variety)
-- Broken: garage 'street exit' check is occasionally flaky with more traffic (passes on rerun)
-- Next: Step 8 wrap-up (full suite, perf log, README, build)
+**STATUS (2026-11-05 01:00)**
+- Done: PHASE 4 COMPLETE (steps 0-8): bugs, cameras, damage, police, minimap, Terrace Town Centre, NPC variety, wrap-up
+- Broken: none known (see Phase 4 rough edges)
+- Next: Phase 5 (see suggestions at the end of this file)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -165,3 +165,72 @@ The dev server is left running at **http://127.0.0.1:5173/**. Click once in the 
 - 00:07 P4 step 5 done: Tab minimap (north-up canvas, pre-rendered roads, player arrow, police blips, wanted radius, place markers) at ~10 fps; phase4test minimap 2/2.
 - 00:39 P4 step 6 done: Terrace Town Centre (grid + ring road + Terrace Link, 10 shops, Terrace Central + Quick Stop enterable, police station, hospital, petrol, bus stops, breakable trees/lights/bins/signs, Central Gardens + Wattle Park). phase4test town 11/11; town centre 69 draw calls, 60 fps headless; police/garage/cameras/combat/minimap + walk/drive/phase2 regressions pass.
 - 00:49 P4 step 7 done: 40 role-based pedestrians (joggers, dog walkers + low-poly dogs, shoppers with bags, bench sitters, picnickers, police on foot, hi-vis workers at roadworks, paramedics, shopkeepers) + 3 cyclists + shop staff; phase4test npcs 9/9; combat/police/town/minimap regressions 25/25.
+
+## PHASE 4 SUMMARY (2026-11-05, 01:00)
+
+Steps 0-8 all done; every step committed with its tests passing. Final full run: phase4test all sections
+(garage, cameras, combat, police, minimap, town, npcs) passed except the garage "street exit" check, which had parked
+next to a parked car; after making the test pick a clear stretch the garage section passed 9/9. walktest 7/7, phase2test 16/16, drivetest 4/4 (physics criteria),
+`npm run build` OK (5.2 MB JS, 1.9 MB gzip).
+
+### What works
+- **Bugs fixed:** leaving the car inside 62's garage puts you next to the car (ground-raycast exit search, ghost fallback);
+  internal garage<->hall door (E); garage door from inside the car (E, wider range).
+- **Cameras (C):** on foot third <-> first person; in a car chase -> cabin (dash, binnacle, speedo/tacho needles,
+  gear, lamps, 450-degree wheel, look limits, B look back, impact shake, cracked screen when damaged, live mirrors with a perf guard) -> cinematic (letterboxed shots).
+- **Damage + cash:** health bar with regen, crash/fall damage, KO -> hospital respawn -$200; car health with smoke,
+  flames (no explosions), loose bumper/hood, wreck; breakable street lights, power poles, signs, bollards, bins, letterboxes, town trees/lights/bins/signs, roadworks cones; $10,000 start cash (saved).
+- **Police:** hold F to break into a parked car (crime only if witnessed), F next to a traffic car = carjack;
+  heat -> 1-5 stars; police cars spawn (station first when nearby, else out of view), route over the lane graph,
+  chase, box you in; BUSTED -$500 at the station (stolen car impounded); losing them: stars flash, clear after 10 s unseen.
+- **Minimap (Tab):** roads, you, police, wanted radius, 62 / police / hospital / shops / parks.
+- **Terrace Town Centre:** a flat 340 x 320 m district east of Grand Terrace via the Terrace Link; street grid with ring road,
+  Terrace Pde (10 shopfronts with awnings + signs), Market St, Station St; give-way rules; 4 extra traffic cars start there.
+  Terrace Central (2 storeys, enterable ground floor with aisles, cashier, guard, shoppers, car park with parked cars),
+  Quick Stop (enterable, snack $20 = +25 health at the counter), police station (brick/blue, patrol-car bay, new busted point),
+  Terrace Hospital (white, blue H, ambulance bay, new KO respawn point), petrol station, 3 bus stops, Central Gardens
+  (fountain, bandstand, benches) and Wattle Park in the suburb (loop path, playground, pond, picnic shelter).
+- **People:** 40 pedestrians with roles - walkers, joggers, dog walkers (low-poly dogs on leads), shoppers with bags,
+  bench sitters, picnickers, police on foot, hi-vis road workers at a small roadworks, paramedics, shopkeepers;
+  3 cyclists on the roads; all adults, all knockable (fall over, get up, walk back to their spot).
+
+### Performance (scripts/perfscenes.mjs, headless Edge 960x540)
+| Scene | fps | draw calls | triangles |
+| --- | --- | --- | --- |
+| suburb: on foot outside 62 | 60 | 115 | 360k |
+| inside 62 (living room) | 60 | 103 | 359k |
+| driving: chase cam on Grand Terrace | 60 | 156 | 384k |
+| driving: cabin cam + mirrors | 52 | 177 | 388k |
+| driving: Terrace Pde (town centre) | 60 | 81 | 374k |
+| town centre on foot (busiest spot) | 60 | 86 | 358k |
+| inside Terrace Central | 60 | 57 | 355k |
+| inside Quick Stop | 60 | 91 | 356k |
+| Wattle Park | 60 | 148 | 375k |
+| town centre at dusk | 60 | 74 | 351k |
+
+### Rough edges
+- Town kerbs/footpaths are visual only (like the suburb): cars roll straight over them.
+- Town intersections are square (no corner fillets); traffic only gives way, so two side-street cars can still overlap in an intersection now and then.
+- Car park / police bay / ambulance vehicles are static props (not stealable).
+- Shop interiors have no extra lights (sunlight through the non-shadow ceiling + hemisphere light); they read a bit flat.
+- Cyclists ride through intersections without giving way; traffic queues behind them.
+- Store staff/shoppers are decorative (outside the pedestrian system).
+- phase4test garage "street exit" picked a spot next to a parked car once more traffic was added; the test now chooses a clear stretch.
+- Nothing was looked at visually in this run (no screenshots by request) - colours/placement of the town are verified by numbers only.
+
+### How to test by hand
+1. `.\dev.cmd npm run dev`, open http://127.0.0.1:5173/, click once.
+2. Get in the red sedan in 62's driveway (F), press C a few times (chase / cabin / cinematic), Tab for the minimap.
+3. Drive to the east end of Grand Terrace and keep going: the Terrace Link leads into Terrace Town Centre.
+4. Walk into Terrace Central (E at the door) and the Quick Stop (E at the door, E at the counter for a snack).
+5. Hold F next to a parked car / F next to a traffic car to steal it; watch the stars, try to lose the police or get busted.
+6. Hit a lamp post or a tree fast: it breaks, the car smokes; crash enough and you wake up at the hospital.
+7. Visit Wattle Park (marked * on the minimap, near the cul-de-sacs) for joggers, dog walkers and picnickers.
+
+### Suggested Phase 5
+1. **Missions:** a simple mission system (start markers, objectives, timers, cash rewards) - deliveries from the hardware store, a pizza run from the takeaway, a getaway from the bank (no weapons).
+2. **Shops + economy:** buy clothes (outfits), car repairs/resprays at a garage (clears wanted level), fuel at the petrol station, buy a second car; save/load more state.
+3. **More districts:** an industrial estate or beachside strip joined to the ring road; highway between districts; more house variants (the skipped 8 variants).
+4. **Multiplayer:** a small WebSocket server (authoritative positions + interpolation) - start with 2-4 players driving around together; see the multiplayer doc that was skipped in Phase 3.
+5. Polish: corner fillets + traffic lights at town intersections, interior lighting, ambient sound loop (skipped), pedestrians crossing at the zebras.
+- 01:00 P4 step 8 done: full suite passed (garage street-exit test made robust), perfscenes.mjs logged per-scene fps/draw calls, README controls + folders updated, npm run build OK, Phase 4 summary written.

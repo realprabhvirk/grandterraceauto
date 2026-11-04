@@ -7,6 +7,12 @@ inspired by Woodlands Estate, Waterford QLD, built around the hero house
 - **Phase 1:** terrain, winding roads + 3 cul-de-sacs, 32 houses, trees, the hero house, lighting, walking.
 - **Phase 2:** 8 drivable procedural cars (arcade raycast-vehicle physics), enter/exit, chase cam,
   synthesised car audio, HUD, a proper animated character with crouch + emotes, day/night with street lights.
+- **Phase 3:** pedestrians, ambient traffic (keep left), enterable 62 with interior + doors.
+- **Phase 4:** camera modes (first person, cabin with working gauges + mirrors, cinematic), health / cash /
+  car damage / breakable street furniture, car theft + wanted stars + police + busted, Tab minimap,
+  **Terrace Town Centre** (shops, enterable Terrace Central + Quick Stop, police station, hospital,
+  petrol station, Central Gardens) east of Grand Terrace, Wattle Park, ~40 role-based pedestrians + cyclists.
+  Arcade rules: no guns, no blood, no explosions; people hit by cars fall over and get back up.
 
 Three.js r187 + Rapier 0.21 (WASM physics) + Vite 8, vanilla JS modules.
 
@@ -37,7 +43,9 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | Ctrl | crouch |
 | 1 / 2 / 3 / 4 | emotes: wave / dance / sit / point (any movement interrupts) |
 | Mouse / arrow keys, wheel | orbit camera, zoom |
-| **F** | get into a car (when "Press F to drive" shows) |
+| **F** | get into your car; **hold F** (1.2 s) to break into someone else's parked car; F next to a traffic car = carjack |
+| **E** | interact: doors (62, Terrace Central, Quick Stop), garage door, buy a snack at the Quick Stop counter ($20, +25 health) |
+| **C** | camera: third person <-> first person |
 
 ### Driving
 | Key | Action |
@@ -50,6 +58,8 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | H | horn |
 | L | headlights |
 | B | look behind |
+| **C** | camera: chase -> cabin (dash, gauges, mirrors) -> cinematic |
+| E | open/close 62's garage door from the car |
 | R | flip upright / reset |
 | Mouse, wheel | orbit the chase camera (it swings back behind when you drive), zoom |
 | **F** | get out (below ~30 km/h; the car brakes to a stop on its own) |
@@ -57,6 +67,7 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 ### Anywhere
 | Key | Action |
 | --- | --- |
+| **Tab** | minimap on/off (roads, you, police, wanted radius, 62 / police / hospital / shops / parks) |
 | N (or T) | toggle late afternoon <-> dusk/night (windows glow, street lights + headlights on) |
 | ? (or H on foot) | show / hide the controls panel |
 | M | mute |
@@ -76,6 +87,8 @@ add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay
 .\dev.cmd node scripts/drivetest.mjs     # autopilot the length of Grand Terrace + into each cul-de-sac; checks height/tilt
 .\dev.cmd node scripts/shot.mjs          # screenshots of every preset into shots/, fails on console errors
 .\dev.cmd node scripts/vehicle-sim.mjs   # headless car tuning bench (0-100, top speed, braking, roll, crest jumps)
+.\dev.cmd node scripts/phase4test.mjs    # Phase 4 (sections: garage cameras combat police minimap town npcs) - numeric asserts, no screenshots
+.\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles per scene
 ```
 
 ## Folder structure
@@ -111,8 +124,15 @@ src/
     character.js           jointed low-poly character, procedural poses
     interact.js            interaction prompt system (cars now, doors later)
     input.js, flyCam.js, presets.js
-  audio/carAudio.js        WebAudio engine, horn, screech, thud (no audio files)
-  ui/                      hud.js (speed + tacho), prompt.js, controlsPanel.js, uiStyle.js
+  camera/                  cabinView.js (dash, gauges, wheel), cinematic.js, mirrors.js
+  combat/                  combat.js (health, impacts, KO), carDamage.js, breakables.js, particles.js, wallet.js
+  police/                  wanted.js (heat -> stars), policeCar.js, policeManager.js (spawn, chase, busted), theft.js
+  town/                    Terrace Town Centre: townPlan.js (grid + link road), townLanes.js, townRoads.js,
+                           townKit.js (building kit + sign atlas), townBuildings.js, townInteriors.js,
+                           townProps.js (breakable trees/lights/bins/signs, bus stops), parks.js, roadworks.js
+  npc/                     pedestrians.js (roles), footpaths.js, outfits.js, dog.js, cyclists.js
+  audio/carAudio.js        WebAudio engine, horn, screech, thud, siren (no audio files)
+  ui/                      hud.js (speed + tacho), statusHud.js (health/cash/stars), minimap.js, prompt.js, controlsPanel.js
   utils/                   seeded RNG, noise, geometry helpers, F3 overlay, debugApi.js
 scripts/                   Playwright tests + tuning bench
 ```
@@ -125,7 +145,9 @@ gums). Colours live in `PALETTE.hero` in `src/art/palette.js`.
 
 ## Performance
 
-~60-100 draw calls including the shadow pass (budget 350), ~240k triangles, 60 fps in the
-headless Edge test on this Ryzen 5 7530U. Pixel ratio capped at 1.5, one 2048 shadow map
+~60-180 draw calls (budget 450), ~350-390k triangles, 52-60 fps in the headless Edge test on
+this Ryzen 5 7530U (scripts/perfscenes.mjs; the cabin cam with live mirrors is the heaviest view).
+The town is split into per-block chunks hidden beyond ~260 m; shop interiors only render within ~25 m;
+pedestrians further than 120 m and cyclists further than 150 m sleep. Pixel ratio capped at 1.5, one 2048 shadow map
 that follows the player, instanced houses/trees/wheels/street lights, merged static
 geometry, shared materials, no post-processing.
