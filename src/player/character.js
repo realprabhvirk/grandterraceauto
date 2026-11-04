@@ -1,14 +1,19 @@
-// Stylised low-poly player character with a joint hierarchy and procedural poses.
-// Root sits at the feet, +Z forward. Joints: hips -> torso -> head, shoulders -> elbows,
-// hip joints -> knees. Each frame a target pose is computed for the current state and
-// the live pose eases toward it, so every transition (walk -> emote -> sit) is smooth.
+// Stylised low-poly character (player AND pedestrians) as ONE SkinnedMesh per person:
+// each body part is rigidly bound to one bone, so a whole character is a single draw call.
+// Root sits at the feet, +Z forward. Bones: hips -> torso -> head, shoulders -> elbows,
+// hip joints -> knees. Each frame a target pose is computed for the current state and the
+// live pose eases toward it, so every transition (walk -> emote -> sit) is smooth.
+// Geometry is cached per outfit, so pedestrians with the same outfit share it.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
 import { box, icosa, paint, merge } from '../utils/geom.js';
 
-const C = PALETTE.player;
 export const HIP_HEIGHT = 0.92;
+
+/** Default outfit = the player. Pedestrians pass their own (see npc/outfits.js). */
+export const PLAYER_OUTFIT = { ...PALETTE.player, hairStyle: 'short' };
 
 /** Tapered box (frustum) from bottom w0 x d0 to top w1 x d1, height h, bottom at y0. */
 function taper(w0, d0, w1, d1, h, y0, color, z = 0) {
@@ -24,75 +29,126 @@ function taper(w0, d0, w1, d1, h, y0, color, z = 0) {
   return paint(g, color, 0.04, Math.round((w0 + h) * 1000));
 }
 
-function joint(parent, x, y, z) {
-  const j = new THREE.Group();
-  j.position.set(x, y, z);
-  parent.add(j);
-  return j;
-}
-function mesh(parent, geo) {
-  const m = new THREE.Mesh(geo, MAT.solid);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  parent.add(m);
-  return m;
+// Bone layout: [name, parent, rest offset from parent].
+const BONES = [
+  ['hips', null, [0, HIP_HEIGHT, 0]],
+  ['torso', 'hips', [0, 0.1, 0]],
+  ['head', 'torso', [0, 0.57, 0.01]],
+  ['lShoulder', 'torso', [0.235, 0.47, 0]], ['lElbow', 'lShoulder', [0, -0.29, 0]],
+  ['rShoulder', 'torso', [-0.235, 0.47, 0]], ['rElbow', 'rShoulder', [0, -0.29, 0]],
+  ['lHip', 'hips', [0.095, -0.08, 0]], ['lKnee', 'lHip', [0, -0.42, 0]],
+  ['rHip', 'hips', [-0.095, -0.08, 0]], ['rKnee', 'rHip', [0, -0.42, 0]],
+];
+const BONE_INDEX = Object.fromEntries(BONES.map(([n], i) => [n, i]));
+function bindPosition(name) {
+  const out = [0, 0, 0];
+  for (let n = name; n;) {
+    const [, parent, off] = BONES[BONE_INDEX[n]];
+    out[0] += off[0]; out[1] += off[1]; out[2] += off[2];
+    n = parent;
+  }
+  return out;
 }
 
-export function createCharacter() {
+function hairParts(O) {
+  const H = O.hair;
+  switch (O.hairStyle) {
+    case 'long': return [
+      icosa(0.15, 1, 0, 0.19, -0.02, H, { sx: 0.97, sy: 0.72, sz: 1.02, jitter: 0.06 }),
+      box(0.27, 0.3, 0.1, 0, 0.02, -0.11, H),
+    ];
+    case 'bun': return [
+      icosa(0.148, 1, 0, 0.19, -0.02, H, { sx: 0.95, sy: 0.7, sz: 1.0, jitter: 0.06 }),
+      icosa(0.07, 0, 0, 0.3, -0.1, H, { jitter: 0.05 }),
+    ];
+    case 'cap': return [
+      icosa(0.15, 1, 0, 0.2, -0.01, O.cap, { sx: 0.98, sy: 0.6, sz: 1.0, jitter: 0.04 }),
+      box(0.22, 0.025, 0.14, 0, 0.215, 0.13, O.cap),
+    ];
+    case 'bald': return [];
+    default: return [icosa(0.148, 1, 0, 0.19, -0.02, H, { sx: 0.95, sy: 0.7, sz: 1.0, jitter: 0.06 })];
+  }
+}
+
+/** Parts per bone, in that bone's local space. */
+function bodyParts(O) {
+  const P = {};
+  P.hips = [taper(0.3, 0.2, 0.34, 0.22, 0.2, -0.12, O.shorts), box(0.35, 0.05, 0.23, 0, 0.08, 0, O.belt)];
+  P.torso = [
+    taper(0.33, 0.21, 0.44, 0.25, 0.46, 0, O.shirt),
+    taper(0.3, 0.2, 0.16, 0.14, 0.08, 0.46, O.shirt),
+    box(0.12, 0.08, 0.02, 0, 0.36, 0.127, O.shirtTrim),
+    box(0.1, 0.08, 0.1, 0, 0.53, 0, O.skin),
+  ];
+  P.head = [
+    icosa(0.14, 1, 0, 0.13, 0, O.skin, { sx: 0.92, sy: 1.08, sz: 0.98, jitter: 0.03 }),
+    ...hairParts(O),
+    box(0.05, 0.05, 0.05, 0, 0.12, 0.135, O.skinShade),
+    box(0.035, 0.03, 0.02, -0.05, 0.16, 0.122, O.eyes),
+    box(0.035, 0.03, 0.02, 0.05, 0.16, 0.122, O.eyes),
+    box(0.04, 0.06, 0.04, -0.13, 0.13, 0, O.skin),
+    box(0.04, 0.06, 0.04, 0.13, 0.13, 0, O.skin),
+  ];
+  for (const s of ['l', 'r']) {
+    P[`${s}Shoulder`] = [taper(0.1, 0.1, 0.13, 0.12, 0.17, -0.17, O.shirt), taper(0.075, 0.075, 0.09, 0.09, 0.14, -0.29, O.skin)];
+    P[`${s}Elbow`] = [taper(0.065, 0.065, 0.08, 0.08, 0.24, -0.24, O.skin), box(0.075, 0.1, 0.05, 0, -0.29, 0.005, O.skin)];
+    P[`${s}Hip`] = [taper(0.13, 0.14, 0.16, 0.17, 0.24, -0.24, O.shorts), taper(0.11, 0.12, 0.13, 0.13, 0.2, -0.42, O.legs || O.skin)];
+    P[`${s}Knee`] = [
+      taper(0.085, 0.09, 0.11, 0.115, 0.36, -0.36, O.legs || O.skin),
+      box(0.1, 0.05, 0.08, 0, -0.33, 0, O.socks),
+      box(0.115, 0.08, 0.27, 0, -0.38, 0.055, O.shoes),
+      box(0.118, 0.025, 0.275, 0, -0.415, 0.055, O.soles),
+    ];
+  }
+  return P;
+}
+
+const geoCache = new Map();
+/** One skinned geometry for an outfit (bind pose = rest pose, each vertex on one bone). */
+function bodyGeometry(O) {
+  const key = JSON.stringify(O);
+  if (geoCache.has(key)) return geoCache.get(key);
+  const parts = bodyParts(O);
+  const list = [];
+  for (const [name] of BONES) {
+    const g = merge(parts[name]);
+    const [x, y, z] = bindPosition(name);
+    g.translate(x, y, z);
+    const n = g.attributes.position.count, bi = BONE_INDEX[name];
+    const idx = new Uint16Array(n * 4), wt = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { idx[i * 4] = bi; wt[i * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wt, 4));
+    list.push(g);
+  }
+  const geo = mergeGeometries(list);
+  list.forEach((g) => g.dispose());
+  geo.computeBoundingSphere();
+  geo.boundingSphere.radius += 0.6; // room for poses
+  geoCache.set(key, geo);
+  return geo;
+}
+
+/**
+ * @param outfit colours + hairStyle (defaults to the player)
+ * @param opts   { shadow = true, name }
+ */
+export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 'player' } = {}) {
   const root = new THREE.Group();
-  root.name = 'player';
-  const hips = joint(root, 0, HIP_HEIGHT, 0);
-  mesh(hips, merge([
-    taper(0.3, 0.2, 0.34, 0.22, 0.2, -0.12, C.shorts),
-    box(0.35, 0.05, 0.23, 0, 0.08, 0, C.belt),
-  ]));
-  const torso = joint(hips, 0, 0.1, 0);
-  mesh(torso, merge([
-    taper(0.33, 0.21, 0.44, 0.25, 0.46, 0, C.shirt),
-    taper(0.3, 0.2, 0.16, 0.14, 0.08, 0.46, C.shirt),          // shoulders slope
-    box(0.12, 0.08, 0.02, 0, 0.36, 0.127, C.shirtTrim),        // chest logo stripe
-    box(0.1, 0.08, 0.1, 0, 0.53, 0, C.skin),                    // neck
-  ]));
-  const head = joint(torso, 0, 0.57, 0.01);
-  mesh(head, merge([
-    icosa(0.14, 1, 0, 0.13, 0, C.skin, { sx: 0.92, sy: 1.08, sz: 0.98, jitter: 0.03 }),
-    icosa(0.148, 1, 0, 0.19, -0.02, C.hair, { sx: 0.95, sy: 0.7, sz: 1.0, jitter: 0.06 }),
-    box(0.05, 0.05, 0.05, 0, 0.12, 0.135, C.skinShade),         // nose
-    box(0.035, 0.03, 0.02, -0.05, 0.16, 0.122, C.eyes),
-    box(0.035, 0.03, 0.02, 0.05, 0.16, 0.122, C.eyes),
-    box(0.04, 0.06, 0.04, -0.13, 0.13, 0, C.skin),              // ears
-    box(0.04, 0.06, 0.04, 0.13, 0.13, 0, C.skin),
-  ]));
-
-  const arm = (side) => {
-    const shoulder = joint(torso, side * 0.235, 0.47, 0);
-    mesh(shoulder, merge([
-      taper(0.1, 0.1, 0.13, 0.12, 0.17, -0.17, C.shirt),        // sleeve
-      taper(0.075, 0.075, 0.09, 0.09, 0.14, -0.29, C.skin),
-    ]));
-    const elbow = joint(shoulder, 0, -0.29, 0);
-    mesh(elbow, merge([
-      taper(0.065, 0.065, 0.08, 0.08, 0.24, -0.24, C.skin),
-      box(0.075, 0.1, 0.05, 0, -0.29, 0.005, C.skin),            // hand
-    ]));
-    return { shoulder, elbow };
-  };
-  const leg = (side) => {
-    const hip = joint(hips, side * 0.095, -0.08, 0);
-    mesh(hip, merge([
-      taper(0.13, 0.14, 0.16, 0.17, 0.24, -0.24, C.shorts),
-      taper(0.11, 0.12, 0.13, 0.13, 0.2, -0.42, C.skin),
-    ]));
-    const knee = joint(hip, 0, -0.42, 0);
-    mesh(knee, merge([
-      taper(0.085, 0.09, 0.11, 0.115, 0.36, -0.36, C.skin),
-      box(0.1, 0.05, 0.08, 0, -0.33, 0, C.socks),
-      box(0.115, 0.08, 0.27, 0, -0.38, 0.055, C.shoes),
-      box(0.118, 0.025, 0.275, 0, -0.415, 0.055, C.soles),
-    ]));
-    return { hip, knee };
-  };
-  const L = { ...arm(1), ...leg(1) }, R = { ...arm(-1), ...leg(-1) };
+  root.name = name;
+  const bones = BONES.map(([n, , off]) => { const b = new THREE.Bone(); b.name = n; b.position.set(...off); return b; });
+  BONES.forEach(([, parent], i) => { if (parent) bones[BONE_INDEX[parent]].add(bones[i]); });
+  const mesh = new THREE.SkinnedMesh(bodyGeometry({ ...PLAYER_OUTFIT, ...outfit }), MAT.solid);
+  mesh.add(bones[0]);
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(bones));
+  mesh.castShadow = shadow;
+  mesh.receiveShadow = true;
+  const B = Object.fromEntries(BONES.map(([n], i) => [n, bones[i]]));
+  const hips = B.hips, torso = B.torso, head = B.head;
+  const L = { shoulder: B.lShoulder, elbow: B.lElbow, hip: B.lHip, knee: B.lKnee };
+  const R = { shoulder: B.rShoulder, elbow: B.rElbow, hip: B.rHip, knee: B.rKnee };
 
   // Pose = plain object of joint angles; `cur` eases toward each frame's target.
   const zero = () => ({
@@ -101,7 +157,7 @@ export function createCharacter() {
     lhx: 0, lhz: 0, lkx: 0, rhx: 0, rhz: 0, rkx: 0,
   });
   const cur = zero();
-  let phase = 0, t = 0;
+  let phase = 0, t = Math.random() * 10;
 
   function target(s) {
     const p = zero();
@@ -141,6 +197,18 @@ export function createCharacter() {
         p.lhx = p.rhx = -0.12 * Math.abs(b);
         return p;
       }
+      case 'look': {
+        // Pause and look around.
+        p.headY = 0.65 * Math.sin(t * 0.9); p.headX = -0.05; p.torsoY = 0.15 * Math.sin(t * 0.9);
+        p.lsz = 0.12; p.rsz = -0.12;
+        return p;
+      }
+      case 'phone': {
+        // Checking a phone: right forearm up in front of the face, head tipped down.
+        p.rsx = -0.55; p.rsz = 0.25; p.rex = -2.0; p.lsx = -0.3; p.lsz = -0.15; p.lex = -1.2;
+        p.headX = 0.32; p.torsoX = 0.04;
+        return p;
+      }
       default: break;
     }
     if (!s.grounded) {
@@ -172,7 +240,7 @@ export function createCharacter() {
   }
 
   function apply() {
-    root.children[0].position.y = HIP_HEIGHT + cur.rootY;
+    hips.position.y = HIP_HEIGHT + cur.rootY;
     hips.rotation.set(0, cur.hipsY, cur.hipsZ);
     torso.rotation.set(cur.torsoX, cur.torsoY, cur.torsoZ);
     head.rotation.set(cur.headX, cur.headY, cur.headZ);
@@ -185,8 +253,9 @@ export function createCharacter() {
 
   return {
     root,
+    mesh,
     /**
-     * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'seated', steer }
+     * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'look'|'phone'|'seated', steer }
      */
     animate(s) {
       const tgt = target(s);

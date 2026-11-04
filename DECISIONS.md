@@ -62,3 +62,5 @@ One line per judgment call made during the autonomous build.
 
 - Settings: Esc toggles the settings panel (the first Esc only releases pointer lock - browser rule); volume/mute persist in localStorage (per-viewer convenience only).
 - Drive test: cul-de-sac routes use centreline waypoints with no avoidance and pass on physics (height band, tilt, NaN); Grand Terrace keeps the lane + overtaking test.
+- Characters: switched from 11 meshes per character to one SkinnedMesh with rigid one-bone-per-part skinning (same pose code), so 20 pedestrians cost ~20 draw calls instead of ~220.
+- Pedestrians: kinematic capsules in a new NPC collision group (blocks the player and cars, ignored by wheel rays and cameras); no damage or reactions beyond dodging.

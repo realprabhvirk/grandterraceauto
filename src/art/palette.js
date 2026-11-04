@@ -133,6 +133,16 @@ export const PALETTE = {
     beam: '#ffe9b8',
   },
 
+  // Pedestrian wardrobe (mixed and matched per NPC, seeded).
+  npc: {
+    shirts: ['#3f7a8c', '#e8d6b0', '#b5493a', '#6d8a4a', '#f0ece2', '#d99a3c', '#7a5a8c', '#2f4a6a', '#c46f8a'],
+    bottoms: ['#3d4f63', '#5a4a3c', '#2e2f33', '#8a8070', '#4a5d3f', '#c9b99a'],
+    skins: ['#f1c9a5', '#d9a47e', '#b87a55', '#8d5a3b', '#e6b590', '#6e4630'],
+    hairs: ['#2b211b', '#5a3a24', '#a8743f', '#d8c28c', '#6b6b6b', '#1f1a17'],
+    shoes: ['#e9e4da', '#2f2f33', '#7a5a3c', '#c9d2d8'],
+    caps: ['#2f4a6a', '#b5493a', '#e8d6b0'],
+  },
+
   player: {
     shirt: '#d86c3d',      // terracotta tee
     shirtTrim: '#f2e6cf',

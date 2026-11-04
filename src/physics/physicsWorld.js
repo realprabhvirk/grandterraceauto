@@ -7,11 +7,12 @@ import { MAP } from '../world/terrain.js';
 const STEP = 1 / 60;
 
 // Interaction groups: 16-bit membership << 16 | 16-bit filter.
-export const GROUP = { STATIC: 0x1, CAR: 0x2, PLAYER: 0x4 };
+export const GROUP = { STATIC: 0x1, CAR: 0x2, PLAYER: 0x4, NPC: 0x8 };
 export const groups = (member, filter) => ((member & 0xffff) << 16) | (filter & 0xffff);
 export const G_STATIC = groups(GROUP.STATIC, GROUP.CAR | GROUP.PLAYER);
-export const G_CAR = groups(GROUP.CAR, GROUP.STATIC | GROUP.CAR | GROUP.PLAYER);
-export const G_PLAYER = groups(GROUP.PLAYER, GROUP.STATIC | GROUP.CAR);
+export const G_CAR = groups(GROUP.CAR, GROUP.STATIC | GROUP.CAR | GROUP.PLAYER | GROUP.NPC);
+export const G_PLAYER = groups(GROUP.PLAYER, GROUP.STATIC | GROUP.CAR | GROUP.NPC);
+export const G_NPC = groups(GROUP.NPC, GROUP.PLAYER | GROUP.CAR);
 
 export function createPhysics(world) {
   const phys = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
