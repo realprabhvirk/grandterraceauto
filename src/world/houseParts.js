@@ -27,7 +27,7 @@ export function addWindow(out, { x, y, z, w, h, face = 'z', frame, glassColor, s
 }
 
 /** Hip roof over a W x D rectangle (centred at cx, cz) with eaves overhang. Ridge along the longer axis. */
-export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0.55, color, fascia, soffit, fasciaH = 0.22 }) {
+export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0.55, color, fascia, soffit, fasciaH = 0.22, caps = null }) {
   const w = W / 2 + overhang, d = D / 2 + overhang;
   const t = Math.tan(THREE.MathUtils.degToRad(pitch));
   const tris = [];
@@ -48,6 +48,17 @@ export function hipRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 24, overhang = 0
     tris.push([v(w, y, -d), v(-w, y, -d), v(0, top, -r)]);
   }
   out.roof.push(trisGeometry(tris, color, 0.05));
+  // Tile roofs: capping along the ridge and the four hips.
+  if (caps) {
+    const rise = (w >= d ? d : w) * t, top = y + rise;
+    const ends = w >= d ? [[-(w - d), 0], [w - d, 0]] : [[0, -(d - w)], [0, d - w]];
+    const seg = (a, b) => out.detail.push(capSegment(a, b, caps));
+    seg([cx + ends[0][0], top + 0.03, cz + ends[0][1]], [cx + ends[1][0], top + 0.03, cz + ends[1][1]]);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const e = w >= d ? ends[sx > 0 ? 1 : 0] : ends[sz > 0 ? 1 : 0];
+      seg([cx + sx * w, y + 0.03, cz + sz * d], [cx + e[0], top + 0.03, cz + e[1]]);
+    }
+  }
   // Soffit (underside) and fascia band around the eaves.
   if (soffit) out.detail.push(soffitPlane(w * 2, d * 2, cx, y - 0.01, cz, soffit));
   if (fascia) {
@@ -89,6 +100,17 @@ export function gableRoof(out, { cx = 0, cz = 0, y, W, D, pitch = 22, overhang =
     }
   }
   return top;
+}
+
+/** Thin capping bar from point a to point b (ridge / hip tiles). */
+function capSegment(a, b, color) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const g = new THREE.BoxGeometry(len, 0.09, 0.16);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), B.clone().sub(A).normalize());
+  g.applyQuaternion(q);
+  const m = A.add(B).multiplyScalar(0.5);
+  return painted(g, color, m.x, m.y, m.z, 0.04);
 }
 
 /** Downward-facing soffit plane under the eaves. */

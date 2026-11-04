@@ -69,40 +69,49 @@ export const PALETTE = {
     leaves: ['#5b7f3c', '#6f8f43', '#4c6e3b', '#879a5a', '#7a9a62'],
   },
 
+  // 62 Grand Terrace, matched to the reference photo (reference/house62/).
   hero: {
-    render: '#efe6d6',
-    renderShade: '#e2d6c2',
-    base: '#6e6862',
-    trim: '#3f3d3c',
-    roof: '#3b3e42',
+    render: '#ede5d3',        // ground floor render (warm cream)
+    cladding: '#e9e2cf',      // upper weatherboard
+    claddingLine: '#cfc6b1',  // board shadow lines
+    renderBox: '#cdc2ae',     // rendered box over the garage (greige)
+    base: '#d6ccb9',          // subtle plinth
+    trim: '#2e2f31',          // window frames (dark charcoal)
+    roof: '#3e4145',          // charcoal concrete tiles
+    caps: '#33363a',          // ridge / hip capping
     fascia: '#2f3134',
     soffit: '#f1ece2',
-    timber: '#9a6b45',
-    door: '#4f3a2c',
-    garage: '#55585c',
-    driveway: '#cdc3af',
-    pavers: '#b8a58a',
-    letterbox: '#9c5b43',
-    hedge: '#567a40',
-    lawn: '#90ae60',
-    lawnStripe: '#7c9a4e',
-    joint: '#9d9483',
+    door: '#3a3b3e',
+    garage: '#4a4b4f',
+    garageLine: '#3b3c40',
+    driveway: '#877d73',      // exposed aggregate
+    pavers: '#c9c1b1',        // porch tiles / side path
+    shutter: '#efe9dd',       // plantation shutters behind the glass
+    letterbox: '#cbc7be',     // rendered letterbox pillar
+    letterboxCap: '#b7b2a8',
+    telecom: '#4e7a52',       // green telecom pillar on the verge
+    pit: '#a9a49a',
+    lawn: '#79a64a',
+    lawnStripe: '#71a046',
+    joint: '#6f675e',
+    mulch: '#5a4130',
+    edging: '#b8afa0',
+    cordyline: '#9e2f3a',
+    grass: '#7c9a55',
     flowers: ['#e7a1b0', '#f3d27a', '#d9694f', '#f6efe3'],
-    fence: '#6f7468',
-    solar: '#2c3a52',
-    solarFrame: '#b9bcbc',
+    fence: '#8a6b50',
+    fencePost: '#6f543e',
+    pot: '#b0603d',
+    gumTrunk: '#c9bda8',
+    gumLeaf: ['#4d6b3a', '#5b7a43', '#44603a'],
+    antenna: '#9a9d9f',
     binBody: '#3d5e45',
     binLidRed: '#b8443a',
     binLidYellow: '#e0b03c',
     clothesline: '#b9bcbc',
     numerals: '#2f2d2c',
     plate: '#f2ede2',
-    palmTrunk: '#9b8a72',
-    palmLeaf: '#5f8a3e',
-    frangipaniLeaf: '#4f7d3a',
-    frangipaniFlower: '#f7f0dc',
   },
-
   // Car paints: warm, slightly chalky, so they sit inside the suburb palette.
   cars: {
     paints: ['#c4473a', '#2f5d8c', '#ece7dc', '#3a3e44', '#c99a2e', '#5f7f5a', '#8fa9bb', '#b4b7b2'],

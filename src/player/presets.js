@@ -47,7 +47,7 @@ export function cameraPreset(name, world, spawn) {
       // 3/4 front view of the hero car in 62's driveway.
       const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
       const L = (lx, ly, lz) => new THREE.Vector3(hero.x + lx * c + lz * sn, hero.h + ly, hero.z - lx * sn + lz * c);
-      return { position: L(-1.2, 1.55, 13.2), target: L(-6.1, 0.75, 8.0) };
+      return { position: L(1.6, 1.55, 13.4), target: L(7.05, 0.75, 8.2) };
     }
     case 'cars': {
       // Kerbside car on Grand Terrace, low 3/4 angle.
@@ -75,11 +75,17 @@ export function cameraPreset(name, world, spawn) {
       const p = new THREE.Vector3(pad.x - pad.inX * 16, pad.h + 2.2, pad.z - pad.inZ * 16);
       return { position: p, target: new THREE.Vector3(pad.x + pad.inX * 14, pad.h + 2.5, pad.z + pad.inZ * 14) };
     }
+    case 'hero-photo': {
+      // Same elevated front-left angle as reference/house62/front-dusk.png.
+      const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
+      const L = (lx, ly, lz) => new THREE.Vector3(hero.x + lx * c + lz * sn, hero.h + ly, hero.z - lx * sn + lz * c);
+      return { position: L(-8.5, 6.4, 22.5), target: L(1.8, 2.6, 0.5) };
+    }
     case 'hero-porch': {
       // Close-up of the entry (good for judging shadow quality and detail).
       const c = Math.cos(hero.rot), sn = Math.sin(hero.rot);
       const L = (lx, ly, lz) => new THREE.Vector3(hero.x + lx * c + lz * sn, hero.h + ly, hero.z - lx * sn + lz * c);
-      return { position: L(3.4, 1.9, 11.5), target: L(0.8, 2.1, 5) };
+      return { position: L(-0.6, 1.9, 11.5), target: L(2.2, 2.0, 3.6) };
     }
     case 'hero-front': {
       // Standing on the opposite verge, looking straight at 62.

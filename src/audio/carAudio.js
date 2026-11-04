@@ -78,10 +78,10 @@ export function createCarAudio() {
       set(engine.lp.frequency, 380 + rpm * 900 + throttle * 600, 0.06);
       set(engine.g.gain, on ? 0.11 + throttle * 0.1 + rpm * 0.05 : 0, on ? 0.08 : 0.25);
     },
-    horn(on) { if (ctx) set(horn.g, on ? 0.16 : 0, 0.015); },
+    horn(on) { if (ctx) set(horn.g.gain, on ? 0.16 : 0, 0.015); },
     screech(amount) {
       if (!ctx) return;
-      set(screech.g, Math.max(0, amount) * 0.12, 0.06);
+      set(screech.g.gain, Math.max(0, amount) * 0.12, 0.06);
       set(screech.f.frequency, 1800 + amount * 900, 0.1);
     },
     /** One-shot low thud, strength 0..1. */

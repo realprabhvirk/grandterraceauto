@@ -45,3 +45,7 @@ One line per judgment call made during the autonomous build.
 - Cars: per-car materials avoided - light states swap between shared off/on/brake materials (no shader recompiles); all 28 regular wheels are one InstancedMesh (+1 for the hero's rims).
 - Cars: ute has a black tonneau cover instead of an open tray (cheaper, reads well); 4WD has roof rails, cladding and a rear spare.
 - Vehicle physics: low centre of mass + 1.8x roll inertia + upright torque + roll damping + downforce + 4.5 m/s upward-velocity clamp = hard to flip, no launching off crests.
+- 62 from photo: removed solar panels, hedge, palms, frangipani and the front path (not in the photo); the porch now opens onto the lawn/driveway like the real house.
+- 62 from photo: roof tiles shown as faceted charcoal planes with ridge/hip capping (no per-tile geometry); shutters are thin white slats just behind the glass so they read by day and glow at dusk.
+- 62 from photo: player spawn moved in line with the front door (x = 2.2) since there is no front path any more.
+- Debug fly camera moved from C to F2 (C freed up; crouch is Ctrl as specified).

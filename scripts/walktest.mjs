@@ -34,7 +34,7 @@ await hold('KeyW', 4500);
 const atDoor = await local();
 console.log('after W', fmt(atDoor));
 check('walked up the path to the house', atDoor.z < 8, fmt(atDoor));
-check('stopped by the house wall (no clipping)', atDoor.z > 5.1, fmt(atDoor));
+check('stopped by the house wall (no clipping)', atDoor.z > 3.3, fmt(atDoor)); // front door is recessed at z = 3.2
 check('standing on the porch slab', atDoor.y > 0.1 && atDoor.y < 0.35, fmt(atDoor));
 await page.screenshot({ path: 'shots/walk-porch.png' });
 
@@ -55,11 +55,11 @@ await page.waitForTimeout(1200);
 const landed = await local();
 check('jump leaves the ground and lands again', air.y > side.y + 0.3 && Math.abs(landed.y - side.y) < 0.3, `air ${air.y.toFixed(2)} landed ${landed.y.toFixed(2)}`);
 
-// Debug fly toggle.
-await page.keyboard.press('KeyC');
+// Debug fly toggle (F2).
+await page.keyboard.press('F2');
 await page.waitForTimeout(200);
 const mode = await page.evaluate(() => window.__gta.controls.mode);
-check('C toggles debug fly cam', mode === 'fly', mode);
+check('F2 toggles debug fly cam', mode === 'fly', mode);
 
 await browser.close();
 if (errors.length) { console.error('BROWSER ERRORS:\n' + errors.join('\n')); process.exit(1); }
