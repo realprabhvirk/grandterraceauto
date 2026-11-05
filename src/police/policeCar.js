@@ -34,6 +34,7 @@ export class PoliceCar extends TrafficCar {
     this.physics = opts.physics;
     this.chaseYaw = 0;
     this.body.collider(0).setCollisionGroups(G_POLICE);
+    opts.physics.tag?.(this.body.collider(0), 'police sensor', String(opts.id));
     this.side = (parseInt(String(opts.id).replace(/D/g, ''), 10) || 0) % 2 ? 1 : -1; // flank side
     this.recoverT = 0; this.contactCd = 0; this.crewOut = 0;
   }

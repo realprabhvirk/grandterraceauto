@@ -63,6 +63,7 @@ export class VehicleBody {
       .setTranslation(0, cfg.belt + cabinH, (c0 + c1) / 2)
       .setCollisionGroups(G_CAR).setFriction(0.4).setDensity(0);
     this.colliders.push(world.createCollider(cabin, this.body));
+    for (const c of this.colliders) physics.tag?.(c, 'car', pose.type || cfg.label);
     const own = new Set(this.colliders.map((c) => c.handle));
     this.wheelFilter = (c) => !own.has(c.handle);
 
@@ -108,6 +109,7 @@ export class VehicleBody {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.steer = 0;
+    this.lastVel = { x: 0, y: 0, z: 0 }; this.impactDv = 0; // a teleport is not a crash
   }
 
   /** R key: flip upright where it is, lifted a little, keeping the heading. */
@@ -219,7 +221,10 @@ export class VehicleBody {
     const dv = Math.hypot(v.x - this.lastVel.x, v.y - this.lastVel.y, v.z - this.lastVel.z);
     this.impact = dv > 2.2 ? Math.min(1, (dv - 2.2) / 6) : 0;
     this.impactDv = Math.max(this.impactDv || 0, dv); // peak since last read (consumed by combat)
-    this.lastVel = { x: v.x, y: v.y, z: v.z };
+    // Remember the velocity AFTER our own impulses / caps this step, so only what the solver
+    // does (real contacts) shows up as dv next step (boost cut / speed cap used to look like a crash).
+    const vEnd = body.linvel();
+    this.lastVel = { x: vEnd.x, y: vEnd.y, z: vEnd.z };
     st.throttle = thr;
     st.boost = boost;
   }

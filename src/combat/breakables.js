@@ -25,6 +25,7 @@ export function createBreakables({ physics }) {
     items.forEach((it, i) => {
       const col = world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, r).setTranslation(it.x, it.y + h / 2, it.z).setCollisionGroups(G_STATIC));
       const base = meshes.map(({ mesh }) => { const m = new THREE.Matrix4(); mesh.getMatrixAt(i, m); return m; });
+      physics.tag?.(col, 'breakable', name);
       const item = { set, i, x: it.x, y: it.y, z: it.z, col, base, broken: false, t: 0, dir: new THREE.Vector3(), restoreT: 0 };
       set.items.push(item);
       const k = key(it.x, it.z);

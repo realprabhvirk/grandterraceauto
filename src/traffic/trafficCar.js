@@ -51,7 +51,8 @@ export class TrafficCar {
     this.body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, terrain.getHeight(start.x, start.z), start.z));
     const h = (cfg.roof - cfg.clearance) / 2;
     const zMid = cfg.frontOverhang - cfg.L / 2 + cfg.wheelBase / 2;
-    world.createCollider(RAPIER.ColliderDesc.cuboid(cfg.W / 2, h, cfg.L / 2).setTranslation(0, cfg.clearance + h, zMid).setCollisionGroups(G_CAR), this.body);
+    const col = world.createCollider(RAPIER.ColliderDesc.cuboid(cfg.W / 2, h, cfg.L / 2).setTranslation(0, cfg.clearance + h, zMid).setCollisionGroups(G_CAR), this.body);
+    physics.tag?.(col, 'traffic', id);
     this.pos = new THREE.Vector3(start.x, 0, start.z);
     this.fwd = new THREE.Vector3(start.tx, 0, start.tz);
   }

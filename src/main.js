@@ -68,6 +68,7 @@ const vehicles = createVehicles({ physics, scene, world });
 world.hero?.attach(physics.toggles); // 62's door colliders
 world.town?.attach(physics.toggles); // town shop doors
 world.vehicles = vehicles;
+world.physics = physics;
 const headlights = createHeadlightRig(scene);
 const audio = createCarAudio();
 
@@ -237,6 +238,7 @@ renderer.setAnimationLoop(() => {
   renderer.info.reset();
   renderer.render(scene, camera);
   viewmodel.render(renderer);
-  overlay.update(dt, controls.debugText());
+  overlay.update(dt, `${controls.debugText()}
+${combat.lastDamageText()}`);
   if (++frames > 3) window.__gta.ready = true;
 });

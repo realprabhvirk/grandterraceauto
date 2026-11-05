@@ -216,6 +216,9 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       for (let s = 0; s <= len; s += 4) out.push({ x: ax + dx * s + dz * lane, z: az + dz * s - dx * lane });
       return out;
     },
+    /** Last 30 crash damage events / ignored velocity jumps (phantom-crash diagnostics). */
+    damageEvents() { return window.__gta.combat.damageLog.slice(); },
+    ignoredImpacts() { return window.__gta.combat.ignoredLog.slice(); },
     /** Wanted timing state (phase none/solid/flashing + timers). */
     wanted() { const s = window.__gta.wanted.state; return { stars: s.stars, wantedPhase: s.phase, graceRemaining: +s.grace.toFixed(2), flashRemaining: +Math.max(0, s.flashT).toFixed(2), hiddenTimer: +s.hidden.toFixed(2), nearestCopDistance: Number.isFinite(s.nearest) ? +s.nearest.toFixed(1) : null }; },
     /** Who would witness a crime at pos right now: [{ kind, cop, dist }]. */

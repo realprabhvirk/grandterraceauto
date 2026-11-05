@@ -67,6 +67,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     scene.add(ch.root);
     const body = phys.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(p.x, p.y + HALF + RADIUS, p.z));
     const collider = phys.createCollider(RAPIER.ColliderDesc.capsule(HALF * scale, RADIUS).setCollisionGroups(G_NPC), body);
+    physics.tag?.(collider, 'ped', `ped-${i}`);
     const jog = spec.role === 'jogger';
     const ped = {
       id: `ped-${i}`, role: spec.role, home: spec.spot || null, ch, body, collider, scale, flee: 0,

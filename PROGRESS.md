@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 10:38)**
-- Done: PHASE 5.1 complete: car damage retune, crimes need witnesses, wanted timing, full map + waypoint navigation; full suite + build run
-- Broken: phase4 'police officer on foot knocked down' fails (scripted car stops at the cop's capsule; logged after 2 attempts)
-- Next: Phase 6 (see Phase 5 summary suggestions)
+**STATUS (2026-11-05 11:07)**
+- Done: Phase 5.2 step 1: phantom crash root-caused + fixed (damage log, collider tags, contact-verified crashes)
+- Broken: phase4 'police officer on foot knocked down' still red (from 5.1); car-vs-car damage reads low (0.2 for an 18 m/s rear-end)
+- Next: 5.2 step 2: gun shop + POI markers on the maps
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -334,3 +334,11 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - **Fixed during baseline:** cabin cam now hides the driver (their neck blocked the road in the ute).
 - **Perf (perfscenes, headless):** 72-202 draw calls, 51-60 fps (cabin cam + live mirrors is the slowest at 51); new districts 72-162 calls at 60 fps.
 - **Check by hand:** crash feel (90 km/h into a wall should feel survivable - about 10 crashes to wreck a car); do witnesses' "startled" poses read, and does stealing in a quiet street really stay unnoticed; wanted timing (15 s solid feels right? flashing blink obvious? cleared message); full map usability (pan/zoom feel, marker snap radius, the route line following keep-left lanes, the beacon + distance chip, re-capturing the mouse after closing - you may need one click).
+
+## PHASE 5.2 LOG
+- 11:07 Step 0: the full suite had just been run at the end of 5.1 (all green except the logged phase4 cop knock-down), so it was not re-run.
+- 11:07 Step 1 PHANTOM CRASH - root causes (from the new damage log + ignored-impact log):
+  1. Crash detection was pure "velocity jump >= 5 m/s per step" with no contact check, so ground hits (landing off crests / dips, suspension bottoming: dv 11-20 m/s logged with reason "ground") counted as crashes.
+  2. vehicleBody stored lastVel BEFORE its own grip/downforce impulses and the speed caps (boost cut drops ~7 m/s in one step), so self-applied velocity changes showed up as impacts the next step. Teleports also read as huge impacts.
+  FIX: crashes now need a real solid, non-ground contact (Rapier contact pairs, normal |y| <= 0.6, terrain/road/curb ignored) during the 0.12 s window; lastVel is taken after our own impulses; teleport resets it. Every collider has an owner/type tag; last 30 damage events + last 30 ignored jumps via debug.damageEvents()/ignoredImpacts(); the F3 overlay shows the last cause.
+  RESULT (scripts/phantomtest.mjs): 13 routes at full throttle + boost (Grand Terrace, cul-de-sacs, Terrace Link, ring road x4, Pde/downtown, Northgate Rd, King St, Wharf Rd): 0 damage events; ghost scan over 6759 lane samples: 0 static colliders in the corridor; flat straight 173 km/h vs 166 configured; wall 25 m/s = 11.1, pole breaks, parked car still hurts. Highway: doesn't exist (skipped in Phase 5).

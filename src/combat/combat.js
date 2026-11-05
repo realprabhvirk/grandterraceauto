@@ -17,6 +17,29 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
   const emit = (e, d) => (listeners[e] || []).forEach((f) => f(d));
   const allCars = () => [...vehicles.cars, ...traffic.cars, ...(world.police ? world.police.cars : [])];
   const heroCar = () => vehicles.cars.find((c) => c.hero);
+  // Damage log (debug API + F3): the last 30 crash events, and the last 30 velocity jumps that were
+  // NOT treated as crashes (no solid contact / ground / upward normal) for diagnosing phantom hits.
+  const damageLog = [], ignoredLog = [];
+  const ring = (arr, e) => { arr.push(e); if (arr.length > 30) arr.shift(); };
+  const physics = world.physics;
+  /** Best solid, non-ground contact of car c right now: { other, tag, normal } or a reason string. */
+  function solidContact(c) {
+    if (!physics) return { tag: 'n/a', normal: [0, 0, 0] };
+    let best = null, reason = 'no contact';
+    for (const col of c.body.colliders) {
+      physics.world.contactPairsWith(col, (other) => {
+        const t = physics.tagOf(other.handle);
+        physics.world.contactPair(col, other, (m, flipped) => {
+          if (!m.numContacts()) return;
+          const n = m.normal(), s = flipped ? -1 : 1, nx = n.x * s, ny = n.y * s, nz = n.z * s;
+          if (t.type === 'terrain' || t.type === 'road' || t.type === 'curb') { reason = 'ground'; return; }
+          if (Math.abs(ny) > 0.6) { reason = `upward normal (${t.type})`; return; }
+          if (!best) best = { other, tag: `${t.type}:${t.owner}`, normal: [+nx.toFixed(2), +ny.toFixed(2), +nz.toFixed(2)] };
+        });
+      });
+    }
+    return best || reason;
+  }
 
   function damagePlayer(n, why = '') {
     if (st.ko || n <= 0) return;
@@ -60,6 +83,9 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
     get hp() { return st.hp; },
     get ko() { return st.ko; },
     get burning() { return st.burn; },
+    damageLog, ignoredLog,
+    /** F3 line for the last damage event. */
+    lastDamageText() { const e = damageLog[damageLog.length - 1]; return e ? `DMG ${e.dmg}% ${e.tag} n=(${e.normal.join(',')}) at ${e.kmh} km/h` : 'DMG none'; },
     get state() { return st; },
     damagePlayer, respawn, restoreHeroCar, damageCar,
     on(e, f) { (listeners[e] = listeners[e] || []).push(f); },
@@ -94,7 +120,7 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
         k.cd -= dt;
         if (k.cd > 0 && dv >= DAMAGE.minSpeed * 0.5) k.cd = DAMAGE.cooldown; // still grinding along: same collision
         if (!k.open && k.cd <= 0 && dv >= DAMAGE.minSpeed) {
-          k.open = true; k.t = 0; k.peak = 0;
+          k.open = true; k.t = 0; k.peak = 0; k.contact = null; k.reason = 'no contact';
           // Another car right here? Then it's car-vs-car: relative speed, half damage.
           const p = c.position;
           k.other = null; let bd = DAMAGE.carNear;
@@ -104,19 +130,26 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
             if (d < bd) { bd = d; k.other = o; }
           }
           if (k.other) {
-            const o = k.other, ov = o.body?.body ? o.body.body.linvel() : { x: o.fwd.x * o.v, y: 0, z: o.fwd.z * o.v };
+            const o = k.other, ov = o.crash?.prev || (o.body?.body ? o.body.body.linvel() : { x: o.fwd.x * o.v, y: 0, z: o.fwd.z * o.v }); // pre-impact velocity of the other car
             k.rel = Math.hypot(k.prev.x - ov.x, k.prev.z - ov.z);
           }
         }
         if (k.open) {
           k.peak = Math.max(k.peak, dv);
           k.t += dt;
-          if (k.t >= DAMAGE.window) {
+          if (!k.contact) { const sc = solidContact(c); if (typeof sc === 'string') k.reason = sc; else k.contact = sc; }
+          if (k.t >= DAMAGE.window && !k.contact) {
+            // A velocity jump with no solid side contact (ground, landing, boost cut...): never a crash.
+            k.open = false;
+            ring(ignoredLog, { t: +st.t.toFixed(2), car: c.type, dv: +k.peak.toFixed(2), kmh: +(Math.abs(c.body.state.speed) * 3.6).toFixed(0), reason: k.reason, pos: [c.position.x, c.position.y, c.position.z].map((q) => +q.toFixed(1)) });
+          }
+          if (k.t >= DAMAGE.window && k.open) {
             k.open = false; k.cd = DAMAGE.cooldown; k.events++;
             const carHit = !!k.other, speed = carHit ? Math.max(DAMAGE.minSpeed, Math.min(k.rel || k.peak, k.peak * 2)) : k.peak;
             const dmg = impactDamage(speed, carHit ? DAMAGE.carVsCar : 1);
             k.last = dmg;
             damageCar(c, dmg);
+            ring(damageLog, { t: +st.t.toFixed(2), car: c.type, player: c === active, dmg: +dmg.toFixed(2), speed: +speed.toFixed(1), dv: +k.peak.toFixed(2), kmh: +(Math.abs(c.body.state.speed) * 3.6).toFixed(0), normal: k.contact.normal, tag: k.contact.tag, pos: [c.position.x, c.position.y, c.position.z].map((q) => +q.toFixed(1)) });
             if (carHit && !k.other.body?.body) { damageCar(k.other, dmg); if (k.other.isPolice && c === active) emit('policeDamaged', { car: k.other }); }
             if (c === active) audio.crash(Math.min(1, (speed - 3) / 18));
           }
