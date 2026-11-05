@@ -136,3 +136,8 @@ One line per judgment call made during the autonomous build.
 - User asked to push to https://github.com/realprabhvirk/grandterraceauto (main) - remote "origin" added on request (overrides the earlier no-remote guardrail for this repo).
 - P5.3 step 2: there are no officer models inside patrol cars, so 'a cop in a car' can only be hit as the car -> that stays the existing police-car damage crime (as the brief says); the station cops (pedestrians with role cop) count as officers. Repeat hits on the same cop add no more heat but restart the 15 s grace; killing adds +150 on top.
 - P5.3 step 3: phantomtest route checks now ignore logged breakable-prop hits (the blind autopilot sometimes clips a kerbside letterbox / street light on the narrow cul-de-sacs); any other damage event still fails.
+
+## Phase 6
+- P6 step 0: the full suite had just been run at the end of 5.3 (green except the known phase4 cop knock-down), so it wasn't repeated.
+- P6 step 1a: per the user's note ("no stars for property destruction"), destroying someone else's car gives NO heat either (the brief's 1-star rule is dropped); breaking street furniture never gives heat. Police-car damage crimes are unchanged.
+- P6 step 1b: limits: Grand Terrace + suburb streets 50, cul-de-sacs 30, town grid 50, downtown streets 40 (incl. Terrace Pde east of Bridge St), School Rd 40, arterials 60 (ring roads, Terrace Pde in the old town, Terrace Link, Northgate Rd, King St North), highway 100 / ramps 80. Street names are now unique pretty names on the plan roads (Ring Rd North/East/West, The Esplanade, King St North...).

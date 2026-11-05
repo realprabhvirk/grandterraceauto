@@ -43,6 +43,8 @@ import { createPlayerWeapons } from './weapons/playerWeapons.js';
 import { createCopGuns } from './police/copGuns.js';
 import { createGunShopMenu } from './ui/gunShopMenu.js';
 import { createAmbience } from './audio/ambience.js';
+import { createSpeeding } from './police/speeding.js';
+import { createSpeedLimitHud } from './ui/speedLimitHud.js';
 import { createSkyLife } from './world/skyLife.js';
 
 const params = new URLSearchParams(location.search);
@@ -164,6 +166,10 @@ const copGuns = createCopGuns({ scene, police, controls, combat, world, physics,
 // Vibe: clouds + birds, zone ambience, one warm pooled light inside whichever Phase 4 shop is near,
 // optional slow automatic day/night cycle (Shift+N or ?cycle; N still toggles by hand).
 const skyLife = createSkyLife(scene);
+// Speeding: fines only when a camera / traffic cop catches you (no heat). HUD: limit sign + street chip.
+const speeding = createSpeeding({ world, controls, wallet, hud: statusHud, audio });
+const limitHud = createSpeedLimitHud();
+world.speeding = speeding;
 const ambience = createAmbience(audio);
 const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
 shopLight.castShadow = false;
@@ -182,7 +188,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, speeding, limitHud, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -206,6 +212,8 @@ renderer.setAnimationLoop(() => {
   { const f = controls.focus(); minimap.update(rdt, { ...mapState(), route: nav.route, waypoint: nav.waypoint }); nav.update(rdt, f, paused); mapUI.update(); }
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
+  speeding.update(dt);
+  limitHud.update(rdt, cutscene.active ? null : speeding.status());
   skyLife.update(dt, { dusk: lighting.dusk });
   {
     // Warm light inside the nearest enterable shop (Terrace Central / Quick Stop) when close.

@@ -51,7 +51,7 @@ export function createTheft({ scene, controls, vehicles, traffic, peds, police, 
   for (const t of traffic.cars) controls.registerTraffic(t, traffic.cars);
 
   combat.on('pedHit', (e) => { if (e.car?.player) crimes.report('pedHit', e.ped?.pos || e.car, { exclude: e.ped }); });
-  combat.on('propBroken', (e) => { if (e.byPlayer) crimes.report('prop', { x: e.x, y: e.item.y, z: e.z }); });
+  // Phase 6: breaking street furniture (poles, signs, bins...) is never a crime.
   combat.on('policeDamaged', (e) => { const c = e?.car; crimes.report('policeDamage', c ? c.pos : controls.focus(), c ? { victim: { ref: c, alive: () => !c.dead } } : {}); });
   // Only when the player's car is OFF the road (on a footpath / verge / lawn).
   peds.onScare?.((e) => { if (e.car?.player && !world.network.index.nearest(e.car.x, e.car.z, 4.6)) crimes.report('footpathScare', { x: e.car.x, y: controls.focus().y, z: e.car.z }); });

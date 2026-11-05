@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 12:24)**
-- Done: PHASE 5.3 complete (random shaking fixed, hitting a cop = 5 stars); pushed to GitHub main
-- Broken: phase4 'police officer on foot knocked down' still red (known)
-- Next: Phase 6
+**STATUS (2026-11-05 12:46)**
+- Done: Phase 6 step 1 (no heat for property damage; speed limits, fines config + HUD)
+- Broken: phase4 'police officer on foot knocked down' (known)
+- Next: P6 step 2: map routing fade + labels + street names
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -360,3 +360,6 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - **Random shaking:** fixed-60 Hz physics was drawn without interpolation, so frames running 0 or 2 physics steps made the car / player (and the camera following them) jump a whole step; the cabin camera also shook from a bump-sensitive velocity signal, and the walk camera's wall pull-in flickered. Now: render interpolation for cars + the walker, shake only from verified crashes / police contact, eased camera pull-in. Debug: window.__gta.jitter monitor, scripts/shaketest.mjs.
 - **Hitting a cop = 5 stars:** any bullet hitting a police officer (on foot or the station cops) sets 5 stars instantly - no witness, no delay, solid with the 15 s grace, police dispatched at once. Misses and police-car hits follow the normal rules; shooting a civilian nobody sees is still free.
 - **Check by hand:** walk, run and drive in third person, POV, chase, cabin and cinematic - the picture should be steady (no random shakes; a real crash still jolts the camera). Then go somewhere empty and shoot a lone cop: 5 stars at once.
+
+## PHASE 6 LOG
+- 12:46 Step 1: property damage never gives heat (street furniture, destroyed cars - user override); src/world/speedLimits.js (limits per road + downtown override, road.speedLimit/road.street), src/police/speedingConfig.js + speeding.js (fine $200 only when a catcher calls tryFine; cooldown 20 s per catcher; no fine when wanted / siren / on foot; cash floor 0), HUD limit sign + street chip. phase5test speeding 8/8.

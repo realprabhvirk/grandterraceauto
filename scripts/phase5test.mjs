@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1147,6 +1147,52 @@ try {
     check('hit a cop at 2 stars: straight to 5', r.two.before === 2 && r.two.after === 5, r.two);
     check('shooting a civilian with no witness: still no heat', r.civ.dead && r.civ.heat === 0, r.civ);
     check('no page errors (copstars)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.1: property damage + speeding fines
+  if (run('speeding')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, S = g.speeding, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
+      g.wanted.clear(true); g.police.reset();
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen && c.type === 'sedan')); await wait(1400);
+      const car = g.controls.car; car.health = 100; car.dead = false; car.body.dead = false;
+      const at = async (kmh) => { car.body.teleport(400, g.world.terrain.getHeight(400, -215 - 2.2), -217.2, Math.PI / 2); await wait(300); const v = { x: kmh / 3.6, y: 0, z: 0 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v }; await wait(120); };
+      const out = {};
+      g.wallet.set(1000);
+      await at(100);
+      const s1 = S.status(); out.status = { limit: s1.limit, street: s1.street, kmh: Math.round(s1.speedKmh), over: s1.over };
+      const h0 = g.wanted.heat;
+      out.fine = S.tryFine('test-cam', 'camera'); out.cash1 = g.wallet.cash;
+      out.cool = S.tryFine('test-cam', 'camera');
+      await at(68); out.atLimit = S.tryFine('test-cam-2', 'camera');
+      await at(100); g.wanted.add('test', 25); out.wanted = S.tryFine('test-cam-3', 'camera'); g.wanted.clear(true); g.police.reset();
+      await at(100); car.emergency = { on: true, update() {} }; out.siren = S.tryFine('test-cam-4', 'camera'); car.emergency = null;
+      out.heatAfter = g.wanted.heat - h0;
+      g.wallet.set(100); await at(100); S.tryFine('test-cam-5', 'camera'); out.floor = g.wallet.cash;
+      out.hud = { ...g.limitHud.st };
+      // Property damage: breaking street furniture and destroying a car (witnessed) -> no heat.
+      g.crimes.st.forceWitness = true; g.wanted.clear(true);
+      const it = g.breakables.sets.find((s) => s.name === 'streetLight').items.find((i) => !i.broken);
+      g.breakables.breakItem(it, { x: 1, y: 0, z: 0, setY() { return this; }, normalize() { return this; } });
+      g.combat.emit('propBroken', { item: it, byPlayer: true, x: it.x, z: it.z });
+      const victim = g.vehicles.cars.find((c) => c !== car && !c.hero && !c.dead && !c.impounded);
+      g.combat.damageCar(victim, 500);
+      await wait(1800);
+      out.property = { heat: g.wanted.heat, stars: g.wanted.stars, victimDead: !!victim.dead };
+      g.crimes.st.forceWitness = false;
+      g.controls.respawnAt(car.position, 0);
+      return out;
+    });
+    check('limit + street known on the road (ring road = arterial 60)', r.status.limit === 60 && r.status.street === 'Ring Rd North' && r.status.over, r.status);
+    check('caught over limit + 10: -$200 once, then cooldown', r.fine && r.cash1 === 800 && r.cool === false, r);
+    check('no fine at limit + 10 or under', r.atLimit === false, r);
+    check('no fine while wanted, none with the siren on', r.wanted === false && r.siren === false, r);
+    check('speeding never adds heat; cash never below 0', r.heatAfter === 0 && r.floor === 0, r);
+    check('HUD shows the limit sign + street chip while driving', r.hud.visible && r.hud.limit === 60 && r.hud.street === 'Ring Rd North', r.hud);
+    check('breaking street furniture or destroying a car (even witnessed): no heat', r.property.heat === 0 && r.property.stars === 0 && r.property.victimDead, r.property);
+    check('no page errors (speeding)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

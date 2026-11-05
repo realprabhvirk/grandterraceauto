@@ -15,6 +15,7 @@ import { buildHeroHouse, HERO_LOT, HERO_PATH_X } from './heroHouse62.js';
 import { buildStreetLights } from './streetLights.js';
 import { lotToWorld } from './layout.js';
 import { makeRng } from '../utils/rng.js';
+import { assignSpeedLimits } from './speedLimits.js';
 import { fbm } from '../utils/noise.js';
 
 export function buildWorld(scene) {
@@ -49,6 +50,9 @@ export function buildWorld(scene) {
   network.allRoads = [...network.roads, plan.link, ...plan.roads];
   const town = buildTown(scene, { network, layout, terrain, plan, wattleSite });
   network.index = new RoadIndex(network.allRoads);
+  // Street names (road.street) + speed limits (road.speedLimit) on every road definition.
+  for (const r of network.allRoads) r.street = r.street || r.name;
+  assignSpeedLimits(network.allRoads);
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders];
   const trunks = [...trees.trunks, ...town.trunks];

@@ -61,7 +61,7 @@ export function buildTownLanes(plan, { add, fwd, bwd, lanePt, S }) {
   fwd.exits = [{ lane: linkE.id, s: 0, prob: 1 }];
 
   // Intersection connectors.
-  const isMain = (L) => L === linkE || L === linkW || L.road?.name === 'TERRACE PDE' || L.road?.name === 'RING RD';
+  const isMain = (L) => L === linkE || L === linkW || (L.road?.arterial && !L.road?.extra);
   for (const n of plan.nodes) {
     const ins = into.get(n.id) || [], outs = outOf.get(n.id) || [];
     for (const inL of ins) {
