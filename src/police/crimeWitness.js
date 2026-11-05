@@ -71,10 +71,18 @@ export function createCrimeWitness({ physics, world, peds, police, traffic, want
 
   /**
    * Report a crime. opts: { amount, targetY, victim: { ref, alive } who always witnesses (carjack
-   * victim, a cop you rammed, a person you shot who survived), exclude }.
+   * victim, a cop you rammed, a person you shot who survived), exclude, alwaysKnown + minStars
+   * (bypass the witness system: hitting a police officer = 5 stars at once) }.
    * Returns the number of witnesses (0 = nobody saw it: no heat, no report).
    */
   function report(kind, pos, opts = {}) {
+    // Flagged exceptions (shooting a police officer): known at once - no witness, no delay.
+    if (opts.alwaysKnown) {
+      st.last = { kind, witnesses: 'always' }; st.reported++;
+      wanted.add(kind, opts.amount);
+      if (opts.minStars) wanted.raiseTo(opts.minStars, kind);
+      return Infinity;
+    }
     let ws = getWitnesses(pos, opts);
     if (opts.victim && opts.victim.alive()) ws.push({ kind: 'victim', ref: opts.victim.ref, alive: opts.victim.alive });
     if (st.forceWitness && !ws.length) ws = [{ kind: 'test', alive: () => true }];

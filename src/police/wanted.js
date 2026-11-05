@@ -29,6 +29,11 @@ export function createWanted(hud) {
       if (st.stars) { st.phase = 'solid'; st.grace = W.grace; st.hidden = 0; st.flashT = 0; }
       if (st.stars !== before) listeners.forEach((f) => f(st.stars, before, kind));
     },
+    /** Raise straight to at least n stars (heat up to that threshold), solid + full grace. */
+    raiseTo(n, kind = 'raise') {
+      const need = W.thresholds[Math.min(n, W.thresholds.length) - 1];
+      this.add(kind, Math.max(0, need - st.heat));
+    },
     clear(silent = false) {
       const before = st.stars;
       Object.assign(st, { heat: 0, stars: 0, phase: 'none', grace: 0, hidden: 0, flashT: 0 });

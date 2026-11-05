@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 11:53)**
-- Done: Phase 5.2 + 5.3 step 1 (random shaking fixed: render interpolation, crash-only shake)
+**STATUS (2026-11-05 11:57)**
+- Done: Phase 5.3 steps 1-2 (shaking fixed, hitting a cop = 5 stars)
 - Broken: phase4 'police officer on foot knocked down' still red (known)
-- Next: 5.3 step 2: shooting a cop = 5 stars
+- Next: 5.3 step 3: wrap-up
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -353,3 +353,4 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 ## PHASE 5.3 LOG
 - 11:53 Step 1 RANDOM SHAKING - root causes: (1) physics runs at a fixed 60 Hz but cars and the walker were drawn at the raw physics pose, so every frame that ran 0 or 2 physics steps (vsync drift / frame-time jitter: 33 of 615 frames on a Grand Terrace run) jumped a whole step and the camera following it stuttered; (2) the cabin camera shook from body.impact, a per-step velocity-jump signal that also fires on bumps and landings; (3) the walk camera's pull-in raycast snapped in/out instantly when grazing geometry.
   FIX: render interpolation between the last two physics poses for every car and the walker (physics.alpha), camera shake only from verified crashes (combat sets crashShake) and police contact, camera pull-in eases back out (instant in). New jitter monitor (window.__gta.jitter) + scripts/shaketest.mjs: walk/run/jump/POV/standing/drive chase-cabin-cinematic/crests/Northgate all smooth with zero shake when nothing is hit, a 25 m/s crash still shakes; e.g. Grand Terrace crests focus jitter 0.20 -> 0.015 m/frame. phantomtest 17/17 still clean.
+- 11:57 Step 2: hitting a police officer (on foot or at the station) = instant 5 stars via crimeWitness.report(..., { alwaysKnown: true, minStars: 5 }) + wanted.raiseTo(); no witness, no delay, solid with full grace, dispatch at once; misses and police-car hits unchanged. Also fixed a step-1 regression: a sleeping/just-teleported car reported its stale interpolated position (crimes at a parked car found no witnesses). phase5test copstars 6/6, witness 8/8, steal 10/10, guns 28/28.

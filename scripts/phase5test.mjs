@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -527,7 +527,7 @@ try {
     check('headshot: head zone, x2 damage', hits.hd?.zone === 'head' && hits.hd.dmg === 50 && hits.hpAfterHead === 25, hits);
     check('heat: shooting a civilian +50, killing +80', hits.heatShoot === 50 && hits.killed && hits.heatKill === 80, hits);
     check('shot ped goes down, fades after ~5 s, gone by ~6.5 s', hits.fadeStart > 4.3 && hits.fadeStart < 5.8 && hits.goneAt > 5.5 && hits.goneAt < 7.2, { fadeStart: hits.fadeStart, goneAt: hits.goneAt });
-    check('cops: 150 hp, shooting +100, killing +150', hits.copHp === 125 && hits.copShot === 100 && hits.copDead && hits.copKill === 150, hits);
+    check('cops: 150 hp; hitting one = 5 stars (heat >= 300), killing adds +150', hits.copHp === 125 && hits.copDead && hits.copKill + 100 >= 450, hits);
     check('hit markers shown', hits.hitMarkers >= 3, hits.hitMarkers);
     // Cars + breakables + civilians reacting.
     const misc = await ev(async () => {
@@ -1095,6 +1095,58 @@ try {
     check('full map legend lists the gun shop', r.legend);
     check('every POI has a marker (highway: none built)', Object.values(r.pois).every(Boolean), r.pois);
     check('no page errors (pois)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 5.3 step 2: hitting a cop = 5 stars
+  if (run('copstars')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.weapons, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      // Empty industrial yard road, nobody around.
+      const S = { x: 860, z: -470 };
+      d.teleport(S.x, S.z, Math.PI / 2); await wait(300);
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
+      const saved = g.peds.peds.map((p) => ({ p, gone: p.gone }));
+      for (const p of g.peds.peds) p.gone = true;
+      g.wanted.clear(true); g.police.reset(); g.crimes.clear(); g.crimes.st.forceWitness = false;
+      const shootAt = (x, y, z, id = 'pistol') => W.debugShot({ x: x - 6, y, z }, { x: 1, y: 0, z: 0 }, id);
+      const res = {};
+      // (c) miss a lone cop: nothing.
+      let o = g.police.foot.spawn(null, { x: S.x + 8, z: S.z }); o.state = 'hold';
+      const missed = W.debugShot({ x: S.x + 2, y: o.pos.y + 1.2, z: S.z + 3 }, { x: 1, y: 0, z: 0 }, 'pistol');
+      await wait(1800);
+      res.miss = { kind: missed.kind, stars: g.wanted.stars };
+      // (a) hit the lone cop: 5 stars at once, solid, full grace, police dispatched.
+      g.police.foot.remove(o); o = g.police.foot.spawn(null, { x: S.x + 8, z: S.z }); o.state = 'hold';
+      const hit = shootAt(o.pos.x, o.pos.y + 1.2, o.pos.z);
+      const w0 = d.wanted();
+      res.hit = { kind: hit.kind, stars: w0.stars, phase: w0.wantedPhase, grace: w0.graceRemaining, heat: g.wanted.heat };
+      await wait(2500);
+      res.hit.cops = g.police.cars.length;
+      // (d) already at 2 stars -> 5.
+      g.wanted.clear(true); g.police.reset(); g.wanted.add('test', 61);
+      const two = g.wanted.stars;
+      o = g.police.foot.spawn(null, { x: S.x + 8, z: S.z }); o.state = 'hold';
+      shootAt(o.pos.x, o.pos.y + 1.2, o.pos.z);
+      res.two = { before: two, after: g.wanted.stars };
+      // (b) shoot (and kill) a civilian with no witnesses: no heat.
+      g.wanted.clear(true); g.police.reset(); g.crimes.clear();
+      const civ = g.peds.peds.find((p) => !p.home && p.role !== 'cop');
+      civ.gone = false; civ.state = 'pause'; civ.timer = 99; civ.hp = 100; civ.pos.set(S.x + 8, g.world.terrain.getHeight(S.x + 8, S.z + 4), S.z + 4); civ.yaw = 0;
+      await wait(200);
+      for (let k = 0; k < 4 && civ.state !== 'dead'; k++) shootAt(civ.pos.x, civ.pos.y + 1.2, civ.pos.z, 'rifle');
+      await wait(2000);
+      res.civ = { dead: civ.state === 'dead', heat: g.wanted.heat, stars: g.wanted.stars };
+      for (const s of saved) s.p.gone = s.gone;
+      g.wanted.clear(true); g.police.reset();
+      return res;
+    });
+    check('miss a cop: no stars', r.miss.kind !== 'officer' && r.miss.stars === 0, r.miss);
+    check('hit a lone cop with nobody around: 5 stars at once, solid, 15 s grace', r.hit.kind === 'officer' && r.hit.stars === 5 && r.hit.phase === 'solid' && r.hit.grace === 15 && r.hit.heat >= 300, r.hit);
+    check('police dispatched within the first seconds', r.hit.cops >= 1, r.hit);
+    check('hit a cop at 2 stars: straight to 5', r.two.before === 2 && r.two.after === 5, r.two);
+    check('shooting a civilian with no witness: still no heat', r.civ.dead && r.civ.heat === 0, r.civ);
+    check('no page errors (copstars)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

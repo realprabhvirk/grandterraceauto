@@ -78,16 +78,19 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
       const dmg = hitDamage(W, h.zone, h.dist);
       fx.impact(h.point, h.normal, 'body');
       let killed;
-      if (h.kind === 'ped') {
+      const isCop = h.kind === 'officer' || h.ref?.role === 'cop'; // officers on foot and the cops at the station
+      if (h.kind === 'ped' && !isCop) {
         killed = peds.shoot(h.ref, dmg, player.position);
         const p = h.ref;
         if (!st.shot.has(p)) { st.shot.add(p); heat('shootCiv', killed ? null : { ref: p, alive: () => p.state !== 'dead' && p.state !== 'down' }); }
         if (killed) heat('killCiv');
       } else {
-        killed = police.foot.damage(h.ref, dmg);
+        // Hitting a police officer: 5 stars straight away, witnesses or not (crimeWitness alwaysKnown).
         const o = h.ref;
-        if (!st.shot.has(o)) { st.shot.add(o); heat('shootCop', killed ? null : { ref: o, alive: () => o.state !== 'dead' }); }
-        if (killed) heat('killCop');
+        killed = h.kind === 'officer' ? police.foot.damage(o, dmg) : peds.shoot(o, dmg, player.position);
+        world.crimes?.report('shootCop', player.position, { alwaysKnown: true, minStars: 5, amount: st.shot.has(o) ? 0 : undefined });
+        st.shot.add(o);
+        if (killed) world.crimes?.report('killCop', player.position, { alwaysKnown: true, minStars: 5 });
       }
       st.hits++;
       hud.hit(killed);

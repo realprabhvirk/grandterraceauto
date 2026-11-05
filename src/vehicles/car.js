@@ -63,7 +63,7 @@ export class Car {
   }
 
   /** Rendered (interpolated) position - what the camera and the rest of the game see. */
-  get position() { return this.renderPos || this.body.position; }
+  get position() { return this.renderPos && !this.sleeping && !this.body.snapRender ? this.renderPos : this.body.position; } // raw body while asleep / just teleported
 
   /** Physics pose before a fixed step (for render interpolation). */
   capturePrev() {
