@@ -95,6 +95,17 @@ export class TrafficCar {
       if (busy) target = 0;
     }
 
+    // --- Traffic lights: stop at the line on red / amber (amber: go if too close to stop) ----
+    const sig = this.lane.signal;
+    this.atRed = false;
+    if (sig) {
+      const light = sig.j[sig.axis], dist = this.lane.len - this.s - 0.8;
+      if (light !== 'green' && dist > -0.3 && dist < 45 && !(light === 'amber' && dist < this.v * 1.1)) {
+        target = dist < 0.4 ? 0 : Math.min(target, Math.sqrt(2 * 3.5 * (dist - 0.4))); // brake to stop at the line
+        this.atRed = true;
+      }
+    }
+
     // --- Accelerate / brake, honk once if the player blocks us for >6 s ---------------------
     const dv = target - this.v;
     this.v += Math.max(-7 * dt, Math.min(2.6 * dt, dv));

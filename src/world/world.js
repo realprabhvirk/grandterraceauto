@@ -19,6 +19,7 @@ import { assignSpeedLimits } from './speedLimits.js';
 import { buildStreetSigns } from '../city/streetSigns.js';
 import { HWY, BRIDGES } from '../city/highwayPlan.js';
 import { buildHighway } from '../city/highway.js';
+import { landmarkLots } from '../city/landmarks.js';
 import { cameraAheadSigns } from '../city/cameraPlan.js';
 import { fbm } from '../utils/noise.js';
 
@@ -32,7 +33,7 @@ export function buildWorld(scene) {
   // street corridors under its bridges to the streets that pass underneath.
   const hwRoad = plan.roads.find((r) => r.highway && !r.ramp);
   const hwGrade = [-6, 0, 6].map((dz) => ({ halfW: 4, samples: hwRoad.samples.filter((s) => !HWY.crossings.some((c) => Math.abs(s.x - c) < HWY.deckHalf)).map((s) => ({ ...s, z: s.z + dz })) }));
-  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade], pads: network.pads, lots: lotPads(layout) });
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots()] });
   terrain.bridges = BRIDGES;
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));

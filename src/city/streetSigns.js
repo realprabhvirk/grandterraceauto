@@ -141,6 +141,8 @@ export function buildStreetSigns({ network, plan, terrain }) {
     if (r.kind === 'school') { const m = S[Math.floor(S.length / 2)]; addLimit(m.x - m.nx * hw, m.z - m.nz * hw, Math.atan2(-m.tx, -m.tz), cells.indexOf('SCHOOL'), { road: r.street, limit: lim, school: true }); }
   }
   for (const c of network.cameraAheadSigns || []) addLimit(c.x, c.z, c.yaw, cells.indexOf('CAMERA'), { camera: true });
+  // Drop any sign that would stand in a carriageway (road ends meeting another road at an odd angle).
+  for (let i = spots.length - 1; i >= 0; i--) { const s = spots[i]; if (network.allRoads.some((r) => r.samples.some((q) => Math.hypot(q.x - s.x, q.z - s.z) < (r.halfW || 3.6) - 0.5))) spots.splice(i, 1); }
   const disc = new THREE.CircleGeometry(0.36, 20);
   const limFace = cellMesh(disc, limitTex, 8, 1, spots.length), limBack = new THREE.InstancedMesh(paint(new THREE.CircleGeometry(0.36, 20).rotateY(Math.PI), '#9aa0a6', 0.02), new THREE.MeshLambertMaterial({ vertexColors: true }), spots.length);
   const limPole = new THREE.InstancedMesh(paint(new THREE.CylinderGeometry(0.035, 0.04, 2.3, 6).translate(0, 1.15, 0), '#8d9196', 0.03), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), spots.length);

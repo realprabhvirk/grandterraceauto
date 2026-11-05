@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 15:16)**
-- Done: Phase 6 steps 1-5 + 6a (13 enterable shops)
+**STATUS (2026-11-05 15:39)**
+- Done: Phase 6 steps 1-5, 6a (13 shops), 6b (traffic lights, 3 landmarks, billboards)
 - Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known); map Tab-resume check flaky in batch
-- Next: P6 step 6b: city structure (markings, traffic lights, landmarks, billboards)
+- Next: P6 step 6c: more NPCs, bus loop, taxis, vans; 6d vibe
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -376,3 +376,10 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - src/town/shopKit.js: one kit (shell + hinged door, fittings by style food/mart/chemist/clothes/barber, keeper, counter E-target). 7 Terrace Pde shopfronts became enterable (cafe, bakery, chemist, barber, fashion, takeaway, bottle shop; bank + electronics stay facades) + 6 downtown mid-block shops facing the cross streets (Noodle Bar, Diner 24H, City Mart, Moda Boutique, Pizza Napoli, Juice Bar).
 - src/ui/shopMenu.js: food/drinks $8-20 → +10..25 health (refused at full health), chemist first aid $40 → +50, clothes $60 shirt colour, barber $25 hair colour (character.setOutfit).
 - Map icons: food (E), chemist (+), clothes (T). Test `shops` 11/11 (walk in through all 13 doors to the counter). `map` "Tab closes, world resumes" failed once in a batch run, passed alone (flaky, noted).
+
+### 2026-11-05 15:39 — Phase 6 Step 6b: traffic lights, landmarks, billboards, markings
+- src/traffic/trafficLights.js: 6 signalised junctions on Terrace Pde (x 420-880), Pde green 14 s / cross 10 s, amber 3 s, 1.5 s all-red, 4.5 s offset per junction (green wave east). AI stops at the line on red/amber (braking-distance profile) and goes on green; straight connectors at signals no longer give way. Stop lines + zebra crossings on every approach; one InstancedMesh for all 72 lamps.
+- src/city/landmarks.js: City Hall + 34 m clock tower (Station St, opposite Central Gardens; hands show real local time), Terrace Stadium (graded pad south of The Esplanade, stepped oval stands, pitch, floodlights, open gate toward town), TV tower on the southern hill (blinking beacon); 3 roadside billboards (motorway x2, Esplanade). All on the map as landmarks.
+- Ghost-scan fixes: Ring Rd North camera moved off the Station St junction; limit signs that would stand inside asphalt are dropped.
+- Tests: `city` 11/11 (red stop / green go, lamps, cycle never both green, landmarks solid, clock = real time, 106 draw calls / 60 fps downtown), phantomtest 19/19, signs 5/5, phase4 town 11/11.
+- Skipped (logged): laneways, road-marking repaint beyond the signal junctions; red-light running carries no penalty (arcade).

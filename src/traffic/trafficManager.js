@@ -8,6 +8,7 @@ import { buildLaneGraph } from './laneGraph.js';
 import { TrafficCar } from './trafficCar.js';
 import { makeRng } from '../utils/rng.js';
 import { addEmergencyKit } from '../vehicles/emergency.js';
+import { buildTrafficLights } from './trafficLights.js';
 export const PATROL_CRUISERS = 2; // traffic cops cruising the motorway / ring road at the limit
 
 const COUNT = 14; // 6 start on Grand Terrace, the rest spread over the town + downtown grid
@@ -16,6 +17,7 @@ const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '
 export function createTraffic({ scene, physics, world, vehicles, audio, count = COUNT }) {
   const rng = makeRng(4646);
   const graph = buildLaneGraph(world.network);
+  const lights = world.town ? buildTrafficLights({ scene, plan: world.town.plan, graph, physics, terrain: world.terrain }) : null;
   const wheels = createWheelInstances((count + PATROL_CRUISERS) * 4).mesh;
   wheels.name = 'traffic-wheels';
   scene.add(wheels);
@@ -60,10 +62,12 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
   return {
     cars,
     graph,
+    lights,
     removeCar,
     honk,
     /** ctx: { player (walker position or null), night } */
     update(dt, { player, night, extra = [] }) {
+      lights?.update(dt);
       const obstacles = [];
       for (const c of cars) obstacles.push({ self: c, x: c.pos.x, z: c.pos.z, speed: c.v, len: c.cfg.L });
       for (const c of vehicles.cars) {

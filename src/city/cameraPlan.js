@@ -8,7 +8,7 @@ export const CAMERA_SPOTS = [
   { id: 'cam-hwy-3', road: 'Terrace Motorway', t: 0.66, dir: 1 },
   { id: 'cam-hwy-4', road: 'Terrace Motorway', t: 0.86, dir: -1 },
   { id: 'cam-gt', road: 'Grand Terrace', t: 0.55, dir: 1 },
-  { id: 'cam-ring-n', road: 'Ring Rd North', t: 0.3, dir: -1 },
+  { id: 'cam-ring-n', road: 'Ring Rd North', t: 0.42, dir: -1 },
   { id: 'cam-ring-e', road: 'Ring Rd East', t: 0.5, dir: 1 },
   { id: 'cam-pde-dt', road: 'Terrace Pde', t: 0.82, dir: 1 },
   { id: 'cam-king', road: 'King St', t: 0.5, dir: -1 },

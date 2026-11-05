@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe shops enforce highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe city shops enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1432,6 +1432,64 @@ try {
     check('shops on the map (food / chemist / clothes icons)', r.places >= 12, { places: r.places });
     check('draw calls downtown < 550', r.calls < 550, { calls: r.calls });
     check('no page errors (shops)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.6b: traffic lights + landmarks
+  if (run('city')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, L = g.traffic.lights, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const out = { st: L.st };
+      // Cycle sanity: never both axes green; an all-red gap exists.
+      let both = 0, allRed = 0;
+      const sig = (t, a) => { L.setTime(t); return L.junctions[0][a]; };
+      for (let t = 0; t < 33; t += 0.25) { const e = sig(t, 'ew'), n = L.junctions[0].ns; if (e === 'green' && n === 'green') both++; if (e === 'red' && n === 'red') allRed++; }
+      out.both = both; out.allRed = allRed;
+      // AI obeys: one car on an east-west approach, others parked out of the way.
+      const j = L.junctions[2];
+      const lane = g.traffic.graph.lanes.find((l) => l.signal && l.signal.j === j && l.signal.axis === 'ew');
+      const car = g.traffic.cars.find((c) => !c.trafficCop);
+      for (const c of [...g.traffic.cars]) if (c !== car) g.traffic.removeCar(c);
+      L.setTime(14 + 3 + 1.5 + 1 - j.offset); // cross street green -> Pde red
+      car.lane = lane; car.s = lane.len - 32; car.v = 9;
+      await wait(7000);
+      out.red = { light: j.ew, sameLane: car.lane === lane, toLine: +(lane.len - car.s).toFixed(2), v: +car.v.toFixed(2), atRed: car.atRed };
+      L.setTime(-j.offset + 0.2); // Pde green
+      await wait(5000);
+      out.green = { light: j.ew, moved: car.lane !== lane, v: +car.v.toFixed(2) };
+      // Lamp colours follow the phase.
+      const head = j.heads.find((h) => h.axis === 'ew'), c = new (g.scene.children[0].color?.constructor || Object)();
+      const col = (i) => { const a = L.lampMesh.instanceColor.array; return [a[i * 3], a[i * 3 + 1], a[i * 3 + 2]].map((v) => +v.toFixed(2)); };
+      out.lamp = { green: col(head.lamps[2]), red: col(head.lamps[0]) };
+      void c;
+      // Landmarks.
+      out.places = g.world.places.filter((p) => ['City Hall', 'Terrace Stadium', 'TV Tower'].includes(p.label)).length;
+      const R = g.physics.RAPIER, W = g.physics.world;
+      const ray = (x, y, z, dx, dz, len) => { const h = W.castRay(new R.Ray({ x, y, z }, { x: dx, y: 0, z: dz }), len, true); return h ? +h.timeOfImpact.toFixed(2) : null; };
+      out.hallWall = ray(522, -2.5, -26, 1, 0, 30);     // from Station St east into City Hall
+      out.stadiumWall = ray(450, 0, 60, 0, 1, 40) ;     // from The Esplanade south: gate is open on the town side
+      out.stadiumSide = ray(380, -2, 112, 1, 0, 40);    // from the west into the stands
+      out.tvShaft = ray(420, g.world.terrain.getHeight(440, 232) + 5, 232, 1, 0, 40);
+      const now = new Date(), m = now.getMinutes() + now.getSeconds() / 60;
+      out.clock = { faces: g.landmarks.clock.faces, dMin: +Math.abs(g.landmarks.clock.minute - m).toFixed(2) };
+      out.pad = [g.world.terrain.getHeight(420, 100), g.world.terrain.getHeight(480, 125)].map((v) => +v.toFixed(2));
+      // Perf at two viewpoints (walker downtown, then aerial over the stadium / city).
+      g.debug.teleport(700, -95, 0); await wait(1200);
+      let f0 = g.renderer.info.render.frame, t0 = performance.now(); await wait(2000);
+      out.fpsStreet = Math.round((g.renderer.info.render.frame - f0) / ((performance.now() - t0) / 1000)); out.callsStreet = g.renderer.info.render.calls;
+      return out;
+    });
+    check('6 signalised junctions on Terrace Pde, 24 approaches with lights', r.st.junctions === 6 && r.st.approaches === 24 && r.st.heads === 24, r.st);
+    check('signal cycle: never both green, all-red clearance exists', r.both === 0 && r.allRed > 0, { both: r.both, allRed: r.allRed });
+    check('AI car stops at the stop line on red', r.red.light === 'red' && r.red.sameLane && r.red.toLine > -0.3 && r.red.toLine < 6 && r.red.v < 0.3, r.red);
+    check('AI car goes on green', r.green.light === 'green' && r.green.moved, r.green);
+    check('lamps show the phase (green lit, red dark on green)', r.lamp.green[1] > 0.8 && r.lamp.red[0] < 0.3, r.lamp);
+    check('3 landmarks on the map (City Hall, Terrace Stadium, TV Tower)', r.places === 3, { places: r.places });
+    check('landmarks are solid (City Hall wall, stadium stands, TV shaft), stadium gate open', r.hallWall !== null && r.hallWall < 12 && r.stadiumSide !== null && r.tvShaft !== null && (r.stadiumWall === null || r.stadiumWall > 30), r);
+    check('City Hall clock shows the real time (4 faces)', r.clock.faces === 4 && r.clock.dMin < 1, r.clock);
+    check('stadium sits on a flat graded pad', Math.abs(r.pad[0] - r.pad[1]) < 0.05, r.pad);
+    check('downtown street: draw calls < 550, fps >= 45', r.callsStreet < 550 && r.fpsStreet >= 45, { calls: r.callsStreet, fps: r.fpsStreet });
+    check('no page errors (city)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
