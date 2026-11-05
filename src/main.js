@@ -36,6 +36,7 @@ import { createCutscene } from './camera/cutscene.js';
 import { addEmergencyKit } from './vehicles/emergency.js';
 import { hideProp } from './town/townKit.js';
 import { createPlayerWeapons } from './weapons/playerWeapons.js';
+import { createCopGuns } from './police/copGuns.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -143,6 +144,7 @@ controls.hooks.onPropSteal = (p) => {
 
 const viewmodel = createViewmodel();
 const weapons = createPlayerWeapons({ scene, camera, controls, physics, world, peds, police, vehicles, traffic, breakables, particles, audio, wanted, combat, viewmodel, theft });
+const copGuns = createCopGuns({ scene, police, controls, combat, world, physics, audio, fx: weapons.fx });
 renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -152,7 +154,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -169,6 +171,7 @@ renderer.setAnimationLoop(() => {
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: [...police.movers(), ...cyclists.movers()] });
   { const ac = controls.mode === 'drive' ? controls.car : null; world.playerSiren = !!ac?.emergency?.on; for (const c of vehicles.cars) c.emergency?.update(dt); }
   police.update(dt);
+  copGuns.update(dt);
   theft.update(dt, world.terrain);
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
   audio.setListener(controls.focus());

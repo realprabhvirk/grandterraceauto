@@ -116,3 +116,5 @@ One line per judgment call made during the autonomous build.
 - P5 step 2: emotes moved to hold G + 1-4; 1-4 alone pick weapons (only owned ones). Input edges are now cleared by main.js after the weapons read them.
 - P5 step 2: bullet threshold for breakables = toughness x 5 damage (street light: 2 pistol rounds). Cars take 25% of weapon damage. Shot civilians fade after 5 s and come back ~30 s later out of sight; heat for shooting a person counts once per person.
 - P5 step 2: shots-fired heat +10 per 2.5 s burst only when theft.witnessed() (peds 30 m with LOS / police car 60 m), capped at +40 until the wanted level clears.
+- P5 step 3: patrol cars in a chase "shoot from the driver's window" (a muzzle point beside the driver's door, no officer model leaning out). At 4-5 stars armed officers hold ~9-10 m away and shoot instead of grabbing; at 3 stars they still walk up to arrest (and shoot on the way). Car hits do 60% of the on-foot damage to the car.
+- P5 step 3: cop gunshot volume falls off linearly to 0 at 140 m (^1.5); cop muzzle flashes don't use the shared flash light (kept for the player's shots).

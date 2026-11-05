@@ -275,9 +275,11 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       if (o.state === 'return' || o.state === 'exit') continue;
       const d = Math.hypot(o.pos.x - P.x, o.pos.z - P.z);
       if (d > 60) { o.state = 'return'; continue; }
-      o.state = d < ARREST.footNear - 1.6 ? 'hold' : 'approach';
-      o.goal = P; o.goalStop = 1.0;
-      o.nearT = d < ARREST.footNear ? o.nearT + dt : 0;
+      // Armed officers at 4-5 stars keep their distance and shoot instead of grabbing.
+      const standoff = o.gun && stars >= 4;
+      o.state = d < (standoff ? 10 : ARREST.footNear - 1.6) ? 'hold' : 'approach';
+      o.goal = P; o.goalStop = standoff ? 9 : 1.0;
+      o.nearT = !standoff && d < ARREST.footNear ? o.nearT + dt : 0;
       o.action = d < 1.8 ? 'grab' : o.gunAction || null;
       if (o.nearT > ARREST.footHold) grabber = o;
     }

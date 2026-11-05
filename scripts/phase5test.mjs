@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -553,6 +553,71 @@ try {
     const nan = await ev(() => { const s = window.__gta.debug.state(); return !s.player.every(Number.isFinite); });
     check('no NaN after gunfire', !nan);
     check('no page errors (guns)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 3: cops with guns
+  if (run('copguns')) {
+    await load();
+    await fresh();
+    const rule = await ev(async () => {
+      const m = await import('/src/police/copGuns.js');
+      return { s2: m.copWeapon(2, 0), s3: m.copWeapon(3, 0), s3b: m.copWeapon(3, 1), s4: m.copWeapon(4, 0), s4b: m.copWeapon(4, 1), s5b: m.copWeapon(5, 2), acc20: +m.copAccuracy(20, 0).toFixed(2), acc40: +m.copAccuracy(40, 0).toFixed(2), accFast: +m.copAccuracy(20, 15).toFixed(2) };
+    });
+    check('arming rule: none <3 stars, pistols at 3, rifle + SMGs at 4-5', rule.s2 === null && rule.s3 === 'pistol' && rule.s3b === 'pistol' && rule.s4 === 'rifle' && rule.s4b === 'smg' && rule.s5b === 'smg', rule);
+    check('accuracy ~35% at 20 m, less far away and vs a fast target', Math.abs(rule.acc20 - 0.35) < 0.01 && rule.acc40 < rule.acc20 && rule.accFast < rule.acc20, rule);
+    // Live arming at 2 vs 3 stars.
+    const live = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(470, -92, 0); await wait(200);
+      g.wanted.add('test', 61); // 2 stars
+      const P = g.controls.player.position;
+      const o = g.police.foot.spawn(null, { x: P.x + 25, z: P.z }); o.state = 'hold';
+      await wait(300);
+      const at2 = o.gun || null;
+      g.wanted.add('test', 60); // 3 stars
+      await wait(300);
+      const at3 = o.gun || null, gunVisible = !!o.gunObj?.group.visible;
+      g.police.reset(); g.wanted.clear(true);
+      return { at2, at3, gunVisible };
+    });
+    check('officers unarmed at 2 stars, pistol at 3 (held, visible)', live.at2 === null && live.at3 === 'pistol' && live.gunVisible, live);
+    // Cop fire at an on-foot player: health drops.
+    const foot = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(470, -92, 0); await wait(200);
+      g.combat.setHp(100);
+      g.wanted.add('test', 201); // 4 stars: armed officers keep their distance and shoot
+      const P = g.controls.player.position;
+      const o = g.police.foot.spawn(null, { x: P.x + 16, z: P.z }); o.state = 'hold';
+      const s0 = g.copGuns.st.shots;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 9000 && g.combat.hp >= 100 && !g.combat.ko) await wait(100);
+      const r = { hp: +g.combat.hp.toFixed(1), shots: g.copGuns.st.shots - s0, gun: o.gun, aimHold: !!o.gunObj, busted: g.police.st.busted, sees: o.sees, t: +((performance.now() - t0) / 1000).toFixed(1) };
+      g.police.reset(); g.wanted.clear(true); g.combat.setHp(100);
+      return r;
+    });
+    check('cops shoot an on-foot player: health drops', foot.shots > 0 && foot.hp < 100, foot);
+    // Cop fire at the player's car: car health drops, player health constant.
+    const car = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      c.body.teleport(440, g.world.terrain.getHeight(440, -83), -83, Math.PI / 2);
+      await wait(400);
+      g.combat.setHp(90);
+      g.wanted.add('test', 201);
+      d.placeCop(418, -83, Math.PI / 2);
+      const s0 = g.copGuns.st.carHits, shots0 = g.copGuns.st.shots;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 6000 && g.copGuns.st.carHits === s0) await wait(100);
+      await wait(300);
+      const r = { carHealth: +c.health.toFixed(1), carHits: g.copGuns.st.carHits - s0, shots: g.copGuns.st.shots - shots0, hp: +g.combat.hp.toFixed(1), mode: g.controls.mode };
+      g.police.reset(); g.wanted.clear(true);
+      return r;
+    });
+    check('cops shoot the car: car health drops', car.carHits > 0 && car.carHealth < 100, car);
+    check('in a car the player never takes bullet damage', car.hp >= 90, car);
+    check('no page errors (copguns)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

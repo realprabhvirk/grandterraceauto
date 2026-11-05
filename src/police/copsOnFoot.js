@@ -35,6 +35,7 @@ export function createCopsOnFoot({ scene, world }) {
 
   function remove(o) {
     scene.remove(o.ch.root);
+    if (o.gunObj) scene.remove(o.gunObj.group);
     if (o.fadeMat) o.fadeMat.dispose();
     if (o.car && o.state !== 'dead') o.car.crewOut = Math.max(0, (o.car.crewOut || 1) - 1);
     officers.splice(officers.indexOf(o), 1);
