@@ -1,7 +1,7 @@
 # Task 010 - music player
 
 ## Intent and state
-Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A complete; implementation M1-M8 pending.
+Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A and M1 complete; M2-M8 pending.
 
 ## Phase A evidence (2026-11-06, clock checked with Get-Date)
 
@@ -72,10 +72,18 @@ Chosen zone: **left 12px, below health at top 80px**, width capped at 280px and 
 - [ ] Keyboard while driving and free-cursor controls, seek/volume/shuffle/repeat.
 - [ ] Car-only, ducking, master volume and M mute.
 - [ ] Siren Y everywhere; T never toggles siren.
-- [x] Source audio visibility decision verified (404); generated copy ignore pending M1.
+- [x] Source audio visibility decision verified (404); generated copy ignored and untracked.
 - [ ] musictest and required regressions pass.
 - [ ] Final implementation/docs pushed.
 
 ## Limitations / owner checks at completion
 
 Playback decoding is verified in headless Edge, not listening quality or a separate Chrome build. By hand: listen to song starts/transitions and mix levels; drive chase/cabin with captured mouse; release cursor to seek/expand; leave/re-enter and switch cars; verify cinematic/cutscene behavior and read controls at normal monitor scaling. No implementation is claimed complete by this Phase A document.
+
+## M1 result
+
+- Files: scripts/musicIndex.mjs, scripts/musicIndextest.mjs, package.json (script only), .gitignore. Metadata aliases preserve source filenames; known tracks use requested order. Indexer supports MP3/M4A/AAC/OGG/WAV/FLAC/WebM extensions; codec support of future user files still depends on browser. Removes stale generated audio, rejects source/output overlap, ignores directories/non-audio, tolerates missing folder.
+- `.\dev.cmd npm run music`: exit 0, three canonical tracks generated.
+- `.\dev.cmd node scripts/musicIndextest.mjs`: exit 0, 8/8 including missing/empty, aliases/order, URL encoding, fallback, byte copies, stale cleanup, path separation and actual SHA-256 source/copy equality.
+- One further headless Edge run fetched `/music/playlist.json` and played each `/music/<encoded file>`: Kaali 0.439 s, GTA Mohali 0.668 s, Bexley 0.654 s advanced; expected durations as above, no media errors. Browser closed. `git check-ignore` confirms generated manifest ignored; `git ls-files` lists only the three source MP3s, no generated audio.
+- Regression scope: no runtime module imports or gameplay behavior changed, so exercised index generation and served playback; gameplay regressions reserved for integration. No screenshots/build/dependencies. Next: M2.

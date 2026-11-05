@@ -2,6 +2,7 @@
 node_modules/
 dist/
 shots/
+public/music/
 *.log
 
 scripts/_probe.mjs

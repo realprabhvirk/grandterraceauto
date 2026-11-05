@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "music": "node scripts/musicIndex.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
