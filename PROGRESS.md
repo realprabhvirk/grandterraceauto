@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 18:32)**
-- Done: Phase 6.1 step 0 baseline
-- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged)
-- Next: 6.1 step 1: docs/PHANTOM_CRASHES.md
+**STATUS (2026-11-05 18:34)**
+- Done: Phase 6.1 steps 0-1 (baseline, docs/PHANTOM_CRASHES.md)
+- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged); phantom crashes deferred (doc)
+- Next: 6.1 step 2: speeding pull-over pursuit
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -410,3 +410,6 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 ### 2026-11-05 18:32 — Step 0 baseline
 - Git clean, dev server up. Phase 6 pieces present: street signs, highway, speed cameras, traffic cops (radar posts + cruisers), speeding fines, city expansion.
 - Suites: phase2 16/16, walk ok, drive all routes ok (Hillcrest Ct / Banksia Cl autopilot stops early but passes, as before), phantom 19/19, shake 21/21, perfscenes 15 scenes 60 fps / 106-326 calls, phase4 fixed 2 stale ped checks (cap ~90; stationary activity NPCs excluded from "walkers move") → npcs 9/9.
+
+### 2026-11-05 18:34 — Step 1: phantom-crash notes (docs only)
+- docs/PHANTOM_CRASHES.md written for a separate discussion (summary, history with hashes, 5.2 root causes + fix, test coverage gaps, current damage pipeline, debug tools, UNTESTED hypotheses, a what-to-record template, next steps). **The fix is deliberately deferred**: no collision/damage/physics/camera code was changed. Noted gap: phantomtest's "highway + ramps" check is still a hard-coded n/a.
