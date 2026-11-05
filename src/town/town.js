@@ -58,7 +58,7 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   const out = {
     group, plan, atlas,
     colliders: [...inner.colliders, ...kit.colliders], trunks: [...gardens.trunks], poles: [], toggles: [...inner.toggles, ...kit.toggles], propCars: [],
-    targets: [...inner.targets, ...kit.targets], shops: kit.shops, places: [...B.places, ...kit.places, { kind: 'park', x: gardens.centre.x, z: gardens.centre.z, label: 'Central Gardens' }],
+    targets: [...inner.targets, ...kit.targets], shops: kit.shops, kitAtlas: kit.atlas, places: [...B.places, ...kit.places, { kind: 'park', x: gardens.centre.x, z: gardens.centre.z, label: 'Central Gardens' }],
     breakables: props.defs, pedLines: props.lines, benches: gardens.benches, gardens, interiors: inner, stops: props.stops,
     chunks: [...inner.chunks, ...kit.chunks], updaters: [...inner.updaters, ...kit.updaters],
     spawns: {

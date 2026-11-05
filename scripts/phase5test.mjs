@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe life city shops enforce highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe vibe6 life city shops enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1524,6 +1524,27 @@ try {
     check('taxis / vans are driving', r.moving >= 3, { moving: r.moving });
     check('City Plaza with crowds: draw calls < 550, fps >= 45', r.calls < 550 && r.fps >= 45, { calls: r.calls, fps: r.fps });
     check('no page errors (life)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.6d: vibe (crowd murmur, glowing signs)
+  if (run('vibe6')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const { zoneLevels } = await import('/src/audio/ambience.js');
+      const out = { plaza: zoneLevels({ x: 745, z: -20 }).crowd, pde: zoneLevels({ x: 500, z: -85 }).crowd, suburb: zoneLevels({ x: 0, z: 0 }).crowd, gate: zoneLevels({ x: 450, z: 72 }).crowd };
+      g.debug.teleport(745, -20, 0); await wait(5000);
+      out.live = +g.ambience.levels.crowd.toFixed(2);
+      const kit = g.world.town.interiors && g.world.town.shops ? g.world.town : null;
+      g.lighting.setDusk(0); await wait(300); const day = [kit?.kitAtlas?.mat?.emissiveIntensity, g.landmarks.atlas.mat.emissiveIntensity];
+      g.lighting.setDusk(1); await wait(300); const night = [kit?.kitAtlas?.mat?.emissiveIntensity, g.landmarks.atlas.mat.emissiveIntensity];
+      g.lighting.setDusk(0);
+      out.glow = { day, night };
+      return out;
+    });
+    check('crowd murmur on busy streets (plaza / Pde / stadium gate), silent in the suburb', r.plaza > 0.9 && r.pde > 0.5 && r.gate > 0.5 && r.suburb === 0 && r.live > 0.5, r);
+    check('shop signs + billboards glow at dusk', r.glow.night[1] > r.glow.day[1] + 0.8 && (r.glow.night[0] === undefined || r.glow.night[0] > r.glow.day[0] + 0.8), r.glow);
+    check('no page errors (vibe6)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

@@ -150,5 +150,5 @@ export function buildLandmarks({ scene, physics, terrain }) {
     const cl = physics.world.createCollider(physics.RAPIER.ColliderDesc.cuboid(c.hx, c.hy, c.hz).setTranslation(c.x, c.y, c.z).setRotation(q));
     physics.tag?.(cl, 'landmark');
   }
-  return { mesh, places, colliders: colliders.length, update(dt) { for (const u of updaters) u(dt); }, clock: LANDMARKS.cityHall.clock };
+  return { mesh, places, colliders: colliders.length, update(dt, dusk = 0) { for (const u of updaters) u(dt); atlas.mat.emissiveIntensity = 0.15 + dusk * 1.2; }, atlas, clock: LANDMARKS.cityHall.clock };
 }

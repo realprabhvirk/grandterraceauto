@@ -1,6 +1,7 @@
 // Ambient sound by zone (WebAudio, no files, same master volume / mute as the car audio):
 //   suburb: wind + birdsong by day; beach: waves; downtown / town: traffic hum;
-//   night: crickets. Levels ease toward the targets for the player's position each frame.
+//   night: crickets; crowd murmur on busy streets (Terrace Pde shops, City Plaza, downtown,
+//   stadium gate). Levels ease toward the targets for the player's position each frame.
 // Zones are measured from the district rectangles (cheap), see zoneLevels().
 
 /** Target levels 0..1 for a position + time of day. */
@@ -13,18 +14,20 @@ export function zoneLevels(p, dusk = 0) {
   const city = Math.max(inRect(320, 980, -230, 50, 60) * (p.x > 610 ? 1 : 0.6), inRect(330, 630, -480, -280, 40) * 0.35, inRect(690, 980, -480, -280, 40) * 0.9); // industrial machinery hum
   const suburb = Math.max(0, inRect(-230, 230, -230, 230, 60) - city * 0.5);
   const day = 1 - dusk;
+  const crowd = Math.max(inRect(425, 620, -100, -68, 30) * 0.75, inRect(700, 790, -85, 45, 25), inRect(610, 970, -100, -68, 25) * 0.6, inRect(430, 470, 62, 80, 25) * 0.7, inRect(380, 420, -100, -68, 20) * 0.4);
   return {
     wind: Math.max(0.25, suburb) * 0.8,
     birds: suburb * day * (1 - beach),
     waves: beach,
     traffic: city * (1 - beach * 0.6),
     crickets: dusk * Math.max(suburb, 0.3) * (1 - city * 0.7),
+    crowd: crowd * (1 - dusk * 0.5),
   };
 }
 
 export function createAmbience(audio) {
   let nodes = null;
-  const cur = { wind: 0, birds: 0, waves: 0, traffic: 0, crickets: 0 };
+  const cur = { wind: 0, birds: 0, waves: 0, traffic: 0, crickets: 0, crowd: 0 };
   let chirpT = 0, t = 0;
 
   function noise(ctx, sec, brown = false) {
@@ -54,6 +57,7 @@ export function createAmbience(audio) {
       wind: loop(brown, 'lowpass', 420),
       waves: loop(white, 'lowpass', 700),
       traffic: loop(brown, 'lowpass', 180, 1.2),
+      crowd: loop(white, 'bandpass', 520, 1.6), // voices-band hiss; syllable-rate wobble below
       crickets: (() => {
         const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 4300;
         const am = ctx.createGain(); am.gain.value = 0;
@@ -94,6 +98,8 @@ export function createAmbience(audio) {
       set(nodes.waves.g.gain, cur.waves * (0.05 + 0.06 * Math.max(0, Math.sin(t * 0.78))));
       set(nodes.traffic.g.gain, cur.traffic * 0.09);
       set(nodes.crickets.g.gain, cur.crickets * 0.012);
+      set(nodes.crowd.g.gain, cur.crowd * (0.035 + 0.02 * Math.abs(Math.sin(t * 3.1) * Math.sin(t * 1.7 + 1))));
+      nodes.crowd.f.frequency.setTargetAtTime(470 + 120 * Math.sin(t * 2.3) * Math.sin(t * 0.9), now, 0.15);
       chirpT -= dt;
       if (cur.birds > 0.15 && chirpT <= 0) { chirp(cur.birds); chirpT = 0.8 + Math.random() * 2.6; }
     },

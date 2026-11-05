@@ -164,5 +164,8 @@ export function buildKitShops({ parent, rng, spots }) {
   });
   for (const ch of [extN, extD]) { out.chunks.push(ch.finish(parent)); out.colliders.push(...ch.colliders); }
   parent.add(atlas.mesh());
+  // Shop signs glow at dusk (like the downtown neon).
+  out.updaters.push((dt, ctx) => { atlas.mat.emissiveIntensity = 0.15 + (ctx.dusk ?? 0) * 1.3; });
+  out.atlas = atlas;
   return out;
 }

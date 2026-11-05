@@ -226,7 +226,7 @@ renderer.setAnimationLoop(() => {
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   speeding.update(dt);
-  if (!paused) { speedCams.update(dt); trafficCops.update(dt); landmarks.update(dt); }
+  if (!paused) { speedCams.update(dt); trafficCops.update(dt); landmarks.update(dt, lighting.dusk); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());
   skyLife.update(dt, { dusk: lighting.dusk });
   {

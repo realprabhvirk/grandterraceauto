@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 15:45)**
-- Done: Phase 6 steps 1-5, 6a shops, 6b lights/landmarks, 6c NPCs/buses/taxis/vans
+**STATUS (2026-11-05 15:46)**
+- Done: Phase 6 steps 1-6 (rules, map, signs, highway, cameras/traffic cops, whole city: shops, lights, landmarks, NPCs, buses/taxis/vans, vibe)
 - Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known); map Tab-resume check flaky in batch
-- Next: P6 step 6d vibe (neon, crowd murmur), then step 7 screenshots
+- Next: P6 step 7: the 3 screenshots; step 8 wrap-up
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -388,3 +388,7 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - src/npc/activitySpots.js: 21 new activity NPCs (a passenger at every bus stop, two street dancers + watchers at City Plaza, fans at the stadium gate, phone calls on the City Hall steps, window shoppers on Terrace Pde) + 3 more walkers → 86 people (cap ~90).
 - src/traffic/serviceVehicles.js: 2 buses (red/blue, destination board) on a fixed loop Terrace Pde east → Ring Rd East → The Esplanade west → Ring Rd West, 6 s dwell at the 4 eastbound Pde stops; 3 yellow taxis (roof light, carjackable → sedan); 2 white delivery vans with livery bands. Buses/vans can't be carjacked. All obey lights/gaps (TrafficCar AI). 23 traffic cars total.
 - Tests: `life` 9/9 (bus loop max 2.2 m off route, 3 stops made in 35 s, 125 draw calls / 60 fps at the plaza); steal/witness/enforce 26/26.
+
+### 2026-11-05 15:46 — Phase 6 Step 6d: vibe
+- Crowd murmur ambience layer (band-passed noise with a syllable-rate wobble) on Terrace Pde shops, City Plaza, downtown Pde and the stadium gate; quieter at night. Kit-shop signs and landmark billboards glow at dusk like the downtown neon.
+- Test `vibe6` 3/3.
