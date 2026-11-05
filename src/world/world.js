@@ -16,6 +16,7 @@ import { buildStreetLights } from './streetLights.js';
 import { lotToWorld } from './layout.js';
 import { makeRng } from '../utils/rng.js';
 import { assignSpeedLimits } from './speedLimits.js';
+import { buildStreetSigns } from '../city/streetSigns.js';
 import { fbm } from '../utils/noise.js';
 
 export function buildWorld(scene) {
@@ -53,11 +54,14 @@ export function buildWorld(scene) {
   // Street names (road.street) + speed limits (road.speedLimit) on every road definition.
   for (const r of network.allRoads) r.street = r.street || r.name;
   assignSpeedLimits(network.allRoads);
+  // City-wide signage: street-name blades at every junction, speed-limit signs (breakable, no heat).
+  const citySigns = buildStreetSigns({ network, plan, terrain });
+  scene.add(citySigns.group);
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders];
   const trunks = [...trees.trunks, ...town.trunks];
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles] };
+  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns };
 }
 
 /**

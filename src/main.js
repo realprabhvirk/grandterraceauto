@@ -107,6 +107,7 @@ const props = buildStreetProps(world);
 scene.add(props.group);
 for (const d of props.defs) breakables.addSet(d);
 for (const d of world.town?.breakables || []) breakables.addSet(d);
+for (const d of world.citySigns?.defs || []) breakables.addSet(d);
 const wallet = createWallet();
 const statusHud = createStatusHud();
 const spawns = createSpawnPoints(world);

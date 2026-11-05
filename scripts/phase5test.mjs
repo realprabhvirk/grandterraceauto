@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1231,6 +1231,35 @@ try {
     check('route behind me fades and is removed', r.after.progress >= 100 && r.after.trimmed > 0 && r.after.len < r.len0, { len0: r.len0, ...r.after });
     check('route + pin clear on arrival', r.arrived);
     check('no page errors (mapnav)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.3: street signs
+  if (run('signs')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, W = g.world, R = W.citySigns.registry, plan = W.town.plan, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      // Every grid junction (node where a N-S and an E-W street meet) has a blade with both names.
+      const missing = [], wrong = [];
+      for (const n of plan.nodes) {
+        const b = R.blades.find((q) => Math.abs(q.x - n.x) < 0.5 && Math.abs(q.z - n.z) < 0.5);
+        if (!b) { missing.push([n.x, n.z]); continue; }
+        const names = W.network.allRoads.filter((rd) => rd.samples.some((s) => Math.hypot(s.x - n.x, s.z - n.z) < 1.2)).map((rd) => rd.street);
+        if (!b.names.every((nm) => names.includes(nm)) || b.names[0] === b.names[1]) wrong.push({ at: [n.x, n.z], blade: b.names, roads: names });
+      }
+      // Every road has a speed-limit sign matching its configured limit.
+      const roadsNoSign = W.network.allRoads.filter((rd) => !R.limits.some((l) => l.road === rd.street)).map((rd) => rd.street);
+      const mismatch = R.limits.filter((l) => !l.change && !l.school && W.network.allRoads.find((rd) => rd.street === l.road)?.speedLimit !== l.limit);
+      const downtownChange = R.limits.some((l) => l.change && l.limit === 40) && R.limits.some((l) => l.change && l.limit === 60);
+      const school = R.limits.some((l) => l.school);
+      const breakable = ['streetBlade', 'limitSign'].every((n) => g.breakables.sets.some((s) => s.name === n));
+      g.debug.teleport(470, -92, 0); await wait(2500);
+      return { nodes: plan.nodes.length, blades: R.blades.length, missing, wrong: wrong.slice(0, 5), roadsNoSign, mismatch: mismatch.slice(0, 5), limits: R.limits.length, downtownChange, school, breakable, calls: g.renderer.info.render.calls, fps: g.stats().fps };
+    });
+    check('every junction has a blade sign with its two street names', r.missing.length === 0 && r.wrong.length === 0, { nodes: r.nodes, blades: r.blades, missing: r.missing.slice(0, 5), wrong: r.wrong });
+    check('every road has a speed-limit sign matching the config (+ downtown change, school zone)', r.roadsNoSign.length === 0 && r.mismatch.length === 0 && r.downtownChange && r.school, r);
+    check('signs are breakable sets (no heat)', r.breakable);
+    check('draw calls within budget (<550), fps >= 45', r.calls < 550 && r.fps >= 45, { calls: r.calls, fps: r.fps });
+    check('no page errors (signs)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
