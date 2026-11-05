@@ -39,7 +39,7 @@ function npc(group, rng, x, z, yaw, y, role = 'shopper') {
 }
 
 export function buildTownInteriors({ parent, atlas, rng }) {
-  const out = { colliders: [], toggles: [], targets: [], updaters: [], chunks: [], doors: [], counters: {}, people: [] };
+  const out = { colliders: [], toggles: [], targets: [], updaters: [], chunks: [], doors: [], counters: {}, people: [], doorAt: {} };
   const y = T.h + 0.06;
 
   // ======================= Terrace Central =======================================================
@@ -80,6 +80,7 @@ export function buildTownInteriors({ parent, atlas, rng }) {
     insideChunk.group.add(people);
     out.chunks.push(ch.finish(parent));
     out.colliders.push(...ch.colliders, ...inside.colliders);
+    out.doorAt.terraceCentral = p(0, 1.5); // just outside the entrance (map marker)
     const door = buildSwingDoor({ id: 'tcDoor', ...p(0, -0.15), y, w: 2.5, h: 2.5, rot: F.rot, color: '#3d5f8a' });
     parent.add(door.group);
     out.doors.push(door);
@@ -137,6 +138,7 @@ export function buildTownInteriors({ parent, atlas, rng }) {
     insideChunk.group.add(people);
     out.chunks.push(ch.finish(parent));
     out.colliders.push(...ch.colliders, ...inside.colliders);
+    out.doorAt.quickStop = F.toW(3.5, 1.5);
     const door = buildSwingDoor({ id: 'qsDoor', ...F.toW(3.5, -0.15), y, w: 1.8, h: 2.4, rot: F.rot, color: '#c4473a' });
     parent.add(door.group);
     out.doors.push(door);
@@ -200,6 +202,7 @@ export function buildTownInteriors({ parent, atlas, rng }) {
     insideChunk.group.add(people);
     out.chunks.push(ch.finish(parent));
     out.colliders.push(...ch.colliders, ...inside.colliders);
+    out.doorAt.gunShop = F.toW(0, 1.5);
     const door = buildSwingDoor({ id: 'bbDoor', ...F.toW(0, -0.15), y, w: 1.8, h: 2.4, rot: F.rot, color: '#2f3a33' });
     parent.add(door.group);
     out.doors.push(door);

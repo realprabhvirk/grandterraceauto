@@ -4,6 +4,7 @@
 // shops). Call refresh() after the road network / places change (e.g. the town is added).
 import { UI, injectStyles } from './uiStyle.js';
 import { ROAD } from '../world/roadNetwork.js';
+import { drawIcon, sortPlaces } from './mapIcons.js';
 
 const SIZE = 190, METRES = 230; // metres across the minimap
 const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'], landmark: ['^', '#e2c25a'], beach: ['~', '#5ab0d8'], school: ['S', '#e0a040'], industry: ['I', '#b0a090'] };
@@ -17,6 +18,7 @@ export function createMinimap(world) {
   document.body.appendChild(canvas);
   const g = canvas.getContext('2d');
   let bg = null, half = 0, visible = true, acc = 0;
+  const markers = []; // last drawn markers (tests)
 
   function refresh() {
     let maxR = 300;
@@ -50,6 +52,7 @@ export function createMinimap(world) {
     toggle() { visible = !visible; canvas.style.display = visible ? 'block' : 'none'; },
     setVisible(v) { visible = !!v; canvas.style.display = visible ? 'block' : 'none'; },
     get bg() { return bg; },
+    get markers() { return markers; },
     get half() { return half; },
     update(dt, { player, heading, police = [], stars = 0, lastSeen = null, route = [], waypoint = null }) {
       if (!visible) return;
@@ -72,12 +75,13 @@ export function createMinimap(world) {
       if (route.length > 1) { g.strokeStyle = '#ffcf4a'; g.lineWidth = 3; g.lineJoin = g.lineCap = 'round'; g.beginPath(); route.forEach((p, i) => { const [x, z] = P(p.x, p.z); i ? g.lineTo(x, z) : g.moveTo(x, z); }); g.stroke(); }
       if (waypoint) { const [x, z] = P(waypoint.x, waypoint.z), r = Math.hypot(x - SIZE / 2, z - SIZE / 2), lim = SIZE / 2 - 6; const fx = r > lim ? SIZE / 2 + ((x - SIZE / 2) / r) * lim : x, fz = r > lim ? SIZE / 2 + ((z - SIZE / 2) / r) * lim : z; g.fillStyle = '#ffcf4a'; g.strokeStyle = '#241e1a'; g.lineWidth = 1.5; g.beginPath(); g.arc(fx, fz, 5, 0, Math.PI * 2); g.fill(); g.stroke(); }
       g.font = 'bold 11px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      for (const pl of world.places || []) {
-        const [x, z] = P(pl.x, pl.z), [t, col] = ICON[pl.kind] || ['?', '#fff'];
+      markers.length = 0;
+      for (const pl of sortPlaces(world.places || [])) {
+        const [x, z] = P(pl.x, pl.z);
         const r = Math.hypot(x - SIZE / 2, z - SIZE / 2), lim = SIZE / 2 - 9;
         const fx = r > lim ? SIZE / 2 + ((x - SIZE / 2) / r) * lim : x, fz = r > lim ? SIZE / 2 + ((z - SIZE / 2) / r) * lim : z;
-        g.fillStyle = col; g.beginPath(); g.arc(fx, fz, 7, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#fff'; g.fillText(t, fx, fz + 0.5);
+        drawIcon(g, pl.kind, fx, fz, 7);
+        markers.push({ kind: pl.kind, label: pl.label, x: fx, y: fz, inView: r <= lim });
       }
       for (const c of police) { const [x, z] = P(c.x, c.z); g.fillStyle = Math.floor(performance.now() / 250) % 2 ? '#2a6bff' : '#ff3b2f'; g.fillRect(x - 3, z - 3, 6, 6); }
       // Player arrow (heading: yaw with forward = (sin, cos)).

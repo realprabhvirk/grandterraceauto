@@ -5,6 +5,7 @@
 // and its route. Click = set a waypoint (clicking near a marker snaps to it), right-click clears.
 // Closing resumes and re-captures the mouse; if the browser refuses, "Click to resume" shows.
 import { injectStyles, UI } from './uiStyle.js';
+import { drawIcon, sortPlaces, legendHTML } from './mapIcons.js';
 
 const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'], landmark: ['^', '#e2c25a'], beach: ['~', '#5ab0d8'], school: ['S', '#e0a040'], industry: ['I', '#b0a090'] };
 export const DISTRICTS = [
@@ -24,7 +25,10 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
   const help = document.createElement('div');
   help.style.cssText = `position:absolute;left:12px;bottom:10px;font:${UI.font};color:${UI.text};text-shadow:0 1px 2px #000;pointer-events:none`;
   help.innerHTML = 'Click: set waypoint &nbsp; Right-click: clear &nbsp; Drag: pan &nbsp; Wheel / pinch: zoom &nbsp; <span class="gta-key">Tab</span>/<span class="gta-key">Esc</span>: close';
-  box.append(cv, help); wrap.append(box); document.body.appendChild(wrap);
+  const legend = document.createElement('div');
+  legend.style.cssText = `position:absolute;right:10px;top:10px;padding:8px 10px;border-radius:6px;background:rgba(36,30,26,.78);font:${UI.font};font-size:12px;color:${UI.text};pointer-events:none`;
+  legend.innerHTML = '<div style="font-weight:800;margin-bottom:4px">LEGEND</div>' + legendHTML();
+  box.append(cv, help, legend); wrap.append(box); document.body.appendChild(wrap);
   const resume = document.createElement('div');
   resume.className = 'gta-panel';
   resume.style.cssText += 'left:50%;top:60%;transform:translateX(-50%);display:none;font-size:15px';
@@ -50,7 +54,13 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
     if (s.stars > 0) { const c = s.lastSeen || s.player, [cx, cy] = toScreen(c.x, c.z); g.strokeStyle = 'rgba(79,123,216,.9)'; g.fillStyle = 'rgba(79,123,216,.14)'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, (40 + s.stars * 25) * st.scale, 0, Math.PI * 2); g.fill(); g.stroke(); }
     if (nav.route.length > 1) { g.strokeStyle = '#ffcf4a'; g.lineWidth = 4; g.lineJoin = g.lineCap = 'round'; g.beginPath(); nav.route.forEach((p, i) => { const [x, y] = toScreen(p.x, p.z); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
     g.font = 'bold 12px system-ui,sans-serif';
-    for (const pl of world.places || []) { const [x, y] = toScreen(pl.x, pl.z), [t, col] = ICON[pl.kind] || ['?', '#fff']; g.fillStyle = col; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.fillText(t, x, y + 0.5); }
+    st.markers = [];
+    for (const pl of sortPlaces(world.places || [])) {
+      const [x, y] = toScreen(pl.x, pl.z);
+      drawIcon(g, pl.kind, x, y, 9);
+      if (pl.kind === 'guns') { g.font = '800 13px system-ui,sans-serif'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(pl.label, x + 1, y - 18 + 1); g.fillStyle = '#e6d2ff'; g.fillText(pl.label, x, y - 18); g.font = 'bold 12px system-ui,sans-serif'; }
+      st.markers.push({ kind: pl.kind, label: pl.label, x, y, inView: x >= 0 && y >= 0 && x <= cv.width && y <= cv.height });
+    }
     for (const c of s.police) { const [x, y] = toScreen(c.x, c.z); g.fillStyle = Math.floor(performance.now() / 250) % 2 ? '#2a6bff' : '#ff3b2f'; g.fillRect(x - 4, y - 4, 8, 8); }
     if (nav.waypoint) { const [x, y] = toScreen(nav.waypoint.x, nav.waypoint.z); g.fillStyle = '#ffcf4a'; g.strokeStyle = '#241e1a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 7, y - 16); g.arc(x, y - 18, 7, Math.PI * 0.85, Math.PI * 0.15); g.closePath(); g.fill(); g.stroke(); }
     const [px, py] = toScreen(s.player.x, s.player.z);
@@ -65,7 +75,7 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
     st.open = m === 2;
     wrap.style.display = st.open ? 'block' : 'none';
     if (st.open && !was) {
-      const s = getState(); st.cx = s.player.x; st.cz = s.player.z;
+      const s = getState(); st.cx = s.player.x; st.cz = s.player.z; st.scale = 0.6; // default zoom every time it opens
       input.setLocked(true);
       document.exitPointerLock?.();
       draw();

@@ -94,7 +94,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     const north = k < 5, x = SHOP_X[k % 5];
     const ch = chunk(north ? 'b10' : 'b11');
     const F = frame(x, north ? ROW_Z.north : ROW_Z.south, 0, north ? yN : yS, T.h);
-    if (s.interior) { out.places.push({ kind: 'shop', x, z: F.cz, label: 'Barrel & Bolt (guns)' }); return; }
+    if (s.interior) return; // Barrel & Bolt: its map marker comes from the real door (town.js)
     shopfront(ch, atlas, F, { w: 16.6, d: 14, name: s.name, wall: C.shopWalls[k % C.shopWalls.length], awning: C.awnings[k % C.awnings.length] });
     out.places.push({ kind: 'shop', x, z: F.cz, label: s.name });
   });

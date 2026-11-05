@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1052,6 +1052,49 @@ try {
     });
     check('route re-computed when off the path; waypoint clears on arrival', nav.len > 2 && nav.rer >= 1 && nav.after === null, nav);
     check('no page errors (map)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 5.2 step 2: gun shop + POIs on the maps
+  if (run('pois')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.world, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const door = W.town.interiors.doorAt.gunShop, gun = W.places.find((p) => p.kind === 'guns');
+      const off = gun ? Math.hypot(gun.x - door.x, gun.z - door.z) : 999;
+      // Standing next to the shop: on the minimap.
+      g.mapUI.setMode(1); // minimap showing
+      d.teleport(door.x + 3, door.z + 4, 0); await wait(600);
+      const mm = g.minimap.markers.find((m) => m.kind === 'guns');
+      // Full map at the default zoom, from the spawn side of the suburb too.
+      if (g.mapUI.mode !== 1) g.mapUI.setMode(1);
+      g.mapUI.setMode(2); await wait(200);
+      const fm = g.mapUI.st.markers.find((m) => m.kind === 'guns');
+      g.mapUI.setMode(1);
+      d.teleport(0, 0, 0); await wait(300);
+      g.mapUI.setMode(2); await wait(200);
+      const fmFar = g.mapUI.st.markers.find((m) => m.kind === 'guns'), scale = g.mapUI.st.scale;
+      // Clicking the marker snaps the waypoint to the shop.
+      const cvs = document.querySelector('canvas[style*="100%"]').getBoundingClientRect();
+      g.mapUI.clickAt(cvs.left + fmFar.x + 4, cvs.top + fmFar.y + 3);
+      const wp = g.nav.waypoint;
+      const legend = [...document.querySelectorAll('div')].some((el) => el.textContent.startsWith('LEGEND') && /Gun shop/.test(el.textContent));
+      g.mapUI.setMode(1); g.nav.clear();
+      const has = (pred) => W.places.some(pred);
+      const pois = {
+        house62: has((p) => p.kind === 'home'), police: has((p) => p.kind === 'police'), hospital: has((p) => p.kind === 'hospital'),
+        departmentStore: has((p) => /Terrace Central/.test(p.label)), quickStop: has((p) => /Quick Stop/.test(p.label)), gunShop: has((p) => p.kind === 'guns'),
+        parks: W.places.filter((p) => p.kind === 'park').length >= 2, beach: has((p) => p.kind === 'beach'), downtown: has((p) => /Terrace Tower|City Plaza/.test(p.label)),
+        industrial: has((p) => p.kind === 'industry'), school: has((p) => p.kind === 'school'), shoppingCentre: has((p) => /Northgate Plaza/.test(p.label)),
+      };
+      return { off: +off.toFixed(2), label: gun?.label, mm, fm, fmFar, scale, wp, legend, pois };
+    });
+    check('gun shop marker at the real door (<5 m), labelled Barrel & Bolt', r.off < 5 && r.label === 'Barrel & Bolt', { off: r.off, label: r.label });
+    check('gun shop marker on the minimap when standing next to it', r.mm && r.mm.inView, r.mm);
+    check('gun shop marker on the full map at the default zoom (near + from the suburb)', r.fm?.inView && r.fmFar?.inView && r.scale === 0.6, { fm: r.fm, fmFar: r.fmFar, scale: r.scale });
+    check('clicking the gun shop marker sets the waypoint to the shop', r.wp && /Barrel/.test(r.wp.label || ''), r.wp);
+    check('full map legend lists the gun shop', r.legend);
+    check('every POI has a marker (highway: none built)', Object.values(r.pois).every(Boolean), r.pois);
+    check('no page errors (pois)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
