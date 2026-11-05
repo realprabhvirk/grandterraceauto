@@ -151,7 +151,7 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       if (!cab) return null;
       camera.updateMatrixWorld(true); car.model.updateMatrixWorld(true);
       const meshes = [];
-      car.model.traverse((o) => { if (o.isMesh && o.material === MAT.solid) { let v = true; for (let p = o; p; p = p.parent) if (!p.visible) v = false; if (v) meshes.push(o); } });
+      car.model.traverse((o) => { if (o.isMesh && o.material === MAT.solid) { let v = true, own = false; for (let p = o; p; p = p.parent) { if (!p.visible) v = false; if (p.name === 'player' || /^gun-/.test(p.name)) own = true; } if (v && !own) meshes.push(o); } }); // the driver's own body/guns are not cabin interior
       const f = car.body.forward(), r = { x: -f.z, z: f.x }, eye = camera.position.clone();
       const ray = new THREE.Raycaster(), blocked = [];
       for (const ahead of [6, 10, 20]) for (const lat of [-1.5, 0, 1.5]) {

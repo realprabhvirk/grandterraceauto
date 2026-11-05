@@ -38,7 +38,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     if (inCar && carCam === 'cabin') { cabin.enter(car); player.character.setHeadVisible(false); } else cabin.exit();
     if (inCar && carCam === 'cinematic') cinematic.enter(); else cinematic.exit();
     if (inCar && carCam !== 'cabin') player.character.setHeadVisible(true);
-    if (mode !== 'walk') player.character.mesh.visible = true;
+    if (mode !== 'walk') player.character.mesh.visible = !(inCar && carCam === 'cabin'); // cabin: the driver's own neck sat right under the eye
     setNear((mode === 'walk' && footCam === 'first') || (inCar && carCam === 'cabin') ? 0.05 : 0.25);
     hud.setVisible(!!inCar && carCam !== 'cinematic');
   }
