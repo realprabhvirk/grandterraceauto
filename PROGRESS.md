@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 16:02)**
-- Done: Phase 6 complete (steps 0-8)
-- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged); map Tab-resume + burn ejection checks flaky in batch; full suite only partly run (memory)
-- Next: re-run phase4/phase2/walk/drive/shake/perfscenes when memory allows; Phase 7
+**STATUS (2026-11-05 18:32)**
+- Done: Phase 6.1 step 0 baseline
+- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged)
+- Next: 6.1 step 1: docs/PHANTOM_CRASHES.md
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -404,3 +404,9 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
   perfscenes; phantomtest last ran 19/19 after step 6b.
 - Perf (from the Phase 6 tests, headless Edge 960x540): 100-125 draw calls downtown / Terrace Pde / City Plaza with 86 NPCs + 23 traffic cars, 60 fps.
 - `npm run build` OK (5.33 MB JS, 1.97 MB gzip). README updated.
+
+## Phase 6.1 (pull-over pursuit, airport, phantom-crash notes)
+
+### 2026-11-05 18:32 — Step 0 baseline
+- Git clean, dev server up. Phase 6 pieces present: street signs, highway, speed cameras, traffic cops (radar posts + cruisers), speeding fines, city expansion.
+- Suites: phase2 16/16, walk ok, drive all routes ok (Hillcrest Ct / Banksia Cl autopilot stops early but passes, as before), phantom 19/19, shake 21/21, perfscenes 15 scenes 60 fps / 106-326 calls, phase4 fixed 2 stale ped checks (cap ~90; stationary activity NPCs excluded from "walkers move") → npcs 9/9.

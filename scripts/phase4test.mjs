@@ -331,7 +331,7 @@ try {
       const s0 = P.map((p) => [p.pos.x, p.pos.z]), c0 = g.cyclists.riders.map((c) => [c.pos.x, c.pos.z]);
       await new Promise((r) => setTimeout(r, secs * 1000));
       const moved = P.map((p, i) => ({ role: p.role, awake: p.ch.root.visible, d: Math.hypot(p.pos.x - s0[i][0], p.pos.z - s0[i][1]), home: p.home ? Math.hypot(p.pos.x - p.home.x, p.pos.z - p.home.z) : null }));
-      const walkers = moved.filter((m) => m.awake && ['walker', 'shopper', 'jogger', 'dogWalker'].includes(m.role));
+      const walkers = moved.filter((m) => m.awake && m.home === null && ['walker', 'shopper', 'jogger', 'dogWalker'].includes(m.role));
       return {
         stats: g.peds.stats(), cyc: g.cyclists.stats(), cycMoved: g.cyclists.riders.filter((c, i) => c.group.visible && Math.hypot(c.pos.x - c0[i][0], c.pos.z - c0[i][1]) > 3).length,
         walkers: walkers.length, movedFrac: +(walkers.filter((m) => m.d > 1).length / Math.max(1, walkers.length)).toFixed(2),
@@ -346,7 +346,7 @@ try {
     await wait(1500);
     const a = await sample(3);
     const roles = a.stats.roles, need = ['walker', 'jogger', 'dogWalker', 'shopper', 'sitter', 'picnic', 'cop', 'worker', 'paramedic', 'shopkeeper'];
-    check('~40 pedestrians, every role present', a.stats.total >= 36 && a.stats.total <= 64 && need.every((r) => roles[r] > 0), roles);
+    check('~40 pedestrians, every role present', a.stats.total >= 36 && a.stats.total <= 92 && /* Phase 6: cap ~90 */ need.every((r) => roles[r] > 0), roles);
     check('cyclists + shop staff (cashiers, guard) + dogs', a.cyc.total === 3 && a.staff.includes('cashier') && a.staff.includes('guard') && a.dogs >= 3, { cyc: a.cyc, staff: a.staff, dogs: a.dogs });
     check('town walkers move, stationary people hold their spots', a.walkers >= 3 && a.movedFrac >= 0.6 && a.homeOk && a.homeAwake >= 6, a);
     check('a cyclist is riding in town', a.cycMoved >= 1, { cyc: a.cyc, moved: a.cycMoved });
