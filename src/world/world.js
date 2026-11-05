@@ -17,6 +17,8 @@ import { lotToWorld } from './layout.js';
 import { makeRng } from '../utils/rng.js';
 import { assignSpeedLimits } from './speedLimits.js';
 import { buildStreetSigns } from '../city/streetSigns.js';
+import { HWY, BRIDGES } from '../city/highwayPlan.js';
+import { buildHighway } from '../city/highway.js';
 import { fbm } from '../utils/noise.js';
 
 export function buildWorld(scene) {
@@ -25,7 +27,12 @@ export function buildWorld(scene) {
   const layout = buildLayout(network);
   // Terrace Town Centre street plan (after the suburb layout, so lots are unaffected).
   const plan = (network.town = buildTownPlan(network));
-  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads], pads: network.pads, lots: lotPads(layout) });
+  // The motorway grades the terrain as three parallel sample lines (20 m wide), but leaves the
+  // street corridors under its bridges to the streets that pass underneath.
+  const hwRoad = plan.roads.find((r) => r.highway && !r.ramp);
+  const hwGrade = [-6, 0, 6].map((dz) => ({ halfW: 4, samples: hwRoad.samples.filter((s) => !HWY.crossings.some((c) => Math.abs(s.x - c) < HWY.deckHalf)).map((s) => ({ ...s, z: s.z + dz })) }));
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade], pads: network.pads, lots: lotPads(layout) });
+  terrain.bridges = BRIDGES;
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));
   scene.add(buildRoads({ roads: [plan.link], junctions: [], pads: [], index: network.index }, []));
@@ -57,11 +64,12 @@ export function buildWorld(scene) {
   // City-wide signage: street-name blades at every junction, speed-limit signs (breakable, no heat).
   const citySigns = buildStreetSigns({ network, plan, terrain });
   scene.add(citySigns.group);
+  const highway = buildHighway({ scene, terrain });
 
-  const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders];
+  const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders, ...highway.colliders];
   const trunks = [...trees.trunks, ...town.trunks];
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns };
+  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway };
 }
 
 /**

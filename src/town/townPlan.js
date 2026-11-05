@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { ROAD, sampleCurve } from '../world/roadNetwork.js';
 import { TOWN } from '../world/terrain.js';
+import { HWY, highwayY } from '../city/highwayPlan.js';
 
 export const T = {
   X: [330, 420, 520, 610, 700, 790, 880, 970], // Phase 5: x 610-970 = Downtown (districts/downtown.js)
@@ -20,7 +21,7 @@ T.front = T.hw + T.kerb + T.path; // street centre -> building line
 
 /** Northgate (Phase 5 district 3): a small street grid north of the ring road, joined by
  *  Northgate Rd (Market St's line, x 420). Its nodes/edges/roads/blocks join the town plan. */
-export const NORTH = { X: [340, 420, 520, 620], Z: [-470, -380, -290], join: 1, joinMain: 1, names: { x: ['Waratah St', 'Northgate Rd', 'Banksia Ave', 'Jacaranda St'], z: ['Gum Tree Rd', 'School Rd', 'Plaza Rd'] } };
+export const NORTH = { X: [330, 420, 520, 620], Z: [-470, -380, -290], join: 1, joinMain: 1, names: { x: ['Waratah St', 'Northgate Rd', 'Banksia Ave', 'Jacaranda St'], z: ['Gum Tree Rd', 'School Rd', 'Plaza Rd'] } };
 
 /** Industrial estate (Phase 5 district 4, no highway): north of downtown, joined by King St (x 790). */
 export const INDUSTRY = { X: [700, 790, 880, 970], Z: [-470, -380, -290], join: 1, joinMain: 5, names: { x: ['Foundry Rd', 'King St North', 'Dock St', 'Crane St'], z: ['Wharf Rd', 'Depot Rd', 'Mill Rd'] } };
@@ -69,6 +70,7 @@ export function buildTownPlan(network) {
   for (let j = 0; j + 1 < Z.length; j++) for (let i = 0; i + 1 < X.length; i++) {
     blocks.push({ i, j, x0: X[i] + hw, x1: X[i + 1] - hw, z0: Z[j] + hw, z1: Z[j + 1] - hw });
   }
+  // (Highway nodes / roads are added after the extra grids, below.)
   // Extra grids north of the ring road (Northgate, Industrial), each joined by one street.
   for (const G of EXTRA_GRIDS) {
     const NX = G.X, NZ = G.Z, base = nodes.length;
@@ -83,5 +85,18 @@ export function buildTownPlan(network) {
       blocks.push({ i, j, north: true, grid: G, x0: NX[i] + hw, x1: NX[i + 1] - hw, z0: NZ[j] + hw, z1: NZ[j + 1] - hw });
     }
   }
+  // Terrace Motorway between the ring road and the northern grids, with a ramp road at each end
+  // (ring corner <-> motorway junction <-> Northgate / industrial). See city/highwayPlan.js.
+  const gridNode = (G, i, j) => nodes.find((n) => n.grid === G && n.i === i && n.j === j);
+  const HWn = { id: nodes.length, i: -1, j: -1, x: HWY.x0, z: HWY.z, links: [], north: true, highway: true }; nodes.push(HWn);
+  const HEn = { id: nodes.length, i: -1, j: -1, x: HWY.x1, z: HWY.z, links: [], north: true, highway: true }; nodes.push(HEn);
+  connect(node(0, 0), HWn); connect(HWn, gridNode(NORTH, 0, NORTH.Z.length - 1));
+  connect(node(X.length - 1, 0), HEn); connect(HEn, gridNode(INDUSTRY, INDUSTRY.X.length - 1, INDUSTRY.Z.length - 1));
+  connect(HWn, HEn);
+  const mway = { ...straight('Terrace Motorway', HWY.x0, HWY.z, HWY.x1, HWY.z), extra: true, north: true, highway: true, halfW: HWY.halfW };
+  for (const s of mway.samples) s.h = highwayY(s.x);
+  roads.push(mway);
+  roads.push({ ...straight('Motorway West Ramp', HWY.x0, NORTH.Z[NORTH.Z.length - 1], HWY.x0, Z[0]), extra: true, north: true, highway: true, ramp: true });
+  roads.push({ ...straight('Motorway East Ramp', HWY.x1, INDUSTRY.Z[INDUSTRY.Z.length - 1], HWY.x1, Z[0]), extra: true, north: true, highway: true, ramp: true });
   return { roads, link, nodes, node, edges, blocks, entry: node(0, 1), bounds: { x0: TOWN.x0, x1: TOWN.x1, z0: TOWN.z0, z1: TOWN.z1 } };
 }

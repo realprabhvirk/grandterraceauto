@@ -85,7 +85,9 @@ export class PoliceCar extends TrafficCar {
     const T = this.terrain, c = this.cfg;
     const x = this.pos.x + Math.sin(yaw) * this.v * dt, z = this.pos.z + Math.cos(yaw) * this.v * dt;
     const hb = c.wheelBase / 2, fx = Math.sin(yaw), fz = Math.cos(yaw);
-    const hF = T.getHeight(x + fx * hb, z + fz * hb), hR = T.getHeight(x - fx * hb, z - fz * hb);
+    const ny = this.pos.y;
+    const hF = T.driveHeight ? T.driveHeight(x + fx * hb, z + fz * hb, ny) : T.getHeight(x + fx * hb, z + fz * hb);
+    const hR = T.driveHeight ? T.driveHeight(x - fx * hb, z - fz * hb, ny) : T.getHeight(x - fx * hb, z - fz * hb);
     const y = (hF + hR) / 2;
     this.pos.set(x, y, z);
     this.fwd.set(fx, 0, fz);

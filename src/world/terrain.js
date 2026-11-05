@@ -148,6 +148,13 @@ export class Terrain {
     this.mesh = this._buildMesh();
   }
 
+  /** Height for a vehicle near y: the bridge deck if (x, z) is on one and we're up there, else the ground. */
+  driveHeight(x, z, nearY = -1e9) {
+    const g = this.getHeight(x, z);
+    for (const b of this.bridges || []) if (x >= b.x0 && x <= b.x1 && z >= b.z0 && z <= b.z1 && nearY > b.y - 2.5) return b.y;
+    return g;
+  }
+
   /** Height exactly matching the rendered triangles. */
   getHeight(x, z) {
     const { nx, nz, cell, x0, z0 } = MAP;

@@ -90,7 +90,7 @@ try {
       for (const L of g.traffic.graph.lanes) {
         for (let i = 0; i + 1 < L.pts.length; i += 2) {
           const a = L.pts[i], b = L.pts[i + 1], yaw = Math.atan2(b.x - a.x, b.z - a.z);
-          const y = W.terrain.getHeight(a.x, a.z) + 0.3 + 0.85; // box spans 0.3 - 2.0 m above the road
+          const y = (L.road?.highway ? W.terrain.driveHeight(a.x, a.z, 50) : W.terrain.getHeight(a.x, a.z)) + 0.3 + 0.85; // box spans 0.3 - 2.0 m above the road (deck on the motorway)
           const rot = { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) };
           samples++;
           P.world.intersectionsWithShape({ x: a.x, y, z: a.z }, rot, shape, (col) => {

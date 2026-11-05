@@ -22,7 +22,7 @@ export function buildTownRoads(plan) {
   for (const x of X) asphalt.push(slab(x - hw, x + hw, za - hw, zb + hw, h + 0.06, 0.2, PALETTE.road.asphalt, 0.035));
   for (const z of Z) asphalt.push(slab(xa - hw, xb + hw, z - hw, z + hw, h + 0.061, 0.2, PALETTE.road.asphalt, 0.035));
   // Extra streets outside the main grid (Northgate).
-  for (const r of plan.roads.filter((q) => q.extra)) {
+  for (const r of plan.roads.filter((q) => q.extra && !(q.highway && !q.ramp))) { // the motorway has its own mesh (city/highway.js)
     const a = r.samples[0], b = r.samples[r.samples.length - 1];
     asphalt.push(slab(Math.min(a.x, b.x) - hw, Math.max(a.x, b.x) + hw, Math.min(a.z, b.z) - hw, Math.max(a.z, b.z) + hw, h + 0.06, 0.2, PALETTE.road.asphalt, 0.035));
   }
@@ -38,6 +38,7 @@ export function buildTownRoads(plan) {
   };
   const gap = hw + 4;
   for (const { a, b } of plan.edges) {
+    if (a.highway && b.highway) continue; // motorway markings come from city/highway.js
     const dx = Math.sign(b.x - a.x), dz = Math.sign(b.z - a.z);
     dash(a.x + dx * gap, a.z + dz * gap, b.x - dx * gap, b.z - dz * gap);
   }

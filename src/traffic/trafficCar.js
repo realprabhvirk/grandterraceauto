@@ -68,7 +68,8 @@ export class TrafficCar {
     sampleLane(this.lane, this.s, P0);
     sampleLane(this.lane, this.s + 14, P1);
     const turn = Math.acos(Math.max(-1, Math.min(1, P0.tx * P1.tx + P0.tz * P1.tz)));
-    let target = this.cruise * Math.max(0.42, 1 - turn * 1.1) * (this.lane.slow ? 0.6 : 1);
+    const base = this.lane.road?.highway ? (this.lane.road.ramp ? 20 : 25) : this.cruise; // motorway 90 km/h, ramps 72
+    let target = base * Math.max(0.42, 1 - turn * 1.1) * (this.lane.slow ? 0.6 : 1);
 
     // --- Obstacles ahead: keep a gap, swing out round parked cars ------------------------
     const fx = P0.tx, fz = P0.tz, rx = -fz, rz = fx; // right of travel
@@ -138,7 +139,9 @@ export class TrafficCar {
     const dYaw = Math.atan2(Math.sin(Math.atan2(P1.tx, P1.tz) - yaw), Math.cos(Math.atan2(P1.tx, P1.tz) - yaw));
     const kappa = dYaw / 3;
     const hb = cfg.wheelBase / 2;
-    const hF = T.getHeight(x + P0.tx * hb, z + P0.tz * hb), hR = T.getHeight(x - P0.tx * hb, z - P0.tz * hb);
+    const ny = this.pos.y; // bridge decks: stay up there if we're up there
+    const hF = T.driveHeight ? T.driveHeight(x + P0.tx * hb, z + P0.tz * hb, ny) : T.getHeight(x + P0.tx * hb, z + P0.tz * hb);
+    const hR = T.driveHeight ? T.driveHeight(x - P0.tx * hb, z - P0.tz * hb, ny) : T.getHeight(x - P0.tx * hb, z - P0.tz * hb);
     const pitchT = -Math.atan2(hF - hR, cfg.wheelBase) - (this.braking ? 0.02 : 0);
     const rollT = Math.max(-0.07, Math.min(0.07, this.v * this.v * kappa * 0.012));
     this.pitch += (pitchT - this.pitch) * Math.min(1, dt * 8);

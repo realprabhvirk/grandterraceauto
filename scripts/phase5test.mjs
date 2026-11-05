@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1260,6 +1260,69 @@ try {
     check('signs are breakable sets (no heat)', r.breakable);
     check('draw calls within budget (<550), fps >= 45', r.calls < 550 && r.fps >= 45, { calls: r.calls, fps: r.fps });
     check('no page errors (signs)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.4: the highway
+  if (run('highway')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, T = g.world.terrain, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const H = await import('/src/city/highwayPlan.js');
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
+      g.wanted.clear(true); g.police.reset();
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen && c.type === 'sedan')); await wait(1400);
+      const car = g.controls.car; car.health = 100; car.dead = false; car.body.dead = false;
+      const runs = {};
+      const go = async (name, pts, speed = 60) => {
+        car.health = 100; const d0 = g.combat.damageLog.length;
+        g.controls.input.setVirtual('ShiftLeft', true);
+        const res = await d.drivePoints(pts, { speed, timeout: 60 });
+        g.controls.input.setVirtual('ShiftLeft', false);
+        runs[name] = { ok: res.ok, reason: res.reason, maxKmh: res.maxSpeed, maxTilt: res.maxTilt, nan: res.nan, maxAbove: res.maxAbove, damage: g.combat.damageLog.slice(d0).filter((e) => !e.tag.startsWith('breakable:')).length, health: car.health };
+      };
+      const z = H.HWY.z, inner = H.HWY.median + H.HWY.lane / 2, outer = inner + H.HWY.lane;
+      const along = (xa, xb, dz) => { const out = [], s = Math.sign(xb - xa); for (let x = xa; s > 0 ? x <= xb : x >= xb; x += 6 * s) out.push({ x, z: z + dz }); return out; };
+      await go('eastbound (outer lane)', along(345, 955, -outer));
+      await go('westbound (outer lane)', along(955, 345, outer));
+      await go('west ramp: ring road -> motorway', [...d.lanePoints(330, -222, 330, -246), ...along(338, 520, -outer)], 30);
+      await go('east ramp: motorway -> industrial', [...along(820, 962, -outer), ...d.lanePoints(970, -258, 970, -284)], 30);
+      // On the deck: the car is up on the bridge, not down on the street.
+      car.body.teleport(400, T.driveHeight(400, z - outer, 10), z - outer, Math.PI / 2); await wait(300);
+      const v = { x: 20, y: 0, z: 0 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v };
+      let minY = 99; for (let k = 0; k < 150; k++) { await new Promise((q) => requestAnimationFrame(q)); if (Math.abs(car.position.x - 420) < 6) minY = Math.min(minY, car.position.y); }
+      const deckY = H.HWY.deckY;
+      g.controls.respawnAt(car.position, 0); await wait(200);
+      // Traffic: a car on the motorway lane runs it end to end at ~90 km/h, on the decks.
+      const L = g.traffic.graph.lanes.find((l) => l.road?.highway && !l.road.ramp && l.pts[0].x < l.pts[l.pts.length - 1].x);
+      const tc = g.traffic.cars[0] || null;
+      let traffic = null;
+      if (L) {
+        const { TrafficCar } = await import('/src/traffic/trafficCar.js');
+        const { CAR_TYPES } = await import('/src/vehicles/carTypes.js');
+        const t = new TrafficCar({ id: 'hw-test', type: 'sedan', cfg: CAR_TYPES.sedan, paint: '#888888', lane: L, s: 2, cruise: 12, physics: g.physics, scene: g.scene, wheels: g.traffic.cars[0]?.wheels || g.scene.getObjectByName('traffic-wheels'), wheelOffset: 0, terrain: T, rng: { next: () => 0.5, chance: () => false, range: (a) => a, int: (a) => a, pick: (a) => a[0], fork() { return this; } } });
+        let maxV = 0, deckSeen = 0, laneChanges = 0, last = L; const t0 = performance.now();
+        for (let k = 0; k < 60 * 40; k++) {
+          t.update(1 / 60, { lanes: g.traffic.graph.lanes, obstacles: [], honk: () => {} });
+          maxV = Math.max(maxV, t.v);
+          if (Math.abs(t.pos.x - 420) < 5 || Math.abs(t.pos.x - 790) < 5) deckSeen = Math.max(deckSeen, t.pos.y);
+          if (t.lane !== last) { laneChanges++; last = t.lane; }
+          if (laneChanges >= 2) break;
+        }
+        traffic = { maxKmh: Math.round(maxV * 3.6), deckY: +deckSeen.toFixed(2), laneChanges, endX: Math.round(t.pos.x), ms: Math.round(performance.now() - t0) };
+        g.scene.remove(t.group); t.body.setEnabled(false);
+      }
+      // Police routing onto the motorway.
+      const P = g.police, from = P.nearestLanePoint(470, -217), to = P.nearestLanePoint(700, -254.2);
+      const route = P.routeTo(from.lane, to.lane);
+      const policeOk = route.length > 0 && g.traffic.graph.lanes[route[route.length - 1]].road?.highway === true;
+      return { runs, minY: +minY.toFixed(2), deckY, traffic, policeOk, routeLen: route.length, limits: g.world.network.allRoads.filter((x) => x.highway).map((x) => [x.street, x.speedLimit]) };
+    });
+    for (const [k, v] of Object.entries(r.runs)) check(`highway ${k}: full throttle + boost, no damage, no flips`, !v.nan && v.damage === 0 && v.maxTilt < 25, v); // maxAbove is vs the ground under the bridges, not the deck
+    check('the overpass carries the car over the street (stays on the deck)', r.minY > r.deckY - 0.8, { minY: r.minY, deckY: r.deckY });
+    check('traffic runs the motorway at 80-100 km/h, over the decks, and on to the next lanes', r.traffic && r.traffic.maxKmh >= 80 && r.traffic.maxKmh <= 100 && r.traffic.deckY > r.deckY - 0.5 && r.traffic.laneChanges >= 2, r.traffic);
+    check('police can route onto the motorway', r.policeOk, { len: r.routeLen });
+    check('limits: motorway 100, ramps 80', r.limits.every(([n, l]) => (/Ramp/.test(n) ? l === 80 : l === 100)), r.limits);
+    check('no page errors (highway)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

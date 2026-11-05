@@ -125,9 +125,10 @@ export function buildStreetSigns({ network, plan, terrain }) {
     const hw = (r.halfW || 3.6) + 1.3;
     // Start: traffic heading +t, kerb on its left (-n).
     const a = S[Math.min(4, S.length - 1)];
-    addLimit(a.x - a.nx * hw, a.z - a.nz * hw, Math.atan2(-a.tx, -a.tz), cellOf(lim), { road: r.street, limit: lim });
+    const padEnd = r.pad ? (Math.hypot(S[0].x - r.pad.x, S[0].z - r.pad.z) < Math.hypot(S[S.length - 1].x - r.pad.x, S[S.length - 1].z - r.pad.z) ? 'start' : 'end') : null; // cul-de-sac: sign only at the street's mouth
+    if (padEnd !== 'start') addLimit(a.x - a.nx * hw, a.z - a.nz * hw, Math.atan2(-a.tx, -a.tz), cellOf(lim), { road: r.street, limit: lim });
     const b = S[Math.max(0, S.length - 5)];
-    addLimit(b.x + b.nx * hw, b.z + b.nz * hw, Math.atan2(b.tx, b.tz), cellOf(lim), { road: r.street, limit: lim });
+    if (padEnd !== 'end') addLimit(b.x + b.nx * hw, b.z + b.nz * hw, Math.atan2(b.tx, b.tz), cellOf(lim), { road: r.street, limit: lim });
     if (r.highway && !r.ramp) for (let k = 0; k < S.length; k += Math.max(1, Math.round(250 / Math.max(1, (S[1]?.s ?? 1) - (S[0]?.s ?? 0))))) {
       const s = S[k]; addLimit(s.x - s.nx * hw, s.z - s.nz * hw, Math.atan2(-s.tx, -s.tz), cellOf(lim), { road: r.street, limit: lim });
     }

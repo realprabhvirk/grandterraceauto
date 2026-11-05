@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 12:55)**
-- Done: Phase 6 steps 1-3 (rules, map routing/labels/street names, street signs)
-- Broken: phase4 'police officer on foot knocked down' (known)
-- Next: P6 step 4: highway
+**STATUS (2026-11-05 14:59)**
+- Done: Phase 6 steps 1-4 (rules, map, signs, highway)
+- Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known)
+- Next: P6 step 5: speed cameras + traffic cops
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -365,3 +365,4 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - 12:46 Step 1: property damage never gives heat (street furniture, destroyed cars - user override); src/world/speedLimits.js (limits per road + downtown override, road.speedLimit/road.street), src/police/speedingConfig.js + speeding.js (fine $200 only when a catcher calls tryFine; cooldown 20 s per catcher; no fine when wanted / siren / on foot; cash floor 0), HUD limit sign + street chip. phase5test speeding 8/8.
 - 12:52 Step 2: navigation is map-only (beacon + chip removed), route progress + 60 m fade + trim, arrival clears; icon registry with priorities, collision-culled labels on every marker, legend from the types in use, petrol/store icons; street names along roads on both maps (minimap majors only). phase5test mapnav 8/8, map 11/11, pois 7/7.
 - 12:55 Step 3: src/city/streetSigns.js - 48 junction blade signs (both names), 63 speed-limit signs (both ends of every road, downtown 40/60 change on Terrace Pde, school zone), breakable, ~7 draw calls total. phase5test signs 5/5 (114 calls, 60 fps in town).
+- 14:59 Step 4: Terrace Motorway (src/city/highwayPlan.js + highway.js): 2 carriageways x 2 lanes, median barrier, shoulders, markings, reflective posts, 2 overpasses (deck, railings, piers, abutments), 4 green gantries, ramp roads at both ends; lane graph via the town plan, traffic at 90 km/h (ramps 72) over the decks, police route onto it; limits 100 / 80; speed signs every ~250 m. docs/STREETS.md written (33 streets). phase5test highway: westbound full throttle clean, overpass/traffic/police/limits pass; FAILED after 2 attempts (logged): eastbound at ~170 km/h the bang-bang test autopilot spins once (tilt 49, no damage), and the east ramp's 90-degree junction turn at 30 m/s rolls the car (tilt 34) - the ramps are right-angle junctions, not curved slip roads. Ghost scan clean (fixed: cul-de-sac end speed signs sat in the turning-circle lanes).
