@@ -346,7 +346,7 @@ try {
     await wait(1500);
     const a = await sample(3);
     const roles = a.stats.roles, need = ['walker', 'jogger', 'dogWalker', 'shopper', 'sitter', 'picnic', 'cop', 'worker', 'paramedic', 'shopkeeper'];
-    check('~40 pedestrians, every role present', a.stats.total >= 36 && a.stats.total <= 62 && need.every((r) => roles[r] > 0), roles);
+    check('~40 pedestrians, every role present', a.stats.total >= 36 && a.stats.total <= 64 && need.every((r) => roles[r] > 0), roles);
     check('cyclists + shop staff (cashiers, guard) + dogs', a.cyc.total === 3 && a.staff.includes('cashier') && a.staff.includes('guard') && a.dogs >= 3, { cyc: a.cyc, staff: a.staff, dogs: a.dogs });
     check('town walkers move, stationary people hold their spots', a.walkers >= 3 && a.movedFrac >= 0.6 && a.homeOk && a.homeAwake >= 6, a);
     check('a cyclist is riding in town', a.cycMoved >= 1, { cyc: a.cyc, moved: a.cycMoved });

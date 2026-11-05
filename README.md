@@ -83,7 +83,9 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 ### Anywhere
 | Key | Action |
 | --- | --- |
-| **Tab** | minimap on/off (roads, you, police, wanted radius, 62 / police / hospital / shops / parks) |
+| **Tab** | cycles hidden -> minimap -> **full map** -> hidden (Esc also closes the full map; the game pauses while it's open) |
+| Full map: **click** | set a waypoint (click a marker to snap to it): route on the map + minimap, a beacon in the world, a distance chip on screen |
+| Full map: **right-click** / drag / wheel or pinch | clear the waypoint / pan / zoom |
 | **N** | toggle late afternoon <-> dusk/night (windows glow, neon + street lights + headlights on) |
 | **Shift + N** | slow automatic day/night cycle on/off (or start with `?cycle`) |
 | ? (or H on foot) | show / hide the controls panel |
@@ -105,7 +107,7 @@ add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay
 .\dev.cmd node scripts/shot.mjs          # screenshots of every preset into shots/, fails on console errors
 .\dev.cmd node scripts/vehicle-sim.mjs   # headless car tuning bench (0-100, top speed, braking, roll, crest jumps)
 .\dev.cmd node scripts/phase4test.mjs    # Phase 4 (sections: garage cameras combat police minimap town npcs) - numeric asserts, no screenshots
-.\dev.cmd node scripts/phase5test.mjs    # Phase 5 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe)
+.\dev.cmd node scripts/phase5test.mjs    # Phase 5 + 5.1 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage witness map)
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
 .\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles per scene (incl. the new districts + gunfire)
 ```

@@ -214,7 +214,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
           if (Math.abs(c.speed) < 3) continue;
           const dx = ped.pos.x - c.x, dz = ped.pos.z - c.z;
           const ahead = Math.abs(dx * c.fx + dz * c.fz), lat = Math.abs(dx * c.fz - dz * c.fx);
-          if (ahead < (c.len || 4.5) / 2 + 0.4 && lat < (c.w || 1.8) / 2 + 0.3) { knockDown(ped, c); break; }
+          if (ahead < (c.len || 4.5) / 2 + 0.4 + Math.abs(c.speed) * 0.06 && lat < (c.w || 1.8) / 2 + 0.3) { knockDown(ped, c); break; } // look ahead ~1 frame so the capsule can't stop the car first
         }
       }
       if (ped.state === 'down') {

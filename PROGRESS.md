@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 10:18)**
-- Done: Phase 5 + 5.1 steps 1-4 (car damage, witnesses, wanted timing, full map + waypoint navigation)
-- Broken: none known
-- Next: 5.1 step 5: wrap-up (full suite, README, build)
+**STATUS (2026-11-05 10:38)**
+- Done: PHASE 5.1 complete: car damage retune, crimes need witnesses, wanted timing, full map + waypoint navigation; full suite + build run
+- Broken: phase4 'police officer on foot knocked down' fails (scripted car stops at the cop's capsule; logged after 2 attempts)
+- Next: Phase 6 (see Phase 5 summary suggestions)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -323,3 +323,14 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - 10:10 Step 2: src/police/crimeWitness.js - every crime goes through report() (theft, carjack, ped hits, props, gunfire, shooting people, cop damage, footpath scares); 30 m civ / 60 m cop, LOS from the head, 140 deg cone (waived inside 5 m), 1.5 s startled delay, cancelled if all witnesses go down. debug.getWitnesses(). phase5test witness 8/8, guns 28/28. Found: the Phase 5 escape rule starts flashing instantly when no cop has spawned yet -> fixed in step 3.
 - 10:14 Step 3: src/police/wantedConfig.js + new wanted state machine (solid 15 s grace -> flashing when hidden 6 s & >=80 m or >=150 m -> 10 s -> cleared; interrupts), immediate dispatch, HUD 2 Hz blink, debug.wanted(). phase5test stars 7/7 (sim-time), push/arrest/ko/copguns 19/19, phase4 police 6/6.
 - 10:18 Step 4: src/ui/fullMap.js (Tab cycle, 85% overlay, pause, drag/wheel/pinch, labels, markers, cops, wanted radius, click = waypoint with marker snap, right-click clears, Click to resume) + src/ui/navigation.js (A* over lanes, re-route >30 m every 2 s, beacon, HUD distance chip, arrive 15 m, localStorage); minimap draws the route. phase5test map 11/11, phase4 minimap 2/2.
+- 10:38 Step 5: full suite run once in sections (one browser at a time). weaponsUnit 26/26; phase5test all 30 sections pass (139 checks across 3 runs after 2 test-isolation fixes: traffic cleared before the cabin + burn checks); phase4test all pass except "police officer on foot knocked down" (see below); phase2 16/16; walktest pass; drivetest pass (physics; Hillcrest Ct autopilot wedge is pre-existing). npm run build OK (5.28 MB JS, 1.95 MB gzip).
+- FAILED after 2 attempts (logged, moving on): phase4 "police officer on foot knocked down" - the scripted car stops dead against the station cop's capsule at ~12 m/s without the knock-down firing (lat 0, ahead 2.5 m < threshold). Added a one-frame look-ahead to the ped hit test (harmless) but it still fails; probably the cop's capsule stops the car within one physics step before the per-frame check. Not a Phase 5.1 regression I could pin down; worth a look.
+
+## PHASE 5.1 SUMMARY (2026-11-05, 10:38)
+- **Car damage:** src/combat/damageConfig.js. 25 m/s head-on into a wall = 10 health (speed^2 curve, nothing under 5 m/s, max 25 per hit), one event per collision (0.12 s peak window + 0.5 s cooldown that a grind keeps alive), car-vs-car half damage on relative speed, police nudge 2, props retuned (pole at 15 m/s = 3). Bullets unchanged.
+- **Witnesses:** src/police/crimeWitness.js. Every crime goes through report(): civilians 30 m / cops 60 m, line of sight from the head, 140 deg facing cone (waived within 5 m), victims who survive always count, 1.5 s startled reaction, cancelled if every witness is knocked out or killed. No witness = no heat and no police.
+- **Wanted timing:** src/police/wantedConfig.js. Solid for a 15 s grace after any witnessed crime (police dispatched immediately), flashing only once hidden 6 s and >= 80 m (or >= 150 m), 10 s of flashing clears it. Cop line of sight, a cop inside 80 m or a new crime makes the stars solid again. The HUD blinks at 2 Hz.
+- **Full map:** Tab cycles minimap -> full map -> hidden; the full map pauses the game, frees the mouse, drag/wheel/pinch to pan/zoom. Click sets a waypoint (snaps to markers), right-click clears; A* route over the lane graph on the map and minimap, re-routes when you're >30 m off it, world beacon + distance chip, clears within 15 m, saved in localStorage. "Click to resume" shows if the browser won't re-lock the mouse.
+- **Fixed during baseline:** cabin cam now hides the driver (their neck blocked the road in the ute).
+- **Perf (perfscenes, headless):** 72-202 draw calls, 51-60 fps (cabin cam + live mirrors is the slowest at 51); new districts 72-162 calls at 60 fps.
+- **Check by hand:** crash feel (90 km/h into a wall should feel survivable - about 10 crashes to wreck a car); do witnesses' "startled" poses read, and does stealing in a quiet street really stay unnoticed; wanted timing (15 s solid feels right? flashing blink obvious? cleared message); full map usability (pan/zoom feel, marker snap radius, the route line following keep-left lanes, the beacon + distance chip, re-capturing the mouse after closing - you may need one click).

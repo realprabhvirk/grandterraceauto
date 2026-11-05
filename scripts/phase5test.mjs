@@ -70,7 +70,7 @@ try {
         if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
         d.enter(i); await new Promise((r) => setTimeout(r, 1300));
         // Flat straight in town (Terrace Pde), facing east.
-        const x = 380 + types.indexOf(t) * 30; g.controls.car.body.teleport(x, g.world.terrain.getHeight(x, -87.2), -87.2, Math.PI / 2);
+        const x = 380 + types.indexOf(t) * 30; for (const tc of [...g.traffic.cars]) if (Math.abs(tc.pos.z + 85) < 10) g.traffic.removeCar(tc); g.controls.car.body.teleport(x, g.world.terrain.getHeight(x, -87.2), -87.2, Math.PI / 2);
         while (g.controls.cameraMode !== 'cabin') await d.tap('KeyC');
         await new Promise((r) => setTimeout(r, 600));
         res.push(d.cabinCheck());
@@ -173,6 +173,7 @@ try {
       if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
       d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await new Promise((q) => setTimeout(q, 1400));
       const car = g.controls.car;
+      for (const tc of [...g.traffic.cars]) if (Math.abs(tc.pos.z + 85) < 12) g.traffic.removeCar(tc); // nobody runs the ejected driver over
       car.body.teleport(470, g.world.terrain.getHeight(470, -87.2), -87.2, Math.PI / 2);
       g.combat.setHp(90);
       await new Promise((q) => setTimeout(q, 300));
