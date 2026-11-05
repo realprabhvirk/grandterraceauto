@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 14:59)**
-- Done: Phase 6 steps 1-4 (rules, map, signs, highway)
+**STATUS (2026-11-05 15:08)**
+- Done: Phase 6 steps 1-5 (rules, map, signs, highway, speed cameras + traffic cops)
 - Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known)
-- Next: P6 step 5: speed cameras + traffic cops
+- Next: P6 step 6: whole city (shops, landmarks, traffic lights, buses/taxis/vans)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
