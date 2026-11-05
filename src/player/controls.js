@@ -92,7 +92,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       range: t.cfg.L / 2 + 1.0,
       label: 'Press F to carjack',
       position: () => carLocalToWorld(t, -(t.cfg.W / 2), 0, t.cfg.seat[2]),
-      enabled: () => mode === 'walk' && !player.state.action && list.includes(t) && !t.isPolice && !t.dead,
+      enabled: () => mode === 'walk' && !player.state.action && list.includes(t) && !t.isPolice && !t.noJack && !t.dead,
       action: () => hooks.onCarjack?.(t),
     });
   }

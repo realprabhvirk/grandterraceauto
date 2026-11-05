@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe city shops enforce highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe life city shops enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1490,6 +1490,40 @@ try {
     check('stadium sits on a flat graded pad', Math.abs(r.pad[0] - r.pad[1]) < 0.05, r.pad);
     check('downtown street: draw calls < 550, fps >= 45', r.callsStreet < 550 && r.fpsStreet >= 45, { calls: r.callsStreet, fps: r.fpsStreet });
     check('no page errors (city)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.6c: NPC activities + buses / taxis / vans
+  if (run('life')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, S = g.traffic.service, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const P = g.peds.peds, out = { peds: P.length, acts: {} };
+      for (const p of P) if (p.home?.action) out.acts[p.home.action] = (out.acts[p.home.action] || 0) + 1;
+      out.stopWaiters = P.filter((p) => p.home && (g.world.town.stops || []).some((s) => Math.hypot(s.x + 2.2 - p.home.x, s.z - p.home.z) < 0.1)).length;
+      out.stops = (g.world.town.stops || []).length;
+      // Buses keep to their loop and pull up at stops; 35 s sample.
+      const offLoop = (x, z) => Math.min(Math.abs(z + 85) + Math.max(0, 330 - x, x - 970), Math.abs(x - 970) + Math.max(0, -85 - z, z - 45), Math.abs(z - 45) + Math.max(0, 330 - x, x - 970), Math.abs(x - 330) + Math.max(0, -85 - z, z - 45));
+      let worst = 0, dwellSeen = 0; const s0 = S.buses.map((b) => b.stops);
+      for (let k = 0; k < 70; k++) { await wait(500); for (const b of S.buses) { worst = Math.max(worst, offLoop(b.pos.x, b.pos.z)); if (b.dwell > 0 && b.v < 0.3) dwellSeen++; } }
+      out.bus = { n: S.buses.length, worst: +worst.toFixed(1), stopsMade: S.buses.map((b, i) => b.stops - s0[i]), dwellSeen };
+      out.taxis = S.taxis.map((t) => ({ paint: t.paint, jack: !t.noJack && !t.isPolice }));
+      out.vans = S.vans.length;
+      out.busJack = S.buses.every((b) => b.noJack) && S.vans.every((v) => v.noJack);
+      out.moving = [...S.taxis, ...S.vans].filter((t) => t.v > 0.5 || t.atRed).length;
+      g.debug.teleport(745, -95, 0); await wait(1500);
+      const f0 = g.renderer.info.render.frame, t0 = performance.now(); await wait(2000);
+      out.fps = Math.round((g.renderer.info.render.frame - f0) / ((performance.now() - t0) / 1000)); out.calls = g.renderer.info.render.calls;
+      return out;
+    });
+    check('NPC population ~90 (80-92)', r.peds >= 80 && r.peds <= 92, { peds: r.peds });
+    check('new activities: dancers, phone calls, waving, window shoppers', (r.acts.dance || 0) >= 2 && (r.acts.phone || 0) >= 5 && (r.acts.wave || 0) >= 1 && (r.acts.look || 0) >= 8, r.acts);
+    check('someone waiting at every bus stop', r.stops > 0 && r.stopWaiters === r.stops, { stops: r.stops, waiters: r.stopWaiters });
+    check('2 buses stay on their loop (Pde -> Ring Rd East -> Esplanade -> Ring Rd West)', r.bus.n === 2 && r.bus.worst < 12, r.bus);
+    check('buses pull up at stops (dwell)', r.bus.stopsMade.some((n) => n >= 1) && r.bus.dwellSeen > 0, r.bus);
+    check('3 yellow taxis (carjackable) + 2 delivery vans; buses / vans not carjackable', r.taxis.length === 3 && r.taxis.every((t) => t.paint === '#f2c41a' && t.jack) && r.vans === 2 && r.busJack, { taxis: r.taxis, vans: r.vans, busJack: r.busJack });
+    check('taxis / vans are driving', r.moving >= 3, { moving: r.moving });
+    check('City Plaza with crowds: draw calls < 550, fps >= 45', r.calls < 550 && r.fps >= 45, { calls: r.calls, fps: r.fps });
+    check('no page errors (life)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

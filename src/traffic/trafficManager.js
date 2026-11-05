@@ -9,6 +9,7 @@ import { TrafficCar } from './trafficCar.js';
 import { makeRng } from '../utils/rng.js';
 import { addEmergencyKit } from '../vehicles/emergency.js';
 import { buildTrafficLights } from './trafficLights.js';
+import { addServiceVehicles, SERVICE_COUNT } from './serviceVehicles.js';
 export const PATROL_CRUISERS = 2; // traffic cops cruising the motorway / ring road at the limit
 
 const COUNT = 14; // 6 start on Grand Terrace, the rest spread over the town + downtown grid
@@ -18,7 +19,7 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
   const rng = makeRng(4646);
   const graph = buildLaneGraph(world.network);
   const lights = world.town ? buildTrafficLights({ scene, plan: world.town.plan, graph, physics, terrain: world.terrain }) : null;
-  const wheels = createWheelInstances((count + PATROL_CRUISERS) * 4).mesh;
+  const wheels = createWheelInstances((count + PATROL_CRUISERS + SERVICE_COUNT) * 4).mesh;
   wheels.name = 'traffic-wheels';
   scene.add(wheels);
   const types = ['sedan', 'hatch', 'suv', 'ute', 'hatch', 'sedan'];
@@ -47,6 +48,7 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
     addEmergencyKit(t, 'police');
     cars.push(t);
   });
+  const service = world.town ? addServiceVehicles({ cars, graph, physics, scene, wheels, world, rng: rng.fork(500), startIndex: count + PATROL_CRUISERS }) : { buses: [], taxis: [], vans: [] };
   const honk = (car) => audio.honk?.(car.pos);
   /** Take a traffic car off the road (carjacked: replaced by a drivable copy). */
   function removeCar(c) {
@@ -63,6 +65,7 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
     cars,
     graph,
     lights,
+    service,
     removeCar,
     honk,
     /** ctx: { player (walker position or null), night } */

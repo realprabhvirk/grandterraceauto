@@ -106,6 +106,9 @@ export class TrafficCar {
       }
     }
 
+    // --- Service hooks (bus stops) -----------------------------------------------------------
+    if (this.extraTarget) target = Math.min(target, this.extraTarget(dt, P0));
+
     // --- Accelerate / brake, honk once if the player blocks us for >6 s ---------------------
     const dv = target - this.v;
     this.v += Math.max(-7 * dt, Math.min(2.6 * dt, dv));

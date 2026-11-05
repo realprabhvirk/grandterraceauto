@@ -49,6 +49,7 @@ import { createSpeedLimitHud } from './ui/speedLimitHud.js';
 import { createSpeedCameras } from './police/speedCameras.js';
 import { createTrafficCops } from './police/trafficCops.js';
 import { buildLandmarks } from './city/landmarks.js';
+import { activitySpots } from './npc/activitySpots.js';
 import { createSkyLife } from './world/skyLife.js';
 
 const params = new URLSearchParams(location.search);
@@ -96,7 +97,8 @@ physics.onStep((h) => { controls.fixedUpdate(h); vehicles.fixedUpdate(h); });
 for (const t of world.hero?.targets || []) controls.interact.register(t); // E: front door, garage
 for (const t of world.town?.targets || []) controls.interact.register(t); // E: shop doors, Quick Stop counter
 const debugDraw = createDebugDraw(scene, physics, world.terrain);
-const peds = createPedestrians({ scene, physics, world });
+world.town?.npcSpots.push(...activitySpots(world)); // Phase 6: bus-stop waiters, plaza dancers, stadium fans...
+const peds = createPedestrians({ scene, physics, world, townCount: 7, downtownCount: 9 });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
 const cyclists = createCyclists({ scene, traffic, terrain: world.terrain });
 /** Everything with wheels that pedestrians should watch out for. */

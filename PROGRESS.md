@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 15:39)**
-- Done: Phase 6 steps 1-5, 6a (13 shops), 6b (traffic lights, 3 landmarks, billboards)
+**STATUS (2026-11-05 15:45)**
+- Done: Phase 6 steps 1-5, 6a shops, 6b lights/landmarks, 6c NPCs/buses/taxis/vans
 - Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known); map Tab-resume check flaky in batch
-- Next: P6 step 6c: more NPCs, bus loop, taxis, vans; 6d vibe
+- Next: P6 step 6d vibe (neon, crowd murmur), then step 7 screenshots
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -383,3 +383,8 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - Ghost-scan fixes: Ring Rd North camera moved off the Station St junction; limit signs that would stand inside asphalt are dropped.
 - Tests: `city` 11/11 (red stop / green go, lamps, cycle never both green, landmarks solid, clock = real time, 106 draw calls / 60 fps downtown), phantomtest 19/19, signs 5/5, phase4 town 11/11.
 - Skipped (logged): laneways, road-marking repaint beyond the signal junctions; red-light running carries no penalty (arcade).
+
+### 2026-11-05 15:45 — Phase 6 Step 6c: more NPC life, buses, taxis, vans
+- src/npc/activitySpots.js: 21 new activity NPCs (a passenger at every bus stop, two street dancers + watchers at City Plaza, fans at the stadium gate, phone calls on the City Hall steps, window shoppers on Terrace Pde) + 3 more walkers → 86 people (cap ~90).
+- src/traffic/serviceVehicles.js: 2 buses (red/blue, destination board) on a fixed loop Terrace Pde east → Ring Rd East → The Esplanade west → Ring Rd West, 6 s dwell at the 4 eastbound Pde stops; 3 yellow taxis (roof light, carjackable → sedan); 2 white delivery vans with livery bands. Buses/vans can't be carjacked. All obey lights/gaps (TrafficCar AI). 23 traffic cars total.
+- Tests: `life` 9/9 (bus loop max 2.2 m off route, 3 stops made in 35 s, 125 draw calls / 60 fps at the plaza); steal/witness/enforce 26/26.
