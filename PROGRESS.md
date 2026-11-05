@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 11:57)**
-- Done: Phase 5.3 steps 1-2 (shaking fixed, hitting a cop = 5 stars)
+**STATUS (2026-11-05 12:24)**
+- Done: PHASE 5.3 complete (random shaking fixed, hitting a cop = 5 stars); pushed to GitHub main
 - Broken: phase4 'police officer on foot knocked down' still red (known)
-- Next: 5.3 step 3: wrap-up
+- Next: Phase 6
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -354,3 +354,9 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - 11:53 Step 1 RANDOM SHAKING - root causes: (1) physics runs at a fixed 60 Hz but cars and the walker were drawn at the raw physics pose, so every frame that ran 0 or 2 physics steps (vsync drift / frame-time jitter: 33 of 615 frames on a Grand Terrace run) jumped a whole step and the camera following it stuttered; (2) the cabin camera shook from body.impact, a per-step velocity-jump signal that also fires on bumps and landings; (3) the walk camera's pull-in raycast snapped in/out instantly when grazing geometry.
   FIX: render interpolation between the last two physics poses for every car and the walker (physics.alpha), camera shake only from verified crashes (combat sets crashShake) and police contact, camera pull-in eases back out (instant in). New jitter monitor (window.__gta.jitter) + scripts/shaketest.mjs: walk/run/jump/POV/standing/drive chase-cabin-cinematic/crests/Northgate all smooth with zero shake when nothing is hit, a 25 m/s crash still shakes; e.g. Grand Terrace crests focus jitter 0.20 -> 0.015 m/frame. phantomtest 17/17 still clean.
 - 11:57 Step 2: hitting a police officer (on foot or at the station) = instant 5 stars via crimeWitness.report(..., { alwaysKnown: true, minStars: 5 }) + wanted.raiseTo(); no witness, no delay, solid with full grace, dispatch at once; misses and police-car hits unchanged. Also fixed a step-1 regression: a sleeping/just-teleported car reported its stale interpolated position (crimes at a parked car found no witnesses). phase5test copstars 6/6, witness 8/8, steal 10/10, guns 28/28.
+- 12:24 Step 3: full suite once: weaponsUnit 26/26, phase5test 184/184 (34 sections), shaketest 21/21, phantomtest pass (one run clipped a kerbside letterbox / street light - real logged prop hits, now reported separately), phase4 all but the known cop knock-down, phase2 16/16, walk pass, drivetest pass. Perf 72-202 draw calls, 52-60 fps. Build OK.
+
+## PHASE 5.3 SUMMARY (2026-11-05, 12:24)
+- **Random shaking:** fixed-60 Hz physics was drawn without interpolation, so frames running 0 or 2 physics steps made the car / player (and the camera following them) jump a whole step; the cabin camera also shook from a bump-sensitive velocity signal, and the walk camera's wall pull-in flickered. Now: render interpolation for cars + the walker, shake only from verified crashes / police contact, eased camera pull-in. Debug: window.__gta.jitter monitor, scripts/shaketest.mjs.
+- **Hitting a cop = 5 stars:** any bullet hitting a police officer (on foot or the station cops) sets 5 stars instantly - no witness, no delay, solid with the 15 s grace, police dispatched at once. Misses and police-car hits follow the normal rules; shooting a civilian nobody sees is still free.
+- **Check by hand:** walk, run and drive in third person, POV, chase, cabin and cinematic - the picture should be steady (no random shakes; a real crash still jolts the camera). Then go somewhere empty and shoot a lone cop: 5 stars at once.
