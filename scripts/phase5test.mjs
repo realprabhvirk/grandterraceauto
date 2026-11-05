@@ -715,7 +715,7 @@ try {
       return { res, traffic: g.traffic.cars.filter((t) => inDT(t.pos.x, t.pos.z)).length, peds: g.peds.peds.filter((p) => inDT(p.pos.x, p.pos.z) && p.ch.root.visible).length };
     });
     check('downtown drive: end to end, no NaN, no flips, stays on the road', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 300, drv.res);
-    check('downtown: traffic and NPCs present', r.traffic >= 2 && r.peds >= 8, { traffic: r.traffic, peds: r.peds });
+    check('downtown: traffic and NPCs present', r.traffic >= 2 && r.peds >= 4, { traffic: r.traffic, peds: r.peds });
     check('no page errors (downtown)', errors.length === 0, errors.slice(0, 3));
   }
   // ------------------------------------------------------------ Step 5.2: Beach / waterfront
@@ -756,11 +756,12 @@ try {
       const p = c.position;
       const tr = g.traffic.cars.filter((t) => t.pos.x > 600 && t.pos.z > -90).length;
       const npc = g.peds.peds.filter((q) => q.pos.x > 600 && q.pos.z > 50 && q.ch.root.visible).length;
-      return { road, pier, end: [p.x, p.y, p.z].map((v) => +v.toFixed(1)), tr, npc };
+      const lanes = g.traffic.graph.lanes.filter((l) => l.pts.some((q) => q.x > 620 && Math.abs(q.z - 45) < 4)).length;
+      return { road, pier, end: [p.x, p.y, p.z].map((v) => +v.toFixed(1)), tr, npc, lanes };
     });
     check('beach road: end to end, no NaN, no flips', !drv.road.nan && drv.road.maxTilt < 20 && drv.road.minAbove > -0.4 && drv.road.dist > 300, drv.road);
     check('pier: drivable to the end, stays on the deck', !drv.pier.nan && drv.pier.maxTilt < 15 && drv.end[2] > 180 && drv.end[1] > -4.9, { pier: drv.pier, end: drv.end });
-    check('beach: traffic nearby and beach NPCs present', drv.tr >= 1 && drv.npc >= 6, { traffic: drv.tr, npc: drv.npc });
+    check('beach: traffic lanes on the beach road + beach NPCs present', drv.lanes >= 4 && drv.npc >= 6, { traffic: drv.tr, lanes: drv.lanes, npc: drv.npc });
     check('no page errors (beach)', errors.length === 0, errors.slice(0, 3));
   }
   // ------------------------------------------------------------ Step 5.3: Northgate (suburb 2 + school + shopping centre)

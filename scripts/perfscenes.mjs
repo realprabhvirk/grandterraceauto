@@ -34,6 +34,24 @@ try {
     d.teleport(399.6, -74.1, 0); out.push(await measure('inside Quick Stop'));
     const w = g.world.town.wattle.centre; d.teleport(w.x - 24, w.z, Math.PI / 2); out.push(await measure('Wattle Park'));
     d.teleport(470, -92, 0); g.lighting.setDusk(1); out.push(await measure('town centre at dusk'));
+    g.lighting.setDusk(0);
+    // Phase 5 scenes.
+    d.teleport(745, -92, 0); out.push(await measure('downtown: City Plaza'));
+    d.teleport(745, -92, 0); g.lighting.setDusk(1); out.push(await measure('downtown at night (neon)'));
+    g.lighting.setDusk(0);
+    d.teleport(800, 60, Math.PI); out.push(await measure('beach promenade (water, gulls)'));
+    d.teleport(470, -300, 0); out.push(await measure('Northgate (houses, school, plaza)'));
+    d.teleport(835, -300, 0); out.push(await measure('industrial estate'));
+    d.teleport(470, -92, Math.PI);
+    g.weapons.arsenal.give('smg', 200); g.weapons.arsenal.select('smg');
+    g.controls.input.setVirtual('Mouse0', true);
+    out.push(await measure('town: firing the SMG (third person)'));
+    g.controls.input.setVirtual('Mouse0', false);
+    await d.tap('KeyC');
+    g.controls.input.setVirtual('Mouse0', true);
+    out.push(await measure('town: firing the SMG (first person viewmodel)'));
+    g.controls.input.setVirtual('Mouse0', false);
+    await d.tap('KeyC');
     return out;
   });
   for (const r of rows) console.log(`${r.scene.padEnd(40)} fps ${String(r.fps).padStart(3)}  calls ${String(r.calls).padStart(4)}  tris ${r.tris}`);

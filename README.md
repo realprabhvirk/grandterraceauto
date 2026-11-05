@@ -13,6 +13,14 @@ inspired by Woodlands Estate, Waterford QLD, built around the hero house
   **Terrace Town Centre** (shops, enterable Terrace Central + Quick Stop, police station, hospital,
   petrol station, Central Gardens) east of Grand Terrace, Wattle Park, ~40 role-based pedestrians + cyclists.
   Arcade rules: no guns, no blood, no explosions; people hit by cars fall over and get back up.
+- **Phase 5:** first-person viewmodel, clearer cabin view, wheel/pinch zoom (never page zoom), no player damage
+  inside cars, burning wrecks, fairer police (soft contact, flanking, officers on foot who pull you out),
+  KNOCKED OUT / BUSTED cutscenes, every parked car stealable (incl. police cars + the ambulance, T = siren),
+  **guns** (pistol, SMG, pump shotgun, rifle - hitscan, IK-held, viewmodel, effects, synth sounds, crime heat),
+  armed police at 3+ stars, the **Barrel & Bolt** gun shop, four new districts - **Downtown**, **Terrace Beach**,
+  **Northgate** (second suburb, school, shopping centre) and an **industrial estate** (the highway was skipped) -
+  plus clouds, birds, zone ambience and an optional day/night cycle. Arcade rules: hitscan only, no blood/gore,
+  no explosions, adults only (the school has staff only); people who are shot go down and fade out.
 
 Three.js r187 + Rapier 0.21 (WASM physics) + Vite 8, vanilla JS modules.
 
@@ -41,10 +49,16 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | Shift | run |
 | Space | jump |
 | Ctrl | crouch |
-| 1 / 2 / 3 / 4 | emotes: wave / dance / sit / point (any movement interrupts) |
-| Mouse / arrow keys, wheel | orbit camera, zoom |
-| **F** | get into your car; **hold F** (1.2 s) to break into someone else's parked car; F next to a traffic car = carjack |
-| **E** | interact: doors (62, Terrace Central, Quick Stop), garage door, buy a snack at the Quick Stop counter ($20, +25 health) |
+| **1 / 2 / 3 / 4** | weapons: pistol / SMG / shotgun / rifle (owned ones; draws it) |
+| **LMB** | fire (hold for the SMG / rifle) |
+| **RMB** | aim: over-the-shoulder camera (first person: down the sights), slower walk |
+| **R** | reload |
+| **Q** | holster / draw |
+| **hold G + 1-4** | emotes: wave / dance / sit / point (any movement interrupts) |
+| Mouse / arrow keys | orbit camera |
+| **Wheel / trackpad pinch** | zoom: camera distance 1.8-8 m (first person: FOV 60-100) |
+| **F** | get into your car; **hold F** (1.2 s) to break into any parked car (car parks, petrol pumps, police bay, ambulance); F next to a traffic car = carjack (not cop cars) |
+| **E** | interact: doors (62, Terrace Central, Quick Stop, Barrel & Bolt), garage door, snack at the Quick Stop counter ($20, +25 health), **Barrel & Bolt buy menu** (ammo $30-$80, shotgun $600, rifle $1,200) |
 | **C** | camera: third person <-> first person |
 
 ### Driving
@@ -59,16 +73,19 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | L | headlights |
 | B | look behind |
 | **C** | camera: chase -> cabin (dash, gauges, mirrors) -> cinematic |
+| Wheel / pinch | zoom: chase distance, cabin FOV 65-85 (cinematic ignores it) |
+| **T** | lights + siren (stolen police car / ambulance) |
 | E | open/close 62's garage door from the car |
 | R | flip upright / reset |
-| Mouse, wheel | orbit the chase camera (it swings back behind when you drive), zoom |
-| **F** | get out (below ~30 km/h; the car brakes to a stop on its own) |
+| Mouse | orbit the chase camera (it swings back behind when you drive) |
+| **F** | get out (below ~30 km/h; the car brakes to a stop on its own). A destroyed car burns: F gets you out at any speed, or you're thrown out after ~5 s (no damage) |
 
 ### Anywhere
 | Key | Action |
 | --- | --- |
 | **Tab** | minimap on/off (roads, you, police, wanted radius, 62 / police / hospital / shops / parks) |
-| N (or T) | toggle late afternoon <-> dusk/night (windows glow, street lights + headlights on) |
+| **N** | toggle late afternoon <-> dusk/night (windows glow, neon + street lights + headlights on) |
+| **Shift + N** | slow automatic day/night cycle on/off (or start with `?cycle`) |
 | ? (or H on foot) | show / hide the controls panel |
 | M | mute |
 | F2 | debug free-fly camera (WASD, Space/E up, Ctrl/Q down, Shift fast, 1-7 camera presets) |
@@ -88,7 +105,9 @@ add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay
 .\dev.cmd node scripts/shot.mjs          # screenshots of every preset into shots/, fails on console errors
 .\dev.cmd node scripts/vehicle-sim.mjs   # headless car tuning bench (0-100, top speed, braking, roll, crest jumps)
 .\dev.cmd node scripts/phase4test.mjs    # Phase 4 (sections: garage cameras combat police minimap town npcs) - numeric asserts, no screenshots
-.\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles per scene
+.\dev.cmd node scripts/phase5test.mjs    # Phase 5 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe)
+.\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
+.\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles per scene (incl. the new districts + gunfire)
 ```
 
 ## Folder structure
@@ -124,15 +143,20 @@ src/
     character.js           jointed low-poly character, procedural poses
     interact.js            interaction prompt system (cars now, doors later)
     input.js, flyCam.js, presets.js
-  camera/                  cabinView.js (dash, gauges, wheel), cinematic.js, mirrors.js
+  camera/                  cabinView.js (dash, gauges, wheel), cinematic.js, mirrors.js, cutscene.js (KO / BUSTED)
   combat/                  combat.js (health, impacts, KO), carDamage.js, breakables.js, particles.js, wallet.js
-  police/                  wanted.js (heat -> stars), policeCar.js, policeManager.js (spawn, chase, busted), theft.js
+  police/                  wanted.js (heat -> stars), policeCar.js (flanking chase), policeManager.js (spawn, soft contact,
+                           arrests), copsOnFoot.js (officers), copGuns.js (armed police), theft.js
+  weapons/                 weaponStats.js (all gun numbers), arsenal.js (ammo/fire logic), gunModels.js, ik.js (2-bone arm IK),
+                           hitscan.js (hit zones), gunFx.js (flash/tracers/casings/impacts/decals), viewmodel.js, playerWeapons.js
+  districts/               downtown.js, beach.js, northgate.js, industrial.js (streets/lanes come from the town grid in townPlan.js)
   town/                    Terrace Town Centre: townPlan.js (grid + link road), townLanes.js, townRoads.js,
                            townKit.js (building kit + sign atlas), townBuildings.js, townInteriors.js,
                            townProps.js (breakable trees/lights/bins/signs, bus stops), parks.js, roadworks.js
   npc/                     pedestrians.js (roles), footpaths.js, outfits.js, dog.js, cyclists.js
-  audio/carAudio.js        WebAudio engine, horn, screech, thud, siren (no audio files)
-  ui/                      hud.js (speed + tacho), statusHud.js (health/cash/stars), minimap.js, prompt.js, controlsPanel.js
+  audio/                   carAudio.js (engine, horn, screech, thud, siren, gunshots - no audio files), ambience.js (zone loops)
+  ui/                      hud.js (speed + tacho), statusHud.js (health/cash/stars), minimap.js, prompt.js, controlsPanel.js,
+                           weaponHud.js (ammo, crosshair, hit marker), gunShopMenu.js
   utils/                   seeded RNG, noise, geometry helpers, F3 overlay, debugApi.js
 scripts/                   Playwright tests + tuning bench
 ```
@@ -145,7 +169,7 @@ gums). Colours live in `PALETTE.hero` in `src/art/palette.js`.
 
 ## Performance
 
-~60-180 draw calls (budget 450), ~350-390k triangles, 52-60 fps in the headless Edge test on
+Phase 5: 72-168 draw calls in the new districts (budget 500), 450-750k triangles, 54-60 fps in the headless Edge test on
 this Ryzen 5 7530U (scripts/perfscenes.mjs; the cabin cam with live mirrors is the heaviest view).
 The town is split into per-block chunks hidden beyond ~260 m; shop interiors only render within ~25 m;
 pedestrians further than 120 m and cyclists further than 150 m sleep. Pixel ratio capped at 1.5, one 2048 shadow map

@@ -182,6 +182,7 @@ export class Terrain {
     const cGrass = new THREE.Color(P.grass), cDry = new THREE.Color(P.grassDry);
     const cDark = new THREE.Color(P.grassDark), cLawn = new THREE.Color(P.lawn);
     const cVerge = new THREE.Color(P.verge), cBank = new THREE.Color(P.bank);
+    const cSand = new THREE.Color('#e6d3a3'), cWet = new THREE.Color('#bfa877'), cSeabed = new THREE.Color('#7f9a8c');
     const tmp = new THREE.Color();
     let p = 0;
     const put = (ix, iz) => {
@@ -199,6 +200,14 @@ export class Terrain {
       const rd = Math.min(this.roadDist[i0], this.roadDist[i1], this.roadDist[i2]);
       if (rd < CORRIDOR.flat + 0.5) tmp.lerp(cVerge, 0.85);
       tmp.lerp(cBank, smoothstep(0.22, 0.5, slope) * 0.8);
+      // Terrace Beach: dry sand -> wet sand at the waterline -> sea bed under the water.
+      if (z > BEACH.prom + 1.5 && x > BEACH.x0 - BEACH.blend && x < BEACH.x1 + BEACH.blend) {
+        const hh = (H[i0] + H[i1] + H[i2]) / 3;
+        const edge = 1 - smoothstep(0, BEACH.blend, Math.max(BEACH.x0 - x, 0, x - BEACH.x1));
+        tmp.lerp(cSand, edge);
+        if (hh < WATER_Y + 0.6) tmp.lerp(cWet, smoothstep(WATER_Y + 0.6, WATER_Y - 0.2, hh) * edge);
+        if (hh < WATER_Y - 0.5) tmp.lerp(cSeabed, smoothstep(WATER_Y - 0.5, WATER_Y - 2.5, hh) * edge);
+      }
       // Per-face jitter for the hand-painted look.
       const j = 1 + (Math.sin(x * 12.9898 + z * 78.233) * 43758.5453 % 1) * 0.05;
       for (let v = 0; v < 3; v++) {
