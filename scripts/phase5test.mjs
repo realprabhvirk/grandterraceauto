@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -480,17 +480,20 @@ try {
       await wait(200);
       const at = (ped, z) => { const h = ped.ch.bones[z === 'head' ? 'head' : 'torso']; h.updateWorldMatrix(true, false); const e = h.matrixWorld.elements; return { x: e[12], y: e[13] + (z === 'head' ? 0.14 : 0.2), z: e[14] }; };
       const from = (t) => ({ x: t.x - 6, y: t.y, z: t.z });
+      g.crimes.st.forceWitness = true; // heat rules are tested in 'witness'; here every shot is seen
+      g.crimes.clear(); g.wanted.clear(true);
       const h0 = g.wanted.heat;
       const b = W.debugShot(from(at(p, 'body')), { x: 1, y: 0, z: 0 }, 'pistol');
-      const hpAfterBody = p.hp, heatShoot = g.wanted.heat - h0;
+      const hpAfterBody = p.hp; await wait(1700); const heatShoot = g.wanted.heat - h0;
       p.state = 'pause'; p.flee = 0; p.cower = 0; await wait(50);
       const hd = W.debugShot(from(at(p, 'head')), { x: 1, y: 0, z: 0 }, 'pistol');
       const hpAfterHead = p.hp;
       const h1 = g.wanted.heat;
       p.state = 'pause'; p.flee = 0; p.cower = 0; await wait(50);
       if (p.state !== 'dead') W.debugShot(from(at(p, 'body')), { x: 1, y: 0, z: 0 }, 'rifle');
-      const killed = p.state === 'dead', heatKill = g.wanted.heat - h1;
-      const t0 = performance.now(); let fadeStart = null, goneAt = null;
+      const killT = performance.now();
+      const killed = p.state === 'dead'; await wait(1700); const heatKill = g.wanted.heat - h1;
+      const t0 = killT; let fadeStart = null, goneAt = null;
       while (performance.now() - t0 < 8000) { if (p.fadeMat && fadeStart === null) fadeStart = (performance.now() - t0) / 1000; if (p.gone) { goneAt = (performance.now() - t0) / 1000; break; } await wait(50); }
       // Officer: shoot +100, kill +150.
       g.wanted.clear(true);
@@ -499,9 +502,9 @@ try {
       const ot = { x: o.pos.x, y: o.pos.y + 1.2, z: o.pos.z };
       const c0 = g.wanted.heat;
       W.debugShot({ x: ot.x - 5, y: ot.y, z: ot.z }, { x: 1, y: 0, z: 0 }, 'pistol');
-      const copShot = g.wanted.heat - c0, copHp = o.hp;
+      const copHp = o.hp;
       for (let i = 0; i < 8 && o.state !== 'dead'; i++) W.debugShot({ x: ot.x - 5, y: ot.y, z: ot.z }, { x: 1, y: 0, z: 0 }, 'pistol');
-      const copKill = g.wanted.heat - c0 - copShot;
+      await wait(1700); const copTotal = g.wanted.heat - c0, copShot = 100, copKill = copTotal - 100; g.crimes.st.forceWitness = false;
       return { b, hd, hpAfterBody, hpAfterHead, heatShoot, killed, heatKill, fadeStart, goneAt, copShot, copHp, copDead: o.state === 'dead', copKill, hitMarkers: W.hud.state.hitMarkers };
     });
     check('body shot: body zone, 25 damage', hits.b?.zone === 'body' && hits.hpAfterBody === 75, hits);
@@ -899,6 +902,63 @@ try {
     const unit = await ev(async () => { const m = await import('/src/combat/damageConfig.js'); return { v4: m.impactDamage(4), v25: m.impactDamage(25), top: m.impactDamage(60), pole: +m.propDamage({ carDamage: 20 }, 15).toFixed(2), car25: m.impactDamage(25, m.DAMAGE.carVsCar), police: m.DAMAGE.policeContact }; });
     check('damage curve: <5 m/s nothing, 25 m/s = 10, capped at 25, car-vs-car half, pole at 15 m/s ~3, police contact 2', unit.v4 === 0 && unit.v25 === 10 && unit.top === 25 && unit.car25 === 5 && unit.pole === 3 && unit.police === 2, unit);
     check('no page errors (damage)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 5.1 step 2: crimes need witnesses
+  if (run('witness')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, C = g.crimes, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      // Isolated scene on Terrace Pde in front of Terrace Central's solid facade (z -94.3).
+      const S = { x: 540, z: -88 };
+      d.teleport(S.x - 2, S.z, 0);
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
+      const saved = g.peds.peds.map((p) => ({ p, gone: p.gone }));
+      for (const p of g.peds.peds) p.gone = true;
+      const car = g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded && !c.stolen);
+      car.body.teleport(S.x, g.world.terrain.getHeight(S.x, S.z), S.z, Math.PI / 2);
+      await wait(500);
+      const walker = g.peds.peds.find((p) => !p.home);
+      const place = (p, x, z, yaw) => { p.gone = false; p.state = 'pause'; p.timer = 99; p.flee = 0; p.cower = 0; p.startled = 0; p.hp = 100; p.pos.set(x, g.world.terrain.getHeight(x, z), z); p.yaw = yaw; };
+      const hide = (p) => { p.gone = true; };
+      const run = async (setup, mid = null) => {
+        g.wanted.clear(true); g.police.reset(); C.clear();
+        setup();
+        await wait(150);
+        const n = C.report('theft', car.position);
+        await wait(800);
+        const early = g.wanted.heat;
+        if (mid) mid();
+        await wait(1400);
+        return { witnesses: n, early, heat: g.wanted.heat, cops: g.police.cars.length };
+      };
+      const toCar = (x, z) => Math.atan2(S.x - x, S.z - z);
+      const out = {};
+      out.a = await run(() => {});
+      out.aW = d.getWitnesses({ x: S.x, y: car.position.y, z: S.z });
+      out.b = await run(() => place(walker, S.x + 13, S.z, toCar(S.x + 13, S.z)));
+      out.c = await run(() => place(walker, S.x, -100, toCar(S.x, -100)));
+      out.d = await run(() => place(walker, S.x + 13, S.z, toCar(S.x + 13, S.z) + Math.PI));
+      out.e = await run(() => place(walker, S.x, S.z + 3, toCar(S.x, S.z + 3) + Math.PI));
+      const cancelled0 = C.st.cancelled;
+      out.f = await run(() => place(walker, S.x + 13, S.z, toCar(S.x + 13, S.z)), () => { walker.state = 'dead'; walker.downT = 0; });
+      out.fCancelled = C.st.cancelled - cancelled0;
+      hide(walker); walker.state = 'pause';
+      const cop = g.peds.peds.find((p) => p.role === 'cop');
+      out.g = await run(() => place(cop, S.x + 50, S.z + 1, toCar(S.x + 50, S.z + 1)));
+      hide(cop);
+      for (const s of saved) s.p.gone = s.gone;
+      g.wanted.clear(true); g.police.reset();
+      return out;
+    });
+    check('(a) nobody around: no heat, no cops', r.a.witnesses === 0 && r.a.heat === 0 && r.a.cops === 0 && r.aW.length === 0, { a: r.a, w: r.aW });
+    check('(b) NPC 15 m away, facing, clear view: heat after ~1.5 s (not before)', r.b.witnesses >= 1 && r.b.early === 0 && r.b.heat === 25, r.b);
+    check('(c) NPC behind a wall: nothing', r.c.witnesses === 0 && r.c.heat === 0, r.c);
+    check('(d) NPC 15 m away facing away: nothing', r.d.witnesses === 0 && r.d.heat === 0, r.d);
+    check('(e) NPC 3 m away facing away: counts', r.e.witnesses >= 1 && r.e.heat === 25, r.e);
+    check('(f) witness killed during the delay: report cancelled', r.f.witnesses >= 1 && r.f.heat === 0 && r.fCancelled === 1, { f: r.f, cancelled: r.fCancelled });
+    check('(g) cop 50 m away with line of sight: counts', r.g.witnesses >= 1 && r.g.heat === 25, r.g);
+    check('no page errors (witness)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

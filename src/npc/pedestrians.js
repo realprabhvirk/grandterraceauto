@@ -207,6 +207,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
         continue;
       }
       if (ped.cower > 0) { ped.cower -= dt; finishPed(ped, dt, dist, 0, 'cower'); continue; }
+      if (ped.startled > 0) { ped.startled -= dt; finishPed(ped, dt, dist, 0, 'startled'); continue; } // just saw a crime
       // --- Knocked down by a car: tumble, lie still, stand back up after ~4 s ---------------
       if (ped.state !== 'down') {
         for (const c of cars) {

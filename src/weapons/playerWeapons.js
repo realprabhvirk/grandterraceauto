@@ -67,7 +67,8 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
     return out.copy(d).addScaledVector(xAx, Math.cos(u) * r).addScaledVector(yAx, Math.sin(u) * r).normalize();
   }
 
-  function heat(kind, amount) { wanted.add(kind, amount); }
+  /** Every crime goes through the witness system (crimeWitness.js). */
+  function heat(kind, victim = null) { world.crimes?.report(kind, player.position, victim ? { victim } : {}); }
 
   /** Apply one hit. Returns true if a person was hit. */
   function applyHit(W, h) {
@@ -79,11 +80,13 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
       let killed;
       if (h.kind === 'ped') {
         killed = peds.shoot(h.ref, dmg, player.position);
-        if (!st.shot.has(h.ref)) { st.shot.add(h.ref); heat('shootCiv'); }
+        const p = h.ref;
+        if (!st.shot.has(p)) { st.shot.add(p); heat('shootCiv', killed ? null : { ref: p, alive: () => p.state !== 'dead' && p.state !== 'down' }); }
         if (killed) heat('killCiv');
       } else {
         killed = police.foot.damage(h.ref, dmg);
-        if (!st.shot.has(h.ref)) { st.shot.add(h.ref); heat('shootCop'); }
+        const o = h.ref;
+        if (!st.shot.has(o)) { st.shot.add(o); heat('shootCop', killed ? null : { ref: o, alive: () => o.state !== 'dead' }); }
         if (killed) heat('killCop');
       }
       st.hits++;
@@ -93,7 +96,7 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
     if (h.kind === 'car') {
       damageCar(h.ref, W.dmg * CAR_DMG);
       fx.impact(h.point, h.normal, 'car');
-      if (h.police && st.t - st.copCarHeatT > 3) { st.copCarHeatT = st.t; heat('policeDamage'); }
+      if (h.police && st.t - st.copCarHeatT > 3) { st.copCarHeatT = st.t; const pc = h.ref; heat('policeDamage', { ref: pc, alive: () => !pc.dead }); }
       return false;
     }
     if (h.kind === 'prop') {
@@ -141,7 +144,7 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
     if (W.id !== 'shotgun') ejectCasing(W);
     // Everybody within 40 m reacts; witnessed gunfire is a crime (capped per burst).
     peds.alarm?.(player.position, 40);
-    if (st.t - st.lastHeatT > 2.5 && st.shotsFiredHeat < 40 && theft.witnessed(player.position)) { st.lastHeatT = st.t; st.shotsFiredHeat += 10; heat('shotsFired'); }
+    if (st.t - st.lastHeatT > 2.5 && st.shotsFiredHeat < 40 && world.crimes?.isWitnessed(player.position)) { st.lastHeatT = st.t; st.shotsFiredHeat += 10; heat('shotsFired'); }
   }
 
   function ejectCasing(W) {

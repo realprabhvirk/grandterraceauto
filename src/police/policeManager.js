@@ -184,6 +184,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
     if (stolen) vehicles.impound(stolen);
     wallet.add(-500);
     wanted.clear(true);
+    world.crimes?.clear();
     hud.fade(false);
     if (!cutscene) hud.message('BUSTED  -$500', 3, '#7fb0ff');
     reset();
@@ -218,7 +219,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       audio.crash?.(0.35);
       // Ramming a cop is a crime; being nudged by one isn't.
       const pSpeed = Math.hypot(pv.x, pv.z);
-      if (pSpeed > 6 && (pv.x * -hit.nx + pv.z * -hit.nz) > 4) { damageCar(c, 6); wanted.add('ramCop'); }
+      if (pSpeed > 6 && (pv.x * -hit.nx + pv.z * -hit.nz) > 4) { damageCar(c, 6); world.crimes?.report('ramCop', c.pos, { victim: { ref: c, alive: () => !c.dead } }); }
     }
     if (touching) st.contactTime += dt;
   }

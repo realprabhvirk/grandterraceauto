@@ -216,6 +216,8 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       for (let s = 0; s <= len; s += 4) out.push({ x: ax + dx * s + dz * lane, z: az + dz * s - dx * lane });
       return out;
     },
+    /** Who would witness a crime at pos right now: [{ kind, cop, dist }]. */
+    getWitnesses(pos) { return window.__gta.crimes.getWitnesses(pos).map((w) => ({ kind: w.kind, cop: w.cop, dist: w.dist })); },
     /** Put a patrol car (chase mode, stopped) at a world point facing yaw. */
     placeCop(x, z, yaw = 0) {
       const g = window.__gta;

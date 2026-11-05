@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 10:03)**
-- Done: Phase 5 + 5.1 step 1 (car damage retune, src/combat/damageConfig.js)
-- Broken: none known
-- Next: 5.1 step 2: crimes only count if witnessed
+**STATUS (2026-11-05 10:10)**
+- Done: Phase 5 + 5.1 steps 1-2 (car damage, crimes need witnesses)
+- Broken: phase4 police 'spawn and pursue' fails: the old escape rule flashes at once when no cop exists yet (fixed by step 3)
+- Next: 5.1 step 3: wanted timing
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -320,3 +320,4 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 ## PHASE 5.1 LOG
 - 10:03 Step 0: suites re-run in sections; one red (cabin ute: the driver's own neck sat under the eye) fixed by hiding the driver in the cabin cam. The last baseline section run was interrupted by the user; those sections passed earlier.
 - 10:03 Step 1: car damage = 10 at 25 m/s head-on, speed^2, <5 m/s ignored, 25 cap, one event per collision (0.12 s peak window + 0.5 s cooldown), car-vs-car half on relative speed, police contact 2, props retuned (pole 15 m/s = 3). phase5test damage 5/5 (head-on 11.1, scrape 1.4, 1 event).
+- 10:10 Step 2: src/police/crimeWitness.js - every crime goes through report() (theft, carjack, ped hits, props, gunfire, shooting people, cop damage, footpath scares); 30 m civ / 60 m cop, LOS from the head, 140 deg cone (waived inside 5 m), 1.5 s startled delay, cancelled if all witnesses go down. debug.getWitnesses(). phase5test witness 8/8, guns 28/28. Found: the Phase 5 escape rule starts flashing instantly when no cop has spawned yet -> fixed in step 3.

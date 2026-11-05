@@ -198,7 +198,7 @@ try {
     });
     await wait(700);
     const pre = await ev(() => window.__gta.debug.state());
-    await ev(async () => { const I = window.__gta.controls.input; I.setVirtual('KeyF', true); await new Promise((r) => setTimeout(r, 1500)); I.setVirtual('KeyF', false); });
+    await ev(async () => { window.__gta.crimes.st.forceWitness = true; const I = window.__gta.controls.input; I.setVirtual('KeyF', true); await new Promise((r) => setTimeout(r, 1500)); I.setVirtual('KeyF', false); });
     await wait(1400);
     let s = await ev(() => window.__gta.debug.state());
     check('hold F breaks into a parked car', s.mode === 'drive' && s.stolen, { prompt: pre.prompt, mode: s.mode, stolen: s.stolen });

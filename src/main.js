@@ -29,6 +29,7 @@ import { createSpawnPoints } from './world/spawnPoints.js';
 import { createWanted } from './police/wanted.js';
 import { createPolice } from './police/policeManager.js';
 import { createTheft } from './police/theft.js';
+import { createCrimeWitness } from './police/crimeWitness.js';
 import { createMinimap } from './ui/minimap.js';
 import { createCyclists } from './npc/cyclists.js';
 import { createViewmodel } from './weapons/viewmodel.js';
@@ -124,8 +125,10 @@ world.wanted = wanted;
 const police = createPolice({ scene, physics, world, traffic, vehicles, controls, audio, wanted, hud: statusHud, wallet, spawns, camera, cutscene });
 world.police = police;
 // Knocked out: wanted level and every cop reset too.
-combat.on('respawn', () => { wanted.clear(true); police.reset(); });
-const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world });
+combat.on('respawn', () => { wanted.clear(true); world.crimes?.clear(); police.reset(); });
+const crimes = createCrimeWitness({ physics, world, peds, police, traffic, wanted });
+world.crimes = crimes;
+const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world, crimes });
 world.cutscene = cutscene; world.lighting = lighting;
 
 // --- Minimap (Tab) ---------------------------------------------------------------------------
@@ -169,7 +172,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, gunShop, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, gunShop, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -185,6 +188,7 @@ renderer.setAnimationLoop(() => {
   cutscene.update(rdt);
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: [...police.movers(), ...cyclists.movers()] });
   { const ac = controls.mode === 'drive' ? controls.car : null; world.playerSiren = !!ac?.emergency?.on; for (const c of vehicles.cars) c.emergency?.update(dt); }
+  crimes.update(dt);
   police.update(dt);
   copGuns.update(dt);
   theft.update(dt, world.terrain);

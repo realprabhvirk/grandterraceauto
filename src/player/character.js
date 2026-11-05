@@ -251,6 +251,11 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
         p.lsx = p.rsx = -0.9 - hop * 1.8; p.lsz = -0.22; p.rsz = 0.22; p.lex = p.rex = -0.05;
         return p;
       }
+      case 'startled': {
+        // Witness reaction: lean back, hands up by the chest.
+        p.torsoX = -0.15; p.headX = -0.12; p.lsx = p.rsx = -1.1; p.lsz = 0.35; p.rsz = -0.35; p.lex = p.rex = -1.6;
+        return p;
+      }
       case 'cuffed': {
         // Busted: hands cuffed behind the back, head down.
         p.lsx = p.rsx = 0.42; p.lsz = -0.12; p.rsz = 0.12; p.lex = p.rex = -1.0;
