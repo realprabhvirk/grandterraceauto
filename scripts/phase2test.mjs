@@ -14,7 +14,7 @@ const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto('http://127.0.0.1:5173/?cam=player', { waitUntil: 'load' });
+await page.goto(new URL('?cam=player', process.env.GTA_URL || 'http://127.0.0.1:5173/').href, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__gta?.ready, null, { timeout: 90000 });
 await page.waitForTimeout(800);
 

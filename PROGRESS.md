@@ -9,6 +9,11 @@
 
 Timestamped log of the autonomous Phase 1 build.
 
+## CODEX LOG
+
+- 2026-11-05 22:31 IST: Created codex-work from e074296; untouched audio snapshot e1b9553, verbatim instruction files 1ba99c3, task 000 plan 7847396; all pushed. Unauthenticated GitHub API returned 404 after retry outside sandbox, so source audio was allowed in Git. No uncommitted game code existed.
+- Task 000 sub-task 1: isolated Vite server on 5180 with node_modules/.vite-codex cache (hidden launcher PID 24296); owner's ports untouched. Vite and Edge launches required sandbox escalation after spawn EPERM. Added GTA_URL override to walktest/phase2test/drivetest/phantomtest, preserving default 5173. With GTA_URL=http://127.0.0.1:5180/ and SHOTS unset, `.\dev.cmd node scripts/walktest.mjs` passed all 7 checks, exit 0 (codex-walktest.log). No screenshots or build. Next: remaining baseline tests singly and leftover evidence.
+
 ## 2026-11-04
 
 > Correction: Phase 1 entries after 18:53 originally carried estimated clock times that were wrong (the real clock read 19:43 when Phase 2 started). They're now marked ~ = order only.

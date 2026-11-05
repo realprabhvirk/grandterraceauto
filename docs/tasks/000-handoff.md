@@ -34,4 +34,4 @@ No source changes were uncommitted at handoff. Snapshot was made before creating
 
 ## Findings and results
 
-Pending sub-tasks 1-3. Full command output will be kept in ignored local *.log files; committed summaries will record failures as well as successes.
+Sub-task 1 complete: isolated Vite 8.3.5 server ready on 5180 (launcher PID 24296), separate cache. Initial Vite and Edge launches failed with sandbox spawn EPERM; retried successfully with approval. GTA_URL override added to the four baseline tests, defaults unchanged. With GTA_URL=http://127.0.0.1:5180/ and SHOTS unset, `.\dev.cmd node scripts/walktest.mjs` passed 7/7, exit 0 (codex-walktest.log). No game source changed. Sub-tasks 2-3 pending. Full command output is kept in ignored local *.log files; committed summaries record failures as well as successes.

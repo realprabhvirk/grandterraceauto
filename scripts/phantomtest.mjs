@@ -16,7 +16,7 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}  ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`); };
 const ev = (fn, arg) => page.evaluate(fn, arg);
 try {
-  await page.goto('http://127.0.0.1:5173/?cam=player', { waitUntil: 'load' });
+  await page.goto(new URL('?cam=player', process.env.GTA_URL || 'http://127.0.0.1:5173/').href, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__gta?.ready, null, { timeout: 90000 });
   await page.waitForTimeout(800);
   // Shared helpers in the page.
