@@ -35,6 +35,18 @@ inspired by Woodlands Estate, Waterford QLD, built around the hero house
   (stop lines + zebra crossings), **City Hall clock tower** (real time), **Terrace Stadium**, a **TV tower** on the
   southern hill, billboards, ~86 people with new activities (bus-stop waiters, street dancers, stadium fans...),
   a **2-bus loop** with stops, **taxis** and **delivery vans**, crowd murmur and glowing signs at dusk.
+- **Phase 6.1:** **speeding is now a pull-over pursuit, then a $200 fine.** A radar cop or cruising patrol car that
+  spots you (over limit + 10, within 60 m, line of sight, its front arc) lights up and follows you ~9 m behind (never
+  faster than 0.95x your speed, never rams). HUD: flashing **PULL OVER**. Stop and the officer walks to your window
+  ("Issuing fine...", 3 s) → -$200; drive off and the chase resumes; lose them (8 s out of sight or > 150 m) and it's
+  over, no fine, no stars (EVADE_STARS = 0). Becoming wanted cancels it. **Speed cameras are disabled**
+  (`SPEEDING.CAMERAS_ENABLED = false` in src/police/speedingConfig.js - flip it to bring them back).
+  **Terrace Airport** north of Northgate (Airport Rd / Terminal Dr / Airport Link, 60 km/h): 1 km runway with
+  lights, taxiway, apron + 4 gates, terminal, car park, control tower, hangars, fuel tanks, fence, windsock, apron
+  vehicles, ground crew - and **autonomous aircraft** (prop plane, regional jet, airliner) that push back, taxi, hold,
+  take off, land from the east, go around if you block the runway, and park at the gates. Planes **can't be boarded
+  yet (future feature)**; they're solid only on the ground. Phantom-crash notes for discussion:
+  [docs/PHANTOM_CRASHES.md](docs/PHANTOM_CRASHES.md) (fix deferred on purpose).
 
 Three.js r187 + Rapier 0.21 (WASM physics) + Vite 8, vanilla JS modules.
 
@@ -121,8 +133,9 @@ add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay
 .\dev.cmd node scripts/shot.mjs          # screenshots of every preset into shots/, fails on console errors
 .\dev.cmd node scripts/vehicle-sim.mjs   # headless car tuning bench (0-100, top speed, braking, roll, crest jumps)
 .\dev.cmd node scripts/phase4test.mjs    # Phase 4 (sections: garage cameras combat police minimap town npcs) - numeric asserts, no screenshots
-.\dev.cmd node scripts/phase5test.mjs    # Phase 5-6 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage witness map pois copstars speeding mapnav signs highway enforce shops city life vibe6)
+.\dev.cmd node scripts/phase5test.mjs    # Phase 5-6 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage witness map pois copstars speeding mapnav signs highway pullover shops city life vibe6 airport)
 .\dev.cmd node scripts/shots6.mjs        # Phase 6: the 3 screenshots in shots/phase6/ (aerial, street level, full map)
+.\dev.cmd node scripts/shots61.mjs       # Phase 6.1: the 2 airport screenshots in shots/phase6_1/
 .\dev.cmd node scripts/phantomtest.mjs   # 5.2: full-throttle runs on every route (no phantom damage), ghost-collider scan, top speed, real-crash regression
 .\dev.cmd node scripts/shaketest.mjs    # 5.3: camera jitter in every camera mode (walk/run/jump/POV/drive), shake only on real crashes
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
@@ -188,7 +201,7 @@ gums). Colours live in `PALETTE.hero` in `src/art/palette.js`.
 
 ## Performance
 
-Phase 5: 72-168 draw calls in the new districts (budget 500), 450-750k triangles, 54-60 fps in the headless Edge test on
+Phase 6.1: 116-357 draw calls across 19 scenes incl. the airport (budget 600), 60 fps headless except the cabin cam with live mirrors (46). Phase 5: 72-168 draw calls in the new districts (budget 500), 450-750k triangles, 54-60 fps in the headless Edge test on
 this Ryzen 5 7530U (scripts/perfscenes.mjs; the cabin cam with live mirrors is the heaviest view).
 The town is split into per-block chunks hidden beyond ~260 m; shop interiors only render within ~25 m;
 pedestrians further than 120 m and cyclists further than 150 m sleep. Pixel ratio capped at 1.5, one 2048 shadow map

@@ -133,3 +133,6 @@ Candidate next steps:
 5. Log police contact damage into `damageLog` too, so all damage sources are visible.
 6. Replace the bridge deck boxes with sloped/ramped colliders or tag them as ground.
 7. Add a "phantom replay" recorder: the last 3 s of car state for each damage event.
+
+## Observations logged after this note was written (no code changed)
+- 2026-11-05, Phase 6.1 wrap-up suite: `phase5test highway` westbound full-throttle run logged **1 damage event** (health 100 -> 93.8, max tilt 27.5) where earlier runs were clean. The test output doesn't print the event's tag/normal, so the cause is **unverified** - a candidate for `__gta.debug.damageEvents()` capture next time (bridge deck ends / barrier? see H1/H2).

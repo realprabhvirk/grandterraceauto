@@ -1,4 +1,4 @@
-# Streets of Grand Terrace
+# Streets of Grand Terrace (36 streets)
 
 Every road has one unique name (`road.street`), used by the maps, the street signs, the HUD chip and routes. Speed limits in km/h (src/world/speedLimits.js; downtown streets and Terrace Pde east of Bridge St are 40).
 
@@ -70,3 +70,13 @@ Every road has one unique name (`road.street`), used by the maps, the street sig
 | Motorway West Ramp | 80 | ramp |
 | Motorway East Ramp | 80 | ramp |
 
+
+## Terrace Airport (Phase 6.1)
+
+| Street | Limit | Type |
+| --- | --- | --- |
+| Airport Rd | 60 | airport |
+| Terminal Dr | 60 | airport |
+| Airport Link | 60 | airport |
+
+Airport Rd runs north from the top of Waratah St (Northgate) to the terminal; Terminal Dr passes the terminal drop-off and the car park; Airport Link returns to the top of Jacaranda St. From the motorway, take the west end (gantry: "AIRPORT  NORTHGATE  WARATAH ST >"). The runway, taxiway and apron are not streets (no lanes, no limit) - you can drive onto them.

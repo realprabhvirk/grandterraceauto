@@ -42,6 +42,8 @@ try {
     d.teleport(800, 60, Math.PI); out.push(await measure('beach promenade (water, gulls)'));
     d.teleport(470, -300, 0); out.push(await measure('Northgate (houses, school, plaza)'));
     d.teleport(835, -300, 0); out.push(await measure('industrial estate'));
+    d.teleport(520, -545, Math.PI); out.push(await measure('airport terminal (aircraft, apron vehicles)'));
+    d.teleport(900, -660, -Math.PI / 2); out.push(await measure('airport airside (runway, lights)'));
     d.teleport(470, -92, Math.PI);
     g.weapons.arsenal.give('smg', 200); g.weapons.arsenal.select('smg');
     g.controls.input.setVirtual('Mouse0', true);

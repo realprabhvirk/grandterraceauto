@@ -816,7 +816,7 @@ try {
       // From the ring road up Northgate Rd to the top of the estate.
       const res = await d.drivePoints(d.lanePoints(420, -222, 420, -462), { speed: 16, timeout: 45 });
       await wait(1500);
-      const inN = (x, z) => z < -250 && z > -485 && x > 325 && x < 640;
+      const inN = (x, z) => z < -250 && z > -560 && x > 325 && x < 640; // Phase 6.1: incl. the airport roads on Northgate's loop
       return { res, traffic: g.traffic.cars.filter((t) => inN(t.pos.x, t.pos.z)).length, peds: g.peds.peds.filter((p) => inN(p.pos.x, p.pos.z) && p.ch.root.visible).length };
     });
     check('northgate drive: Northgate Rd end to end, no NaN, no flips', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 200, drv.res);
@@ -1460,7 +1460,7 @@ try {
   }
   // ------------------------------------------------------------ 6.6b: traffic lights + landmarks
   if (run('city')) {
-    await load();
+    await load(true); // needs the full traffic set (other sections remove cars)
     await fresh();
     const r = await ev(async () => {
       const g = window.__gta, L = g.traffic.lights, wait = (ms) => new Promise((q) => setTimeout(q, ms));
@@ -1518,7 +1518,7 @@ try {
   }
   // ------------------------------------------------------------ 6.6c: NPC activities + buses / taxis / vans
   if (run('life')) {
-    await load();
+    await load(true); // needs the full traffic set (other sections remove cars)
     await fresh();
     const r = await ev(async () => {
       const g = window.__gta, S = g.traffic.service, wait = (ms) => new Promise((q) => setTimeout(q, ms));
@@ -1573,7 +1573,7 @@ try {
   }
   // ------------------------------------------------------------ 6.1 step 3: airport + autonomous aircraft
   if (run('airport')) {
-    await load();
+    await load(true); // needs the full traffic set (other sections remove cars)
     await fresh();
     const r = await ev(async () => {
       const g = window.__gta, d = g.debug, A = g.airport, wait = (ms) => new Promise((q) => setTimeout(q, ms));

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 19:06)**
-- Done: Phase 6.1 steps 0-3 (baseline, phantom notes, pull-over pursuit, airport)
-- Broken: highway autopilot spin (logged); phantom crashes deferred (doc); life bus-stop check flaky in batch
-- Next: 6.1 step 4 wrap-up
+**STATUS (2026-11-05 19:35)**
+- Done: Phase 6.1 complete (phantom notes, pull-over pursuit, airport, wrap-up)
+- Broken: highway autopilot runs (incl. 1 westbound damage event, see phantom notes); bus-stop + district traffic snapshot checks flaky in batch; shaketest third-person run marginal
+- Next: discuss docs/PHANTOM_CRASHES.md; boarding planes; curved motorway ramps
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -426,3 +426,32 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - Ops (airportOps.js): seeded continuous state machine - parked → pushback → taxiOut → hold → lineup → takeoff → airborne → gone; final (3° glide slope from the east) → flare/touchdown chirp → rollout → taxiIn → parked; go-around if the runway is blocked at 300 m final; departures hold while the runway is busy and get priority over new arrivals; taxiway one-way eastbound; gates booked at arrival spawn; ≤ 4 moving; first pushback at 6 s, first arrival on final at 8 s. Kinematic colliders on the ground only. 2 cruise flyovers, 2 tugs with carts, a fuel truck, an apron shuttle bus. Synth audio: jet roar + prop buzz with spool and distance attenuation, touchdown chirp, via master volume.
 - Test `airport` 11/11 (420 s sim: 4 departures airborne + 3 arrivals parked, 0 NaN, 0 stuck, 0 double-booked; player on runway → hold + go-arounds, cleared → departures resume; taxiing plane brakes for a walker; drive Airport Rd → Terminal Dr → Airport Link with 0 damage events; 109 draw calls / 60 fps at the terminal). Ghost scan 0 (7737 samples). Screenshots: shots/phase6_1/1-airport-aerial.png, shots/phase6_1/2-takeoff.png (one fix round: airport chunks kept visible to ~600 m; tower chunk bounds fixed, verified numerically).
 - Logged after 2 attempts: `life` "buses pull up at stops" fails in batch runs (one bus dwelling 35 s, or queued behind traffic at the x 520 light); passes alone.
+
+### 2026-11-05 19:35 — Step 4: wrap-up
+- Full suite once (foreground, one browser at a time): weaponsUnit 26/26, phase2 16/16, walk pass, drive all routes, phase4 51/51 (the old cop knock-down passes now), phantomtest 19/19, shaketest 20/21 (third-person run RMS 0.0193 vs 0.018 - marginal, passed at baseline), phase5test: all sections pass except the known highway autopilot runs (eastbound spin, east ramp roll) and **westbound now logged 1 damage event** (noted in docs/PHANTOM_CRASHES.md, not touched); downtown/northgate traffic snapshot counts failed once in batch (Northgate count now includes the airport roads on its loop; both pass on rerun); city/life/airport now force a page reload (the pullover section removes all traffic).
+- Perf (perfscenes, headless Edge 960x540, fps / draw calls): suburb 60/146, inside 62 60/136, chase cam 60/276, cabin + mirrors **46**/357, Terrace Pde drive 60/258, town on foot 60/191, Terrace Central 60/213, Quick Stop 60/153, Wattle Park 60/343, town dusk 60/192, City Plaza 60/124, downtown night 60/131, beach 60/208, Northgate 60/253, industrial 60/148, **airport terminal 60/116, airport airside 60/253**, SMG 3rd 60/240, SMG 1st 60/251.
+- README (pull-over pursuit, cameras flag, airport - no boarding yet, phantom notes pointer, perf), docs/STREETS.md (airport roads), `npm run build` OK (5.37 MB).
+
+## PHASE 6.1 SUMMARY (2026-11-05 19:35)
+**Works**
+- docs/PHANTOM_CRASHES.md - paste-ready notes (summary, history, 5.2 fix, coverage gaps, pipeline, debug tools, untested hypotheses, what to record). No collision/damage/physics code changed.
+- Speeding = pull-over pursuit → stop → officer at the window → -$200; outrun / lose them → no fine; wanted cancels; siren / wanted / on foot never trigger; cameras off by flag (signs + icons gone).
+- Terrace Airport with roads (60 km/h), terminal, car park, tower, hangars, tanks, fence, lights, windsock, apron vehicles, crew; continuous autonomous departures / arrivals with holds, go-arounds, braking for you, gate booking; engine audio; flyovers.
+
+**Rough**
+- The pursuit cop drives off-lane (follows your path, no wall avoidance beyond that) and pops back to its post after leaving; pushback has no visible tug; apron vehicles have no colliders.
+- Planes fly straight in/out over the map edge; cabin cam + mirrors dropped to 46 fps.
+- Known test reds: highway autopilot runs (incl. one westbound damage event - phantom notes), bus-stop dwell + district traffic snapshots flaky in batch, shaketest third-person run marginal.
+
+**BY-HAND CHECKLIST**
+1. Drive past the radar cop on Terrace Motorway (or The Esplanade) at ~30 km/h over: PULL OVER flashes, siren, a cop follows ~9 m behind. Pull over and stop: the officer walks to your window, 3 s bar, -$200, the cop leaves. Stars stay 0.
+2. Get spotted again later and floor it: you should slowly pull away; break line of sight (corner / buildings) for 8 s or get > 150 m: "You lost the police", no fine.
+3. During "Issuing fine..." drive off: the pursuit resumes, no fine.
+4. Airport by day: take the motorway's west end → Waratah St → Airport Rd. Watch a pushback → taxi → takeoff, and an arrival landing from the east (first one lands within ~40 s of starting).
+5. Park on the runway: departures wait at the hold point, the next arrival goes around. Stand in front of a taxiing plane: it stops.
+6. Airport at night (N): runway / taxiway / approach-strobe lights, beacons and strobes on the planes.
+7. Full map: "Airport" icon + legend, street names Airport Rd / Terminal Dr / Airport Link.
+
+**Next steps**
+- Discuss docs/PHANTOM_CRASHES.md, then fix the phantom crashes (re-enable a real highway/bridge route in phantomtest first).
+- Boarding / flying planes; curved slip roads for the motorway ramps; a visible pushback tug; pursuit cop wall avoidance.
