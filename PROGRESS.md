@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 06:58)**
-- Done: PHASE 5 steps 1-7: fixes a-k, guns, armed cops, gun shop, Downtown + Beach + Northgate + Industrial, vibe pass, README/summary
-- Broken: unverified: final full-suite run + npm run build were stopped (PC low on memory); cabin-ute ray check failed once (probably the car's spawn spot); highway skipped
-- Next: Re-run the suites + build (see Test status in the Phase 5 summary), then Phase 6
+**STATUS (2026-11-05 10:03)**
+- Done: Phase 5 + 5.1 step 1 (car damage retune, src/combat/damageConfig.js)
+- Broken: none known
+- Next: 5.1 step 2: crimes only count if witnessed
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -316,3 +316,7 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - Multiplayer (deferred again).
 
 - 06:58 Step 7: README updated (controls, tests, folders, performance). The full suite + dev server were stopped by Claude Code because the PC was low on memory; not restarted, and npm run build not run. Fixed 2 test thresholds, added beach sand colouring. Phase 5 summary + BY-HAND VISUAL CHECKLIST below.
+
+## PHASE 5.1 LOG
+- 10:03 Step 0: suites re-run in sections; one red (cabin ute: the driver's own neck sat under the eye) fixed by hiding the driver in the cabin cam. The last baseline section run was interrupted by the user; those sections passed earlier.
+- 10:03 Step 1: car damage = 10 at 25 m/s head-on, speed^2, <5 m/s ignored, 25 cap, one event per collision (0.12 s peak window + 0.5 s cooldown), car-vs-car half on relative speed, police contact 2, props retuned (pole 15 m/s = 3). phase5test damage 5/5 (head-on 11.1, scrape 1.4, 1 event).

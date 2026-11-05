@@ -17,6 +17,7 @@ import { createCopsOnFoot } from './copsOnFoot.js';
 import { sampleLane } from '../traffic/laneGraph.js';
 import { groups, GROUP } from '../physics/physicsWorld.js';
 import { damageCar } from '../combat/carDamage.js';
+import { DAMAGE } from '../combat/damageConfig.js';
 import { carLocalToWorld } from '../vehicles/exitSpot.js';
 import { box } from '../utils/geom.js';
 import { MAT } from '../art/materials.js';
@@ -211,7 +212,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       const dv = Math.max(0.8, Math.min(CHASE.contactDv, 0.8 + Math.max(0, rel) * 0.5));
       const m = car.body.body.mass();
       car.body.body.applyImpulse({ x: hit.nx * m * dv, y: 0, z: hit.nz * m * dv }, true);
-      damageCar(car, 2 + Math.abs(rel) * 1.2);
+      damageCar(car, DAMAGE.policeContact);
       car.body.impact = Math.max(car.body.impact || 0, 0.5);
       controls.chase.shake?.(0.6);
       audio.crash?.(0.35);

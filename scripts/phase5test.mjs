@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -870,6 +870,35 @@ try {
     check('optional automatic day/night cycle reaches night', r.cycDusk > 0.95, { dusk: r.cycDusk });
     check('still exactly ONE shadow-casting light', r.lights === 1, { lights: r.lights });
     check('no page errors (vibe)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 5.1 step 1: car damage
+  if (run('damage')) {
+    await load();
+    await fresh();
+    const crash = (speed, angle = 0) => ev(async ({ speed, angle }) => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen && c.type === 'sedan')); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      for (const t of [...g.traffic.cars]) if (Math.hypot(t.pos.x - 553, t.pos.z + 80) < 30) g.traffic.removeCar(t);
+      // Terrace Central's solid facade is at z = -94.3; start 12 m south of it facing north.
+      const yaw = Math.PI + angle;
+      c.body.teleport(553, g.world.terrain.getHeight(553, -82), -82, yaw);
+      await wait(400);
+      const e0 = c.crash?.events || 0, h0 = c.health;
+      const v = { x: Math.sin(yaw) * speed, y: 0, z: Math.cos(yaw) * speed };
+      c.body.body.setLinvel(v, true); c.body.lastVel = { ...v }; // no fake 'impact' from the teleport kick
+      await wait(2000);
+      return { loss: +(h0 - c.health).toFixed(2), events: (c.crash?.events || 0) - e0, last: +(c.crash?.last || 0).toFixed(2) };
+    }, { speed, angle });
+    const head = await crash(25);
+    check('head-on at 25 m/s into a wall costs 8-12 health', head.loss >= 8 && head.loss <= 12, head);
+    check('one crash = one damage event', head.events === 1, head);
+    const slow = await crash(10, 0.5);
+    check('10 m/s scrape costs under 2', slow.loss < 2, slow);
+    const unit = await ev(async () => { const m = await import('/src/combat/damageConfig.js'); return { v4: m.impactDamage(4), v25: m.impactDamage(25), top: m.impactDamage(60), pole: +m.propDamage({ carDamage: 20 }, 15).toFixed(2), car25: m.impactDamage(25, m.DAMAGE.carVsCar), police: m.DAMAGE.policeContact }; });
+    check('damage curve: <5 m/s nothing, 25 m/s = 10, capped at 25, car-vs-car half, pole at 15 m/s ~3, police contact 2', unit.v4 === 0 && unit.v25 === 10 && unit.top === 25 && unit.car25 === 5 && unit.pole === 3 && unit.police === 2, unit);
+    check('no page errors (damage)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

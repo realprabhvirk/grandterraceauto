@@ -3,6 +3,7 @@
 // knocked down by cars. Emits events (pedHit, propBroken, policeDamaged) for the wanted system.
 import * as THREE from 'three';
 import { damageCar, repairCar, updateCarDamage, BURN_TIME } from './carDamage.js';
+import { DAMAGE, impactDamage, propDamage } from './damageConfig.js';
 
 const REGEN_DELAY = 20, REGEN_RATE = 0.5;
 
@@ -84,21 +85,43 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
       }
 
       // --- Car impacts: every Rapier car (player, parked) -----------------------------------
+      // One damage event per collision: open a short window at the first hard impact, take
+      // the peak impact speed over it, apply once, then a cooldown (see damageConfig.js).
       for (const c of vehicles.cars) {
         const dv = c.body.impactDv || 0;
         c.body.impactDv = 0;
-        if (dv > 3) {
-          damageCar(c, (dv - 3) * 4.5);
-          if (c === active) {
-            audio.crash(Math.min(1, (dv - 3) / 10));
-            if (dv > 8) damagePlayer((dv - 8) * 6 * (controls.cameraMode === 'cabin' ? 0.85 : 1), 'crash');
-            // Kinematic cars we hit take the same damage.
-            const p = c.position;
-            for (const t of [...traffic.cars, ...(world.police ? world.police.cars : [])]) {
-              if (Math.hypot(t.pos.x - p.x, t.pos.z - p.z) < 6) { damageCar(t, (dv - 3) * 4.5); if (t.isPolice) emit('policeDamaged', { car: t }); }
-            }
+        const k = c.crash || (c.crash = { open: false, t: 0, peak: 0, cd: 0, events: 0, last: 0, other: null, rel: 0, prev: { x: 0, y: 0, z: 0 } });
+        k.cd -= dt;
+        if (k.cd > 0 && dv >= DAMAGE.minSpeed * 0.5) k.cd = DAMAGE.cooldown; // still grinding along: same collision
+        if (!k.open && k.cd <= 0 && dv >= DAMAGE.minSpeed) {
+          k.open = true; k.t = 0; k.peak = 0;
+          // Another car right here? Then it's car-vs-car: relative speed, half damage.
+          const p = c.position;
+          k.other = null; let bd = DAMAGE.carNear;
+          for (const o of allCars()) {
+            if (o === c || o.impounded) continue;
+            const q = o.position || o.pos, d = Math.hypot(q.x - p.x, q.z - p.z);
+            if (d < bd) { bd = d; k.other = o; }
+          }
+          if (k.other) {
+            const o = k.other, ov = o.body?.body ? o.body.body.linvel() : { x: o.fwd.x * o.v, y: 0, z: o.fwd.z * o.v };
+            k.rel = Math.hypot(k.prev.x - ov.x, k.prev.z - ov.z);
           }
         }
+        if (k.open) {
+          k.peak = Math.max(k.peak, dv);
+          k.t += dt;
+          if (k.t >= DAMAGE.window) {
+            k.open = false; k.cd = DAMAGE.cooldown; k.events++;
+            const carHit = !!k.other, speed = carHit ? Math.max(DAMAGE.minSpeed, Math.min(k.rel || k.peak, k.peak * 2)) : k.peak;
+            const dmg = impactDamage(speed, carHit ? DAMAGE.carVsCar : 1);
+            k.last = dmg;
+            damageCar(c, dmg);
+            if (carHit && !k.other.body?.body) { damageCar(k.other, dmg); if (k.other.isPolice && c === active) emit('policeDamaged', { car: k.other }); }
+            if (c === active) audio.crash(Math.min(1, (speed - 3) / 18));
+          }
+        }
+        const v = c.body.body.linvel(); k.prev.x = v.x; k.prev.y = v.y; k.prev.z = v.z;
       }
 
       // --- Breakables: the driven car (and anything else fast) ------------------------------
@@ -108,12 +131,11 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
         for (const it of broken) {
           const v = c.body.body.linvel();
           c.body.body.setLinvel({ x: v.x * 0.82, y: v.y, z: v.z * 0.82 }, true); // lose some speed ploughing through
-          damageCar(c, it.set.carDamage);
+          damageCar(c, propDamage(it.set, c.body.state.speed));
           if (it.set.sparks) particles.sparks(new THREE.Vector3(it.x, it.y + it.set.h * 0.85, it.z));
           audio.snap();
           if (c === active) {
             audio.crash(Math.min(1, it.set.carDamage / 30));
-            if (Math.abs(c.body.state.speed) > 8) damagePlayer(it.set.carDamage * 0.4 * (controls.cameraMode === 'cabin' ? 0.85 : 1), 'prop');
           }
           emit('propBroken', { item: it, byPlayer: c === active, x: it.x, z: it.z });
         }
