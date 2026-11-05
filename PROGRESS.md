@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 05:50)**
-- Done: PHASE 4 complete; Phase 5 step 1 (fixes a-k: POV viewmodel, cabin view, zoom, no HP loss in cars, burning wrecks, stars escape, police soft contact, officers + arrests, KO/BUSTED cutscenes, steal any parked car, more parked cars)
+**STATUS (2026-11-05 06:09)**
+- Done: Phase 5 steps 1-2: fixes a-k + guns (pistol/SMG/shotgun/rifle, IK hold, aim cam, viewmodel, hitscan, FX, sounds, HUD, heat, save)
 - Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
-- Next: Phase 5 step 2: guns
+- Next: Phase 5 step 3: cops with guns
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -238,3 +238,4 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 ## PHASE 5 LOG
 - 05:03 Step 0: git clean, dev server up. Baseline run got interrupted by my own edits (Vite reload), so suites were re-run after Step 1.
 - 05:50 Step 1 done (fixes a-k). New scripts/phase5test.mjs sections pov cabin zoom carhp burn stars push arrest ko steal parked: all pass (cabin: 9/9 road rays clear for all 4 car types, dash top at 79-99% of screen height; 3-star chase: nearest cop 61 m after 12 s, contact 0 s). Updated old tests for the new rules (emotes = hold G + 1-4, no player damage in cars, KO/busted cutscene timings). phase4test combat/police 12/12, phase2test 16/16, walktest pass, drivetest pass (physics).
+- 06:09 Step 2 done (guns). New src/weapons/ (weaponStats, arsenal, gunModels, ik, hitscan, gunFx, viewmodel, playerWeapons) + ui/weaponHud. scripts/weaponsUnit.mjs 26/26 (damage, zones, falloff, ammo/reload, auto/semi, pump, spread, holster, caps, save). phase5test guns 28/28 (IK: grip/foregrip within 5 mm for all 4 guns, muzzle 0.4-0.75 m ahead; kill+fade timing; heat events; FP ADS). phase2 16/16, walk pass.

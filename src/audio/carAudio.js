@@ -133,6 +133,42 @@ export function createCarAudio() {
       src.connect(bp); bp.connect(g); g.connect(master); src.start(); src.stop(t + 0.5);
       this.thud(strength);
     },
+    /**
+     * Gunshot (synth): bright noise crack + low thump + a short lowpassed tail.
+     * o = { pitch, body, tail } per weapon; vol 0..1 (distance attenuation by the caller).
+     */
+    gunshot(o, vol = 1) {
+      if (!ctx || vol < 0.01) return;
+      if (!this._gunNoise) this._gunNoise = noiseBuffer(0.6);
+      const t = ctx.currentTime, p = o.pitch || 1;
+      const src = ctx.createBufferSource(); src.buffer = this._gunNoise; src.playbackRate.value = 0.9 + p * 0.2;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400 * p; bp.Q.value = 0.7;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.55 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(t); src.stop(t + 0.12);
+      const o1 = ctx.createOscillator(); o1.type = 'sine';
+      o1.frequency.setValueAtTime(140 * p, t); o1.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+      const g1 = ctx.createGain(); g1.gain.setValueAtTime(0.6 * (o.body ?? 0.7) * vol, t); g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o1.connect(g1); g1.connect(master); o1.start(t); o1.stop(t + 0.18);
+      const tl = o.tail ?? 0.3;
+      const s2 = ctx.createBufferSource(); s2.buffer = this._gunNoise;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0.18 * tl * vol, t + 0.02); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.15 + tl);
+      s2.connect(lp); lp.connect(g2); g2.connect(master); s2.start(t + 0.02); s2.stop(t + 0.2 + tl);
+    },
+    /** Mechanical clicks: 'dry' (empty), 'mag' (reload), 'pump' (shotgun rack, two clacks). */
+    gunClick(kind = 'dry', vol = 1) {
+      if (!ctx) return;
+      if (!this._gunNoise) this._gunNoise = noiseBuffer(0.6);
+      const hits = kind === 'pump' ? [[0, 2600], [0.16, 2100]] : kind === 'mag' ? [[0, 3200]] : [[0, 4200]];
+      for (const [dt, f] of hits) {
+        const t = ctx.currentTime + dt;
+        const s = ctx.createBufferSource(); s.buffer = this._gunNoise;
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 4;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.35 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+        s.connect(bp); bp.connect(g); g.connect(master); s.start(t); s.stop(t + 0.06);
+      }
+    },
     /** Pole / sign snapping: sharp crack. */
     snap() {
       if (!ctx) return;

@@ -35,6 +35,7 @@ import { createViewmodel } from './weapons/viewmodel.js';
 import { createCutscene } from './camera/cutscene.js';
 import { addEmergencyKit } from './vehicles/emergency.js';
 import { hideProp } from './town/townKit.js';
+import { createPlayerWeapons } from './weapons/playerWeapons.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -121,6 +122,7 @@ world.police = police;
 // Knocked out: wanted level and every cop reset too.
 combat.on('respawn', () => { wanted.clear(true); police.reset(); });
 const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world });
+world.cutscene = cutscene; world.lighting = lighting;
 
 // --- Minimap (Tab) ---------------------------------------------------------------------------
 const heroLot = world.layout.hero;
@@ -140,6 +142,7 @@ controls.hooks.onPropSteal = (p) => {
 };
 
 const viewmodel = createViewmodel();
+const weapons = createPlayerWeapons({ scene, camera, controls, physics, world, peds, police, vehicles, traffic, breakables, particles, audio, wanted, combat, viewmodel, theft });
 renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -149,7 +152,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -183,7 +186,8 @@ renderer.setAnimationLoop(() => {
   if (controls.cameraMode === 'cabin') mirrors.update(renderer, scene, controls.car, dt); else mirrors.resetGuard();
   debugDraw.update(controls.focus());
   if (cutscene.active) { controls.player.character.mesh.visible = true; controls.player.character.setHeadVisible(true); }
-  viewmodel.update({ active: !cutscene.active && controls.mode === 'walk' && controls.cameraMode === 'first', dt, speed: controls.player.state.speed, look: controls.player.state.lastLook || { x: 0, y: 0 }, aim: false, dusk: lighting.dusk, aspect: camera.aspect });
+  weapons.update(dt); // guns: input, IK hold pose, hitscan, effects, viewmodel
+  controls.input.endFrame();
   renderer.info.reset();
   renderer.render(scene, camera);
   viewmodel.render(renderer);

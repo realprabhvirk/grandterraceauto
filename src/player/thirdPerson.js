@@ -77,9 +77,13 @@ export function createThirdPerson({ physics, scene, spawn }) {
   /** Where the walk camera wants to be (no side effects except the blocked-ray test). */
   function cameraPose(outPos, outTarget) {
     outTarget.copy(pos).y += state.camHeight;
-    const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    // Over-the-shoulder while aiming: target slides right + closer camera.
+    const ab = state.aim?.blend || 0;
+    if (ab > 0.001) { outTarget.x += -Math.cos(state.yaw) * 0.55 * ab; outTarget.z += Math.sin(state.yaw) * 0.55 * ab; outTarget.y += 0.08 * ab; }
+    const pitch = state.pitch - (state.recoil || 0) * 0.8;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
     desired.set(-Math.sin(state.yaw) * cp, sp, -Math.cos(state.yaw) * cp);
-    let dist = state.dist;
+    let dist = state.dist + (Math.min(state.dist, 2.3) - state.dist) * ab;
     const hit = world.castRay(new RAPIER.Ray(outTarget, desired), dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC), collider);
     if (hit) dist = Math.max(0.6, hit.timeOfImpact - 0.25);
     outPos.copy(outTarget).addScaledVector(desired, dist);
@@ -128,14 +132,19 @@ export function createThirdPerson({ physics, scene, spawn }) {
       const jump = active && state.jumpQueued;
       state.jumpQueued = false;
       if (moving || jump) state.action = null; // movement interrupts emotes
-      const run = active && !state.crouch && (input.down('ShiftLeft') || input.down('ShiftRight'));
-      const top = !moving || state.action ? 0 : state.crouch ? CROUCH : run ? RUN : WALK;
+      const aiming = state.aim?.on;
+      const run = active && !state.crouch && !aiming && (input.down('ShiftLeft') || input.down('ShiftRight'));
+      const top = (!moving || state.action ? 0 : state.crouch ? CROUCH : run ? RUN : WALK) * (aiming ? 0.55 : 1); // aiming slows you down
       // Smooth acceleration toward the target velocity.
       const tv = move.clone().multiplyScalar(top);
       state.vel.lerp(tv, Math.min(1, dt * ACCEL));
       state.speed = Math.hypot(state.vel.x, state.vel.z);
       if (state.firstPerson) {
         state.facing = state.yaw; // first person: body always faces where you look
+      } else if (state.faceCam) {
+        // Armed + aiming / firing: face where the camera looks.
+        let d = state.yaw - state.facing; d = Math.atan2(Math.sin(d), Math.cos(d));
+        state.facing += d * Math.min(1, dt * 16);
       } else if (moving) {
         const target = Math.atan2(move.x, move.z);
         let d = target - state.facing;
@@ -185,8 +194,8 @@ export function createThirdPerson({ physics, scene, spawn }) {
         state.bob += dt * state.speed * 2.2;
         character.eyeWorld(camera.position);
         camera.position.y += Math.sin(state.bob) * 0.025 * Math.min(1, state.speed / 4);
-        const cp = Math.cos(state.fpPitch);
-        camTarget.set(camera.position.x + Math.sin(state.yaw) * cp, camera.position.y - Math.sin(state.fpPitch), camera.position.z + Math.cos(state.yaw) * cp);
+        const fpP = state.fpPitch - (state.recoil || 0), cp = Math.cos(fpP);
+        camTarget.set(camera.position.x + Math.sin(state.yaw) * cp, camera.position.y - Math.sin(fpP), camera.position.z + Math.cos(state.yaw) * cp);
         camera.lookAt(camTarget);
         return;
       }

@@ -340,7 +340,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       for (const c of vehicles.cars) if (c.body.impact > 0) { if (c === car || c.position && player.position.distanceTo(tmp.set(c.position.x, c.position.y, c.position.z)) < 30) audio.thud(c.body.impact); }
       if (messageT > 0) { messageT -= dt; if (messageT <= 0) { message = null; prompt.hide(); } }
       panel.update(dt);
-      input.endFrame();
+      // input.endFrame() is called by main.js after the weapons have read this frame's presses.
     },
 
     /** Where the shadow camera should centre. */

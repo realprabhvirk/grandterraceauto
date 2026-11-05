@@ -1,6 +1,6 @@
-﻿// Phase 5 test suite (numeric/state asserts only - no screenshots).
+// Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -149,7 +149,7 @@ try {
     const r = await ev(async () => {
       const g = window.__gta, d = g.debug;
       g.combat.setHp(80);
-      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && c.type === 'sedan')); await new Promise((q) => setTimeout(q, 1400));
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await new Promise((q) => setTimeout(q, 1400));
       const ch0 = g.controls.car.health;
       g.combat.damagePlayer(30, 'crash'); g.combat.damagePlayer(30, 'bullet'); g.combat.damagePlayer(30, 'fall');
       // A real crash: drive into a wall at speed.
@@ -171,7 +171,7 @@ try {
     const r = await ev(async () => {
       const g = window.__gta, d = g.debug;
       if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
-      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && c.type === 'sedan')); await new Promise((q) => setTimeout(q, 1400));
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await new Promise((q) => setTimeout(q, 1400));
       const car = g.controls.car;
       car.body.teleport(470, g.world.terrain.getHeight(470, -87.2), -87.2, Math.PI / 2);
       g.combat.setHp(90);
@@ -251,7 +251,7 @@ try {
     await fresh();
     const r = await ev(async () => {
       const g = window.__gta, d = g.debug;
-      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && c.type === 'sedan')); await new Promise((q) => setTimeout(q, 1400));
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await new Promise((q) => setTimeout(q, 1400));
       return d.chaseTest({ stars: 3, seconds: 12 });
     });
     check('3-star chase: nearest cop ends >20 m away', r.nearest > 20, r);
@@ -294,7 +294,7 @@ try {
     // Moving fast: no officer gets out.
     const m = await ev(async () => {
       const g = window.__gta, d = g.debug;
-      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && c.type === 'sedan')); await new Promise((q) => setTimeout(q, 1400));
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await new Promise((q) => setTimeout(q, 1400));
       g.wanted.add('test', 70);
       const car = g.controls.car;
       car.body.teleport(340, g.world.terrain.getHeight(340, -87.2), -87.2, Math.PI / 2);
@@ -417,6 +417,142 @@ try {
     check('parked cars >=8 m apart, >=12 m from driveways, none in pads', r.minGap >= 8 && r.minCut >= 12 && r.inPad === 0, r);
     check('far parked cars sleep', r.sleeping > 0, r);
     check('no page errors', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 2: guns
+  if (run('guns')) {
+    await load();
+    await fresh();
+    // Hold pose (IK) for every gun, ready + aiming.
+    const hold = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.weapons, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(470, -92, Math.PI); await wait(300);
+      const out = {};
+      for (const id of ['pistol', 'smg', 'shotgun', 'rifle']) {
+        W.arsenal.give(id, 30); W.arsenal.select(id); await wait(700);
+        const ready = W.holdCheck();
+        g.controls.input.setVirtual('Mouse2', true); await wait(700);
+        const aim = { ...W.holdCheck(), aiming: W.aiming, fov: +g.camera.fov.toFixed(1), dist: +g.camera.position.distanceTo(g.controls.player.position).toFixed(2) };
+        g.controls.input.setVirtual('Mouse2', false); await wait(300);
+        out[id] = { ready, aim };
+      }
+      return out;
+    });
+    for (const [id, h] of Object.entries(hold)) {
+      const worst = Math.max(h.ready.gripToHand, h.aim.gripToHand, h.ready.foreToHand ?? 0, h.aim.foreToHand ?? 0);
+      check(`${id}: right hand on the grip, left hand on the foregrip (<3 cm)`, worst < 0.03, h);
+      check(`${id}: muzzle in front of the body`, h.ready.muzzleAhead > 0.25 && h.aim.muzzleAhead > 0.25, { ready: h.ready.muzzleAhead, aim: h.aim.muzzleAhead });
+    }
+    check('RMB: over-the-shoulder aim (zoomed, camera closer)', hold.pistol.aim.aiming && hold.pistol.aim.fov < 56 && hold.pistol.aim.dist < 3.2, hold.pistol.aim);
+    // Holster / draw (Q) + guns on the body.
+    const hq = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.weapons;
+      await d.tap('Digit1'); await new Promise((q) => setTimeout(q, 300));
+      const drawn = { armed: W.arsenal.armed, id: W.arsenal.weapon.id, inHand: W.hand.pistol.group.visible, onHip: W.holster.pistol.group.visible, onBack: W.holster.rifle.group.visible };
+      await d.tap('KeyQ'); await new Promise((q) => setTimeout(q, 300));
+      const hol = { armed: W.arsenal.armed, inHand: W.hand.pistol.group.visible, onHip: W.holster.pistol.group.visible, onBack: W.holster.rifle.group.visible, hud: W.hud.state.visible, cross: W.hud.state.crosshair };
+      await d.tap('KeyQ');
+      return { drawn, hol };
+    });
+    check('1 draws the pistol (in hand, long guns on the back)', hq.drawn.armed && hq.drawn.id === 'pistol' && hq.drawn.inHand && !hq.drawn.onHip && hq.drawn.onBack, hq.drawn);
+    check('Q holsters: pistol on the hip, HUD + crosshair off', !hq.hol.armed && !hq.hol.inHand && hq.hol.onHip && !hq.hol.hud && !hq.hol.cross, hq.hol);
+    // Real trigger pull through the crosshair at a wall: ammo, decal, flash, casing, HUD.
+    const shot = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.weapons, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(553, -80, Math.PI); g.controls.player.state.yaw = Math.PI; g.controls.player.state.pitch = 0.05;
+      W.arsenal.select('pistol'); await wait(600);
+      W.arsenal.state.ammo.pistol.mag = 12;
+      const mag0 = W.arsenal.ammo.mag, fx0 = { ...W.fx.stats };
+      g.controls.input.setVirtual('Mouse0', true); await wait(60); g.controls.input.setVirtual('Mouse0', false); await wait(400);
+      return { mag0, mag: W.arsenal.ammo.mag, last: W.st.lastShot, fx: Object.fromEntries(Object.entries(W.fx.stats).map(([k, v]) => [k, v - fx0[k]])), hud: W.hud.state.text, light: W.fx.light.intensity };
+    });
+    check('LMB fires one round through the crosshair', shot.mag === shot.mag0 - 1 && shot.last && shot.last.kind !== 'none', shot);
+    check('effects: muzzle flash, casing, impact, bullet hole', shot.fx.flashes === 1 && shot.fx.casings === 1 && shot.fx.impacts >= 1 && shot.fx.decals === 1, shot.fx);
+    check('HUD shows weapon + ammo, flash light back off', /Pistol 11\//.test(shot.hud) && shot.light === 0, { hud: shot.hud, light: shot.light });
+    // Hits: head/body zones, kill + fade timing, heat events.
+    const hits = await ev(async () => {
+      const g = window.__gta, W = g.weapons, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      g.wanted.clear(true); g.police.reset();
+      g.debug.teleport(470, -92, 0); await wait(300);
+      const P = g.controls.player.position;
+      const p = g.peds.peds.filter((q) => q.ch.root.visible && q.state !== 'dead' && q.state !== 'down').sort((a, b) => a.pos.distanceTo(P) - b.pos.distanceTo(P))[0];
+      if (!p) return { error: 'no ped' };
+      p.state = 'pause'; p.timer = 60; p.flee = 0; p.cower = 0;
+      await wait(200);
+      const at = (ped, z) => { const h = ped.ch.bones[z === 'head' ? 'head' : 'torso']; h.updateWorldMatrix(true, false); const e = h.matrixWorld.elements; return { x: e[12], y: e[13] + (z === 'head' ? 0.14 : 0.2), z: e[14] }; };
+      const from = (t) => ({ x: t.x - 6, y: t.y, z: t.z });
+      const h0 = g.wanted.heat;
+      const b = W.debugShot(from(at(p, 'body')), { x: 1, y: 0, z: 0 }, 'pistol');
+      const hpAfterBody = p.hp, heatShoot = g.wanted.heat - h0;
+      p.state = 'pause'; p.flee = 0; p.cower = 0; await wait(50);
+      const hd = W.debugShot(from(at(p, 'head')), { x: 1, y: 0, z: 0 }, 'pistol');
+      const hpAfterHead = p.hp;
+      const h1 = g.wanted.heat;
+      p.state = 'pause'; p.flee = 0; p.cower = 0; await wait(50);
+      if (p.state !== 'dead') W.debugShot(from(at(p, 'body')), { x: 1, y: 0, z: 0 }, 'rifle');
+      const killed = p.state === 'dead', heatKill = g.wanted.heat - h1;
+      const t0 = performance.now(); let fadeStart = null, goneAt = null;
+      while (performance.now() - t0 < 8000) { if (p.fadeMat && fadeStart === null) fadeStart = (performance.now() - t0) / 1000; if (p.gone) { goneAt = (performance.now() - t0) / 1000; break; } await wait(50); }
+      // Officer: shoot +100, kill +150.
+      g.wanted.clear(true);
+      // Shot in the same tick it appears (an officer with no car and no wanted level would walk off).
+      const o = g.police.foot.spawn(null, { x: P.x + 6, z: P.z }); o.state = 'hold';
+      const ot = { x: o.pos.x, y: o.pos.y + 1.2, z: o.pos.z };
+      const c0 = g.wanted.heat;
+      W.debugShot({ x: ot.x - 5, y: ot.y, z: ot.z }, { x: 1, y: 0, z: 0 }, 'pistol');
+      const copShot = g.wanted.heat - c0, copHp = o.hp;
+      for (let i = 0; i < 8 && o.state !== 'dead'; i++) W.debugShot({ x: ot.x - 5, y: ot.y, z: ot.z }, { x: 1, y: 0, z: 0 }, 'pistol');
+      const copKill = g.wanted.heat - c0 - copShot;
+      return { b, hd, hpAfterBody, hpAfterHead, heatShoot, killed, heatKill, fadeStart, goneAt, copShot, copHp, copDead: o.state === 'dead', copKill, hitMarkers: W.hud.state.hitMarkers };
+    });
+    check('body shot: body zone, 25 damage', hits.b?.zone === 'body' && hits.hpAfterBody === 75, hits);
+    check('headshot: head zone, x2 damage', hits.hd?.zone === 'head' && hits.hd.dmg === 50 && hits.hpAfterHead === 25, hits);
+    check('heat: shooting a civilian +50, killing +80', hits.heatShoot === 50 && hits.killed && hits.heatKill === 80, hits);
+    check('shot ped goes down, fades after ~5 s, gone by ~6.5 s', hits.fadeStart > 4.3 && hits.fadeStart < 5.8 && hits.goneAt > 5.5 && hits.goneAt < 7.2, { fadeStart: hits.fadeStart, goneAt: hits.goneAt });
+    check('cops: 150 hp, shooting +100, killing +150', hits.copHp === 125 && hits.copShot === 100 && hits.copDead && hits.copKill === 150, hits);
+    check('hit markers shown', hits.hitMarkers >= 3, hits.hitMarkers);
+    // Cars + breakables + civilians reacting.
+    const misc = await ev(async () => {
+      const g = window.__gta, W = g.weapons, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      g.wanted.clear(true); g.police.reset();
+      const car = g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded && !c.sleeping) || g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded);
+      const h0 = car.health ?? 100, cp = car.position;
+      const r = W.debugShot({ x: cp.x - 6, y: cp.y + 0.8, z: cp.z }, { x: 1, y: 0, z: 0 }, 'rifle');
+      const carDmg = h0 - car.health;
+      // A street light (breakable): shoot until it breaks.
+      const set = g.breakables.sets.find((s) => s.name === 'streetLight'), it = set.items.find((i) => !i.broken);
+      let n = 0;
+      while (!it.broken && n < 20) { W.debugShot({ x: it.x - 4, y: it.y + 2, z: it.z + 0.001 }, { x: 1, y: 0, z: 0 }, 'pistol'); n++; }
+      // Civilians within 40 m react to gunfire.
+      g.debug.teleport(470, -92, 0); await wait(400);
+      W.arsenal.select('pistol'); await wait(500);
+      g.controls.input.setVirtual('Mouse0', true); await wait(60); g.controls.input.setVirtual('Mouse0', false); await wait(300);
+      const P = g.controls.player.position;
+      const near = g.peds.peds.filter((p) => p.ch.root.visible && p.state !== 'dead' && p.state !== 'down' && Math.hypot(p.pos.x - P.x, p.pos.z - P.z) < 40);
+      return { r, carDmg, poleBroken: it.broken, shotsToBreak: n, near: near.length, reacting: near.filter((p) => p.flee > 0 || p.cower > 0).length };
+    });
+    check('bullets damage cars a little', misc.r.kind === 'car' && misc.carDmg > 5 && misc.carDmg < 15, misc);
+    check('street light breaks from gunfire', misc.poleBroken && misc.shotsToBreak >= 2, misc);
+    check('civilians within 40 m flee or cower', misc.near === 0 || misc.reacting >= Math.ceil(misc.near * 0.7), misc);
+    // First person: viewmodel holds the gun, ADS centres the sights.
+    const fp = await ev(async () => {
+      const g = window.__gta, d = g.debug, W = g.weapons, V = g.viewmodel, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      while (g.controls.cameraMode !== 'first') await d.tap('KeyC');
+      W.arsenal.select('rifle'); await wait(600);
+      const holder = V.root.children[2];
+      const hip = { visible: V.visible, item: !!W.st.viewItem, x: +holder.position.x.toFixed(3) };
+      g.controls.input.setVirtual('Mouse2', true); await wait(700);
+      const ads = { ads: +V.state.ads.toFixed(2), x: +holder.position.x.toFixed(3), fov: +g.camera.fov.toFixed(1) };
+      g.controls.input.setVirtual('Mouse2', false);
+      while (g.controls.cameraMode !== 'third') await d.tap('KeyC');
+      return { hip, ads };
+    });
+    check('POV: viewmodel shows the gun at the hip', fp.hip.visible && fp.hip.item && fp.hip.x > 0.08, fp);
+    check('POV: ADS centres the sights + zooms', fp.ads.ads > 0.9 && Math.abs(fp.ads.x) < 0.02 && fp.ads.fov < 70, fp);
+    const saved = await ev(() => JSON.parse(localStorage.getItem('gta-weapons') || 'null'));
+    check('owned weapons + ammo saved to localStorage', saved && saved.owned.includes('rifle') && !!saved.ammo.pistol, saved?.owned);
+    const nan = await ev(() => { const s = window.__gta.debug.state(); return !s.player.every(Number.isFinite); });
+    check('no NaN after gunfire', !nan);
+    check('no page errors (guns)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

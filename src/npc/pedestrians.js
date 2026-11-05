@@ -13,6 +13,7 @@ import { G_NPC } from '../physics/physicsWorld.js';
 import { makeRng } from '../utils/rng.js';
 
 const COUNT = 16, SLEEP_DIST = 120, NEAR_DIST = 45;
+const DEAD_FADE = 5, DEAD_RESPAWN = 30; // shot: lie ~5 s, fade 1.2 s, back ~30 s later (out of sight)
 const RADIUS = 0.28, HALF = 0.55;
 // Roles: walker, jogger, dogWalker, shopper (bags) walk lines; sitter, picnic, cop, worker,
 // paramedic, shopkeeper stay at a spot (and walk back to it after being knocked down).
@@ -58,7 +59,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       pos: new THREE.Vector3(p.x, p.y, p.z), yaw: spec.spot ? spec.spot.yaw : 0,
       speed: jog ? r.range(4.6, 5.3) : r.range(1.05, 1.45), cur: 0,
       state: spec.spot ? 'home' : 'walk', timer: jog ? 1e9 : r.range(4, 12), action: null,
-      detour: null, dodge: null, waved: 0, animAcc: 0, frame: i,
+      detour: null, dodge: null, waved: 0, animAcc: 0, frame: i, hp: 100, cower: 0, gone: false,
       rng: r.fork(i + 1),
     };
     if (spec.role === 'shopper') {
@@ -116,13 +117,49 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   }
 
   const hitListeners = [], scareListeners = [];
+  /** Run away from a point (walkers pick the line direction away from it). */
+  function fleeFrom(o, from, sec = 8) {
+    o.flee = sec; o.action = null; o.fleeFrom = from.clone ? from.clone() : new THREE.Vector3(from.x, from.y || 0, from.z);
+    if (o.home) { o.flee = Math.min(sec, 5); o.state = 'home'; return; }
+    o.state = 'walk';
+    const L = graph.lines[o.li], a = L[Math.min(L.length - 1, o.idx + 1)], b = L[Math.max(0, o.idx - 1)];
+    o.dir = Math.hypot(a.x - from.x, a.z - from.z) > Math.hypot(b.x - from.x, b.z - from.z) ? 1 : -1;
+  }
+  /** Gunfire nearby: people within radius cower (some) or run (most). */
+  function alarm(pos, radius = 40) {
+    for (const o of peds) {
+      if (o.state === 'dead' || o.state === 'down' || o.gone) continue;
+      if (Math.hypot(o.pos.x - pos.x, o.pos.z - pos.z) > radius) continue;
+      if (o.flee > 2 || o.cower > 0) continue;
+      if (o.rng.next() < 0.3) { o.cower = 3 + o.rng.next() * 2; o.action = null; }
+      else fleeFrom(o, pos);
+    }
+  }
+  /** Shot by the player: hp down; at 0 they drop (no gore) and fade out later. Returns true if killed. */
+  function shoot(ped, dmg, from) {
+    if (ped.state === 'dead') return false;
+    ped.hp -= dmg;
+    if (ped.hp > 0) { ped.cower = 0; fleeFrom(ped, from); alarm(ped.pos, 25); return false; }
+    ped.state = 'dead'; ped.downT = 0; ped.dodge = null; ped.action = null; ped.cower = 0; ped.flee = 0;
+    ped.collider.setEnabled(false);
+    alarm(ped.pos, 30);
+    return true;
+  }
+  function revive(ped) {
+    ped.hp = 100; ped.gone = false; ped.state = ped.home ? 'home' : 'walk'; ped.downT = 0;
+    if (ped.fadeMat) { ped.ch.mesh.material = MAT.solid; ped.fadeMat.dispose(); ped.fadeMat = null; ped.ch.mesh.castShadow = true; }
+    if (ped.home) ped.pos.set(ped.home.x, ped.home.y, ped.home.z);
+    else { const L = graph.lines[ped.li]; ped.idx = ped.rng.int(1, L.length - 2); const p = L[ped.idx]; ped.pos.set(p.x, p.y, p.z); }
+    ped.collider.setEnabled(true);
+    ped.ch.root.rotation.set(0, ped.yaw, 0);
+  }
   function knockDown(ped, car) {
     ped.state = 'down'; ped.downT = 0; ped.dodge = null; ped.action = null;
     ped.yaw = Math.atan2(-car.fx * Math.sign(car.speed), -car.fz * Math.sign(car.speed)); // falls away from the car
     ped.collider.setEnabled(false);
     ped.pos.x += car.fx * Math.sign(car.speed) * 1.2; ped.pos.z += car.fz * Math.sign(car.speed) * 1.2;
     // Everyone nearby runs off for ~8 s.
-    for (const o of peds) if (o !== ped && o.state !== 'down' && o.pos.distanceTo(ped.pos) < 25) { o.flee = 8; o.action = null; o.fleeFrom = ped.pos.clone();
+    for (const o of peds) if (o !== ped && o.state !== 'down' && o.state !== 'dead' && o.pos.distanceTo(ped.pos) < 25) { o.flee = 8; o.action = null; o.fleeFrom = ped.pos.clone();
       if (o.home) { o.flee = 5; o.state = 'home'; continue; }
       o.state = 'walk';
       const L = graph.lines[o.li], a = L[Math.min(L.length - 1, o.idx + 1)], b = L[Math.max(0, o.idx - 1)];
@@ -134,10 +171,23 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     for (const ped of peds) {
       const dist = Math.hypot(ped.pos.x - focus.x, ped.pos.z - focus.z);
       const asleep = dist > SLEEP_DIST;
-      ped.ch.root.visible = !asleep;
+      ped.ch.root.visible = !asleep && !ped.gone;
       if (ped.dog) ped.dog.group.visible = ped.dog.leash.visible = !asleep;
       if (asleep) continue;
 
+      // --- Shot: drop, lie still ~5 s, fade out; back (somewhere) ~30 s later ----------------
+      if (ped.state === 'dead') {
+        ped.downT += dt;
+        if (ped.downT > DEAD_FADE && !ped.gone) {
+          if (!ped.fadeMat) { ped.fadeMat = ped.ch.mesh.material.clone(); ped.fadeMat.transparent = true; ped.ch.mesh.material = ped.fadeMat; ped.ch.mesh.castShadow = false; }
+          ped.fadeMat.opacity = Math.max(0, 1 - (ped.downT - DEAD_FADE) / 1.2);
+          if (ped.downT > DEAD_FADE + 1.2) { ped.gone = true; ped.ch.root.visible = false; if (ped.dog) ped.dog.group.visible = ped.dog.leash.visible = false; }
+        }
+        if (ped.gone && ped.downT > DEAD_RESPAWN && dist > 50) revive(ped);
+        if (!ped.gone) finishPed(ped, dt, dist, 0, 'dead');
+        continue;
+      }
+      if (ped.cower > 0) { ped.cower -= dt; finishPed(ped, dt, dist, 0, 'cower'); continue; }
       // --- Knocked down by a car: tumble, lie still, stand back up after ~4 s ---------------
       if (ped.state !== 'down') {
         for (const c of cars) {
@@ -266,6 +316,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     update,
     /** Debug: count awake / waving etc. */
     onHit(f) { hitListeners.push(f); },
+    shoot, alarm, revive,
     onScare(f) { scareListeners.push(f); },
     stats() {
       const roles = {};

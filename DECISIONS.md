@@ -110,3 +110,9 @@ One line per judgment call made during the autonomous build.
 - P5 1i: cutscene time is real time (KO world runs at 0.3x underneath); the busted cutscene borrows the two nearest officers (or spawns them).
 - P5 1j: merged town parked cars stay merged until stolen: vertex ranges are recorded at merge time and collapsed when the prop becomes a real Car (switchable collider disabled). Ambulance is now a white 4WD with livery + light bar (was a box van) so the stolen one matches. T is now only lights+siren (N alone toggles night).
 - P5 1k: suburb only (town streets have bus stops/zebras/entrances to dodge); extra cars kept 32 m+ from turning circles. Parked cars >120 m from the focus stop simulating (Rapier body put to sleep).
+- P5 step 2: gun spec numbers live in src/weapons/weaponStats.js. Rifle = semi-auto with a 4/s cap that repeats while held (reads as burst fire). Shotgun falloff 10 -> 35 m down to 20%.
+- P5 step 2: the shot ray starts level with the player along the camera ray (so nothing between the camera and the player can eat the shot); tracers start at the muzzle.
+- P5 step 2: third-person hold = gun placed from hip-space poses (ready / aim), pointed at the crosshair target, then analytic 2-bone IK for both arms; long guns twist the torso -0.45 rad (rifle stance). Character arm reach is only 0.58 m, so foregrips sit 0.17-0.32 m ahead of the grip.
+- P5 step 2: emotes moved to hold G + 1-4; 1-4 alone pick weapons (only owned ones). Input edges are now cleared by main.js after the weapons read them.
+- P5 step 2: bullet threshold for breakables = toughness x 5 damage (street light: 2 pistol rounds). Cars take 25% of weapon damage. Shot civilians fade after 5 s and come back ~30 s later out of sight; heat for shooting a person counts once per person.
+- P5 step 2: shots-fired heat +10 per 2.5 s burst only when theft.witnessed() (peds 30 m with LOS / police car 60 m), capped at +40 until the wanted level clears.
