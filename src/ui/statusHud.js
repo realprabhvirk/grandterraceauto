@@ -2,6 +2,7 @@
 // cash (top-right), big centre messages ("KNOCKED OUT  -$200") and a fade-to-black overlay.
 import { injectStyles, UI } from './uiStyle.js';
 import { PALETTE } from '../art/palette.js';
+import { WANTED_CFG } from '../police/wantedConfig.js';
 
 export function createStatusHud() {
   injectStyles();
@@ -36,7 +37,7 @@ export function createStatusHud() {
       if (carHealth != null) carBar.style.width = `${Math.max(0, carHealth)}%`;
       cashEl.textContent = `$${cash.toLocaleString('en-AU')}`;
       flash += dt;
-      const on = !searching || Math.floor(flash * 3) % 2 === 0;
+      const on = !searching || Math.floor(flash * 2 * WANTED_CFG.flashHz) % 2 === 0; // ~2 Hz blink while flashing
       starsEl.innerHTML = Array.from({ length: 5 }, (_, i) => `<span style="color:${i < stars && on ? '#f3d27a' : 'rgba(246,238,223,.22)'}">&#9733;</span>`).join('');
       if (msgT > 0) { msgT -= dt; if (msgT <= 0) msg.style.opacity = '0'; }
     },

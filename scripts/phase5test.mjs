@@ -212,37 +212,52 @@ try {
   if (run('stars')) {
     await load();
     await fresh();
+    // Sim-time fast-forward of the wanted state machine (Phase 5.1 rules, wantedConfig.js).
     const r = await ev(async () => {
-      const g = window.__gta, W = g.wanted;
-      // Unit: unseen 6 s -> flashing; seen again stops it; 5 s of flashing clears.
-      W.clear(true); W.add('test', 70);
-      W.update(5.9, { seen: false, nearest: 50 }); const a = W.searching;
-      W.update(0.2, { seen: false, nearest: 50 }); const b = W.searching;
-      W.update(0.1, { seen: true, nearest: 30 }); const c = W.searching;
-      W.update(0.1, { seen: true, nearest: 130 }); const far = W.searching;
-      for (let i = 0; i < 49; i++) W.update(0.1, { seen: false, nearest: 130 });
-      const stillOn = W.stars;
-      W.update(0.2, { seen: false, nearest: 130 });
-      return { a, b, c, far, stillOn, after: W.stars };
+      const g = window.__gta, W = g.wanted, d = g.debug;
+      const sim = (sec, inp, every = 0.1) => { const out = []; for (let t = 0; t < sec - 1e-6; t += every) { W.update(every, inp); out.push(W.phase); } return out; };
+      const far = { seen: false, nearest: 300 };
+      // (a) 1 star, 300 m away at once: solid for the full 15 s grace, then flashing.
+      W.clear(true); W.add('test', 25);
+      const a1 = sim(14.9, far), a2 = sim(0.3, far);
+      const a = { solidThroughGrace: a1.every((p) => p === 'solid'), flipped: a2.includes('flashing'), grace: d.wanted().graceRemaining };
+      // (b) 10 s of flashing, then wanted 0.
+      const b1 = sim(9.7, far), starsMid = W.stars; sim(0.5, far);
+      const b = { stillFlashing: b1.every((p) => p === 'flashing') && starsMid > 0, stars: W.stars, phase: W.phase };
+      // (c) a cop 60 m away with no LOS: never flashes.
+      W.clear(true); W.add('test', 25);
+      const c = { phases: [...new Set(sim(40, { seen: false, nearest: 60 }))] };
+      // (d) cop gets LOS mid-flash: solid again, flash timer reset.
+      W.clear(true); W.add('test', 25); sim(15.2, far); const dBefore = W.phase; sim(4, far); const flashLeft = d.wanted().flashRemaining;
+      sim(0.1, { seen: true, nearest: 100 }); const dAfter = d.wanted();
+      sim(0.2, far); const dRe = d.wanted(); // nearest >= 150 m: may flash again at once, with a full 10 s timer
+      const dd = { dBefore, flashLeft, after: dAfter, re: dRe };
+      // (e) new crime during the grace restarts it at 15 s.
+      W.clear(true); W.add('test', 25); sim(10, far); const g1 = d.wanted().graceRemaining; W.add('test', 5); const g2 = d.wanted().graceRemaining;
+      W.clear(true);
+      return { a, b, c, dd, e: { g1, g2 } };
     });
-    check('no flashing before 6 s unseen', r.a === false, r);
-    check('flashing after 6 s unseen', r.b === true, r);
-    check('a cop seeing you stops the flashing', r.c === false, r);
-    check('nearest cop >120 m -> flashing', r.far === true, r);
-    check('5 s of flashing clears the level', r.stillOn > 0 && r.after === 0, r);
-    // Live: wanted, cops spawn, player teleports far away -> stand down.
-    const live = await ev(async () => {
-      const g = window.__gta, d = g.debug;
-      d.teleport(470, -92, 0);
-      g.wanted.add('test', 70);
-      await new Promise((q) => setTimeout(q, 3500));
-      const cops = g.police.cars.length;
-      d.teleport(20, 120, 0); // far away in the suburb
-      const t0 = performance.now(); let flashT = null;
-      while (g.wanted.stars && performance.now() - t0 < 15000) { if (g.wanted.searching && flashT === null) flashT = (performance.now() - t0) / 1000; await new Promise((q) => setTimeout(q, 100)); }
-      return { cops, flashT, clearT: +((performance.now() - t0) / 1000).toFixed(1), stars: g.wanted.stars, modes: g.police.cars.map((c) => c.mode) };
+    check('(a) stars stay solid for the 15 s grace even 300 m away, then flash', r.a.solidThroughGrace && r.a.flipped, r.a);
+    check('(b) 10 s of flashing clears the wanted level', r.b.stillFlashing && r.b.stars === 0 && r.b.phase === 'none', r.b);
+    check('(c) cop 60 m away without LOS: never flashes', r.c.phases.length === 1 && r.c.phases[0] === 'solid', r.c);
+    check('(d) cop LOS mid-flash: back to solid, flash timer reset', r.dd.dBefore === 'flashing' && r.dd.flashLeft < 7 && r.dd.after.wantedPhase === 'solid' && r.dd.after.hiddenTimer === 0 && r.dd.re.wantedPhase === 'flashing' && r.dd.re.flashRemaining > 9.5, r.dd);
+    check('(e) new crime during the grace restarts it at 15 s', r.e.g1 < 5.5 && r.e.g2 === 15, r.e);
+    // (f) live: a witnessed crime dispatches police at once; they close in within the grace.
+    const f = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(470, -92, 0); g.police.reset(); g.wanted.clear(true);
+      await wait(300);
+      g.wanted.add('test', 25);
+      await wait(1500);
+      const n1 = g.police.cars.length, P = g.controls.player.position, dist = () => Math.min(...g.police.cars.map((c) => Math.hypot(c.pos.x - P.x, c.pos.z - P.z)));
+      const d1 = dist();
+      await wait(5000);
+      const d2 = dist(), w = d.wanted();
+      g.police.reset(); g.wanted.clear(true);
+      return { n1, d1: +d1.toFixed(1), d2: +d2.toFixed(1), phase: w.wantedPhase, grace: w.graceRemaining };
     });
-    check('live escape: flashing then cleared, cops stand down', live.stars === 0 && live.clearT < 9 && live.modes.every((m) => m === 'patrol'), live);
+    check('(f) police dispatched straight away and closing in during the grace', f.n1 >= 1 && f.d2 < f.d1 - 10 && f.phase === 'solid', f);
+    check('HUD blink rate ~2 Hz while flashing', await ev(async () => (await import('/src/police/wantedConfig.js')).WANTED_CFG.flashHz === 2));
   }
 
   // ------------------------------------------------------------ 1g: soft contact chase

@@ -305,7 +305,10 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       st.spawnT -= dt;
       const want = COUNTS[stars];
       // No reinforcements while the stars flash (they're searching, not chasing).
-      if (cars.length < want && st.spawnT <= 0 && !wanted.searching) { spawnOne(target); st.spawnT = 1.5; }
+      // Dispatch straight away when stars go up (grace period = pursuit time), then one every 1.5 s.
+      if (stars > (st.lastStars || 0)) { st.spawnT = 0; st.replanT = 0; }
+      st.lastStars = stars;
+      if (cars.length < want && st.spawnT <= 0 && !wanted.searching) { spawnOne(target); st.spawnT = 1.5; st.replanT = 0; }
       if (!stars) {
         for (const c of [...cars]) { if (c.crewOut) continue; c.mode = 'patrol'; c.route = []; if (Math.hypot(c.pos.x - target.x, c.pos.z - target.z) > 150 && !inView(c.pos.x, c.pos.z)) despawn(c); }
       }
