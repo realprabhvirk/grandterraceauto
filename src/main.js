@@ -42,6 +42,7 @@ import { hideProp } from './town/townKit.js';
 import { createPlayerWeapons } from './weapons/playerWeapons.js';
 import { createCopGuns } from './police/copGuns.js';
 import { createGunShopMenu } from './ui/gunShopMenu.js';
+import { createShopMenu } from './ui/shopMenu.js';
 import { createAmbience } from './audio/ambience.js';
 import { createSpeeding } from './police/speeding.js';
 import { createSpeedLimitHud } from './ui/speedLimitHud.js';
@@ -184,6 +185,8 @@ const dayCycle = { on: params.has('cycle'), t: 0, period: 480 };
 // Barrel & Bolt: E at the counter opens the buy menu.
 const gunShop = createGunShopMenu({ arsenal: weapons.arsenal, wallet, input: controls.input, audio, hud: statusHud });
 if (world.town) world.town.hooks.openGunShop = () => gunShop.openMenu();
+const shopMenu = createShopMenu({ wallet, input: controls.input, audio, hud: statusHud, combat, character: controls.player.character });
+if (world.town) world.town.hooks.openShop = (s) => shopMenu.openMenu(s);
 renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -193,7 +196,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, speeding, limitHud, speedCams, trafficCops, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, jitter, speeding, limitHud, speedCams, trafficCops, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();

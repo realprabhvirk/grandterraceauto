@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe enforce highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe shops enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1379,6 +1379,59 @@ try {
     check('no fines while wanted or with the siren on; never any heat from speeding', r.wanted === 0 && r.siren === 0 && r.heat === 0, r);
     check('9 cameras + 5 radar posts + 2 cruisers, cameras on the full map', r.cams >= 8 && r.posts >= 5 && r.cruisers === 2 && r.onMap >= 8, { cams: r.cams, posts: r.posts, cruisers: r.cruisers, onMap: r.onMap });
     check('no page errors (enforce)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.6a: kit shops (enterable + buy menus)
+  if (run('shops')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, M = g.shopMenu, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const shops = g.world.town.shops, out = { n: shops.length, walk: [], places: 0 };
+      // Walk in through every door to the counter.
+      for (const s of shops) {
+        const yaw = Math.atan2(s.centre.x - s.door.x, s.centre.z - s.door.z);
+        d.teleport(s.door.x, s.door.z, yaw); await wait(350);
+        await d.tap('KeyE'); await wait(700);
+        const inner = { x: s.door.x + (s.centre.x - s.door.x) * 0.45, z: s.door.z + (s.centre.z - s.door.z) * 0.45 };
+        await d.walkToWorld(inner.x, inner.z, 5000);
+        const p = await d.walkToWorld(s.counter.x, s.counter.z, 5000);
+        out.walk.push({ id: s.id, dist: +Math.hypot(p[0] - s.counter.x, p[2] - s.counter.z).toFixed(2) });
+      }
+      // Buy menu: food heals, chemist heals 50, full health refuses food, clothes change the outfit.
+      const byKind = (k) => shops.find((s) => s.kind === k);
+      const cafe = byKind('cafe');
+      d.teleport(cafe.counter.x, cafe.counter.z, 0); await wait(400);
+      out.prompt = d.state().prompt;
+      await d.tap('KeyE'); await wait(200);
+      out.opened = { open: M.open, locked: g.controls.input.locked, rows: document.querySelectorAll('.gta-panel button[data-i]').length };
+      g.wallet.set(500); g.combat.setHp(40);
+      const b1 = M.buy(2); out.food = { bought: b1, hp: g.combat.hp, cash: g.wallet.cash - 500 };
+      g.combat.setHp(100); out.fullRefused = M.buy(0) === false && g.wallet.cash === 480;
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true })); await wait(200);
+      out.closed = !M.open && !g.controls.input.locked;
+      M.openMenu(byKind('chemist')); g.combat.setHp(30); const c0 = g.wallet.cash;
+      M.buy(0); out.chemist = { hp: g.combat.hp, cash: g.wallet.cash - c0 }; M.close(); await wait(50);
+      M.openMenu(byKind('fashion')); const geo0 = g.controls.player.character.mesh.geometry, c1 = g.wallet.cash;
+      const b2 = M.buy(0); out.clothes = { bought: b2, cash: g.wallet.cash - c1, changed: g.controls.player.character.mesh.geometry !== geo0, again: M.buy(0) };
+      M.close(); g.wallet.set(5); M.openMenu(byKind('pizza')); g.combat.setHp(50); out.broke = M.buy(0) === false && g.combat.hp < 51; M.close();
+      out.places = g.world.places.filter((p) => ['food', 'chemist', 'clothes'].includes(p.kind)).length;
+      out.prices = shops.every((s) => s.menu.every((it) => (it.hp && !it.outfit ? (s.kind === 'chemist' || (it.price >= 8 && it.price <= 20 && it.hp >= 10 && it.hp <= 25)) : it.price > 0)));
+      d.teleport(640, -60, 0); await wait(600);
+      out.calls = g.renderer.info.render.calls;
+      return out;
+    });
+    const far = r.walk.filter((w) => !(w.dist < 1.3));
+    check('13 enterable kit shops (7 Terrace Pde + 6 downtown)', r.n >= 12, { n: r.n });
+    check('every shop: walk in through the door to the counter', far.length === 0, far.length ? far : r.walk.length);
+    check('counter prompt + E opens the menu (input paused)', /Press E to shop/.test(r.prompt || '') && r.opened.open && r.opened.locked && r.opened.rows >= 2, { prompt: r.prompt, ...r.opened });
+    check('food: -$20, +25 health; refused at full health; Esc closes', r.food.bought && r.food.hp >= 65 && r.food.hp < 67 && r.food.cash === -20 && r.fullRefused && r.closed, { food: r.food, full: r.fullRefused, closed: r.closed });
+    check('chemist first aid: -$40, +50 health', r.chemist.hp >= 80 && r.chemist.hp < 82 && r.chemist.cash === -40, r.chemist);
+    check('clothes: -$60 new outfit colour (no re-buy of what you wear)', r.clothes.bought && r.clothes.cash === -60 && r.clothes.changed && r.clothes.again === false, r.clothes);
+    check('not enough cash: refused', r.broke);
+    check('menus priced to spec (food $8-20 / +10..25)', r.prices);
+    check('shops on the map (food / chemist / clothes icons)', r.places >= 12, { places: r.places });
+    check('draw calls downtown < 550', r.calls < 550, { calls: r.calls });
+    check('no page errors (shops)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

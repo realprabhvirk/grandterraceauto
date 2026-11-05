@@ -6,6 +6,9 @@ import { buildTownRoads } from './townRoads.js';
 import { makeChunk, createSignAtlas } from './townKit.js';
 import { buildTownBuildings, staticCar } from './townBuildings.js';
 import { buildTownInteriors } from './townInteriors.js';
+import { buildKitShops, kitShopSpots } from './shopKit.js';
+import { SHOPS } from './townBuildings.js';
+import { PALETTE } from '../art/palette.js';
 import { buildTownProps } from './townProps.js';
 import { buildCentralGardens, buildWattlePark } from './parks.js';
 import { T } from './townPlan.js';
@@ -50,19 +53,20 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   const props = buildTownProps({ plan, rng: rng.fork(3), chunk, atlas, avoid });
   group.add(props.group);
   const inner = buildTownInteriors({ parent: group, atlas, rng: rng.fork(4) });
+  const kit = buildKitShops({ parent: group, rng: rng.fork(13), spots: kitShopSpots(SHOPS, PALETTE.town.shopWalls, PALETTE.town.awnings) });
 
   const out = {
     group, plan, atlas,
-    colliders: [...inner.colliders], trunks: [...gardens.trunks], poles: [], toggles: [...inner.toggles], propCars: [],
-    targets: [...inner.targets], places: [...B.places, { kind: 'park', x: gardens.centre.x, z: gardens.centre.z, label: 'Central Gardens' }],
+    colliders: [...inner.colliders, ...kit.colliders], trunks: [...gardens.trunks], poles: [], toggles: [...inner.toggles, ...kit.toggles], propCars: [],
+    targets: [...inner.targets, ...kit.targets], shops: kit.shops, places: [...B.places, ...kit.places, { kind: 'park', x: gardens.centre.x, z: gardens.centre.z, label: 'Central Gardens' }],
     breakables: props.defs, pedLines: props.lines, benches: gardens.benches, gardens, interiors: inner, stops: props.stops,
-    chunks: [...inner.chunks], updaters: [...inner.updaters],
+    chunks: [...inner.chunks, ...kit.chunks], updaters: [...inner.updaters, ...kit.updaters],
     spawns: {
       police: { position: new THREE.Vector3(B.spawns.police.x, T.h + 0.1, B.spawns.police.z), yaw: B.spawns.police.yaw },
       hospital: { position: new THREE.Vector3(B.spawns.hospital.x, T.h + 0.1, B.spawns.hospital.z), yaw: B.spawns.hospital.yaw },
     },
     hooks: {},
-    attach(h) { for (const d of inner.doors) d.attach(h); },
+    attach(h) { for (const d of [...inner.doors, ...kit.doors]) d.attach(h); },
     /** Per frame: chunk visibility + interiors/doors. ctx = { focus } */
     update(dt, ctx) {
       const f = ctx.focus;
@@ -159,6 +163,8 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   if (da.terraceCentral) out.places.push({ kind: 'store', x: da.terraceCentral.x, z: da.terraceCentral.z, label: 'Terrace Central' });
   if (da.quickStop) out.places.push({ kind: 'store', x: da.quickStop.x, z: da.quickStop.z, label: 'Quick Stop' });
   if (gs) out.targets.push({ id: 'gunShopCounter', key: 'E', range: 2.0, position: () => gs, label: 'Press E to shop (Barrel & Bolt)', action: () => out.hooks.openGunShop?.() });
+  // Phase 6 kit shops: E at the counter opens the shared buy menu (main.js wires hooks.openShop).
+  for (const s of kit.shops) out.targets.push({ id: `${s.id}-counter`, key: 'E', range: 2.0, position: () => s.counter, label: `Press E to shop (${s.label})`, action: () => out.hooks.openShop?.(s) });
   out.targets.push({ id: 'quickStopCounter', key: 'E', range: 2.0, position: () => q, label: 'Press E to buy a snack ($20)', action: () => out.hooks.buySnack?.() });
   return out;
 }

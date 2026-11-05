@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 15:08)**
-- Done: Phase 6 steps 1-5 (rules, map, signs, highway, speed cameras + traffic cops)
-- Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known)
-- Next: P6 step 6: whole city (shops, landmarks, traffic lights, buses/taxis/vans)
+**STATUS (2026-11-05 15:16)**
+- Done: Phase 6 steps 1-5 + 6a (13 enterable shops)
+- Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known); map Tab-resume check flaky in batch
+- Next: P6 step 6b: city structure (markings, traffic lights, landmarks, billboards)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -371,3 +371,8 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - 9 fixed speed cameras (4 motorway, Grand Terrace, Ring Rd North/East, Terrace Pde downtown, King St), "SPEED CAMERA AHEAD" signs ~100 m before each, white flash + shutter click + $200 fine, one fine per pass + 20 s cooldown; shown on the full map.
 - 5 radar posts (parked patrol car + officer with radar gun) and 2 patrol cruisers in traffic (motorway + Ring Rd North). Catch = over limit+10, within 60 m, clear LOS, inside 120° arc (cruisers front/rear) → lights/radar gun up 2 s + $200 fine. Never heat; no fines while wanted or with the siren on.
 - Tests: `enforce` 8/8 (camera once, cooldown, at-limit nothing, radar LOS catch, behind/wall not seen, wanted/siren none, no heat). Highway autopilot fails unchanged (logged in Step 4).
+
+### 2026-11-05 15:16 — Phase 6 Step 6a: 13 enterable shops (shared interior kit + buy menu)
+- src/town/shopKit.js: one kit (shell + hinged door, fittings by style food/mart/chemist/clothes/barber, keeper, counter E-target). 7 Terrace Pde shopfronts became enterable (cafe, bakery, chemist, barber, fashion, takeaway, bottle shop; bank + electronics stay facades) + 6 downtown mid-block shops facing the cross streets (Noodle Bar, Diner 24H, City Mart, Moda Boutique, Pizza Napoli, Juice Bar).
+- src/ui/shopMenu.js: food/drinks $8-20 → +10..25 health (refused at full health), chemist first aid $40 → +50, clothes $60 shirt colour, barber $25 hair colour (character.setOutfit).
+- Map icons: food (E), chemist (+), clothes (T). Test `shops` 11/11 (walk in through all 13 doors to the counter). `map` "Tab closes, world resumes" failed once in a batch run, passed alone (flaky, noted).

@@ -16,7 +16,7 @@ const C = PALETTE.town, SHOW = 25;
 const PRODUCTS = ['#c8553e', '#3f7fc0', '#e2b33a', '#4f9a55', '#8a5aa8', '#e7e1d4', '#d27a3c'];
 
 /** Hollow single-storey shell (walls t=0.3) with a door gap at lx=doorX on the front. */
-function shell(ch, F, { w, d, h, wall, doorX = 0, doorW = 2.2, doorH = 2.5, inner = '#ece6d8', floor = '#d8d2c6' }) {
+export function shell(ch, F, { w, d, h, wall, doorX = 0, doorW = 2.2, doorH = 2.5, inner = '#ece6d8', floor = '#d8d2c6' }) {
   const t = 0.3, half = w / 2;
   ch.block(F, w, h, t, 0, 0, -d + t / 2, wall);                          // back
   for (const s of [-1, 1]) ch.block(F, t, h, d, s * (half - t / 2), 0, -d / 2, wall); // sides
@@ -30,7 +30,7 @@ function shell(ch, F, { w, d, h, wall, doorX = 0, doorW = 2.2, doorH = 2.5, inne
   return { l0, l1, r0, r1 };
 }
 
-function npc(group, rng, x, z, yaw, y, role = 'shopper') {
+export function npc(group, rng, x, z, yaw, y, role = 'shopper') {
   const ch = createCharacter(roleOutfit(role, rng), { name: 'shop-' + role });
   ch.root.position.set(x, y, z);
   ch.root.rotation.y = yaw;

@@ -330,6 +330,8 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
   return {
     root,
     mesh,
+    /** Swap outfit colours (clothing shop / barber): geometry is cached per outfit. */
+    setOutfit(o) { mesh.geometry = bodyGeometry({ ...PLAYER_OUTFIT, ...o }); },
     /** Hide the head (first-person / cabin views) by collapsing its bone. */
     setHeadVisible(v) { head.scale.setScalar(v ? 1 : 0.001); },
     /** World position of the eyes (for first-person cameras). */

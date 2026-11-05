@@ -12,10 +12,10 @@ import { T } from './townPlan.js';
 const C = PALETTE.town;
 export const SHOPS = [
   // North side of Terrace Pde (face +z), then south side (face -z), west -> east.
-  { kind: 'cafe', name: 'BEAN THERE CAFE' }, { kind: 'bakery', name: 'GOLDEN CRUST BAKERY' }, { kind: 'chemist', name: 'PARADE CHEMIST' },
-  { kind: 'barber', name: 'SHARP CUTS BARBER' }, { kind: 'guns', name: 'BARREL & BOLT', interior: true }, // Phase 5: enterable gun shop (townInteriors.js)
-  { kind: 'electronics', name: 'VOLT ELECTRONICS' }, { kind: 'fashion', name: 'THREADS FASHION' }, { kind: 'bank', name: 'TERRACE SAVINGS BANK' },
-  { kind: 'takeaway', name: 'WOK & ROLL TAKEAWAY' }, { kind: 'bottle', name: 'CORNER BOTTLE SHOP' },
+  { kind: 'cafe', name: 'BEAN THERE CAFE', kit: true }, { kind: 'bakery', name: 'GOLDEN CRUST BAKERY', kit: true }, { kind: 'chemist', name: 'PARADE CHEMIST', kit: true },
+  { kind: 'barber', name: 'SHARP CUTS BARBER', kit: true }, { kind: 'guns', name: 'BARREL & BOLT', interior: true }, // Phase 5: enterable gun shop (townInteriors.js)
+  { kind: 'electronics', name: 'VOLT ELECTRONICS' }, { kind: 'fashion', name: 'THREADS FASHION', kit: true }, { kind: 'bank', name: 'TERRACE SAVINGS BANK' },
+  { kind: 'takeaway', name: 'WOK & ROLL TAKEAWAY', kit: true }, { kind: 'bottle', name: 'CORNER BOTTLE SHOP', kit: true },
 ];
 export const SHOP_X = [435.6, 452.8, 470, 487.2, 504.4];
 export const ROW_Z = { north: T.Z[1] - T.front, south: T.Z[1] + T.front };
@@ -94,7 +94,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     const north = k < 5, x = SHOP_X[k % 5];
     const ch = chunk(north ? 'b10' : 'b11');
     const F = frame(x, north ? ROW_Z.north : ROW_Z.south, 0, north ? yN : yS, T.h);
-    if (s.interior) return; // Barrel & Bolt: its map marker comes from the real door (town.js)
+    if (s.interior || s.kit) return; // enterable: Barrel & Bolt (townInteriors.js) / Phase 6 kit shops (shopKit.js)
     shopfront(ch, atlas, F, { w: 16.6, d: 14, name: s.name, wall: C.shopWalls[k % C.shopWalls.length], awning: C.awnings[k % C.awnings.length] });
     out.places.push({ kind: 'shop', x, z: F.cz, label: s.name });
   });
