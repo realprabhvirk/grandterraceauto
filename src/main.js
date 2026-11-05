@@ -35,6 +35,7 @@ import { createNavigation } from './ui/navigation.js';
 import { createMapUI } from './ui/fullMap.js';
 import { createCyclists } from './npc/cyclists.js';
 import { createViewmodel } from './weapons/viewmodel.js';
+import { createJitterMonitor } from './utils/jitterMonitor.js';
 import { createCutscene } from './camera/cutscene.js';
 import { addEmergencyKit } from './vehicles/emergency.js';
 import { hideProp } from './town/townKit.js';
@@ -157,6 +158,7 @@ controls.hooks.onPropSteal = (p) => {
 };
 
 const viewmodel = createViewmodel();
+const jitter = createJitterMonitor(); // debug: camera jitter (records only while started)
 const weapons = createPlayerWeapons({ scene, camera, controls, physics, world, peds, police, vehicles, traffic, breakables, particles, audio, wanted, combat, viewmodel, theft });
 const copGuns = createCopGuns({ scene, police, controls, combat, world, physics, audio, fx: weapons.fx });
 // Vibe: clouds + birds, zone ambience, one warm pooled light inside whichever Phase 4 shop is near,
@@ -180,7 +182,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -192,7 +194,7 @@ renderer.setAnimationLoop(() => {
   const dt = paused ? 0 : rdt * cutscene.timeScale; // slow motion during the KO cutscene
   vehicles.setFocus(controls.focus());
   if (!paused) physics.step(dt);
-  vehicles.sync();
+  vehicles.sync(physics.alpha);
   controls.update(dt);
   cutscene.update(rdt);
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: [...police.movers(), ...cyclists.movers()] });
@@ -238,6 +240,7 @@ renderer.setAnimationLoop(() => {
   renderer.info.reset();
   renderer.render(scene, camera);
   viewmodel.render(renderer);
+  if (jitter.enabled) jitter.record(camera, { dt: rdt, steps: physics.lastSteps, focus: controls.focus(), shake: Math.max(controls.chase.state.shake || 0, controls.cabin.state.shake || 0, controls.player.state.recoil || 0), tag: controls.cameraMode });
   overlay.update(dt, `${controls.debugText()}
 ${combat.lastDamageText()}`);
   if (++frames > 3) window.__gta.ready = true;

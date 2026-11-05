@@ -64,9 +64,15 @@ export function createThirdPerson({ physics, scene, spawn }) {
   const desired = new THREE.Vector3();
   const move = new THREE.Vector3();
 
+  // Render interpolation between the pose before and after the last fixed physics step.
+  const prevT = new THREE.Vector3(), curT = new THREE.Vector3();
+  let hasPrev = false;
   function syncVisual() {
     const t = body.translation();
-    pos.set(t.x, t.y - HALF - RADIUS, t.z);
+    curT.set(t.x, t.y, t.z);
+    const a = physics.alpha ?? 1;
+    if (hasPrev && a < 1) curT.lerpVectors(prevT, curT, a);
+    pos.set(curT.x, curT.y - HALF - RADIUS, curT.z);
     if (character.root.parent === scene) {
       character.root.position.copy(pos);
       character.root.rotation.set(0, state.facing, 0);
@@ -86,7 +92,9 @@ export function createThirdPerson({ physics, scene, spawn }) {
     let dist = state.dist + (Math.min(state.dist, 2.3) - state.dist) * ab;
     const hit = world.castRay(new RAPIER.Ray(outTarget, desired), dist, true, undefined, groups(GROUP.PLAYER, GROUP.STATIC), collider);
     if (hit) dist = Math.max(0.6, hit.timeOfImpact - 0.25);
-    outPos.copy(outTarget).addScaledVector(desired, dist);
+    // Pull in at once (never clip), ease back out (no flicker when the ray grazes something).
+    state.pull = state.pull == null || dist < state.pull ? dist : state.pull + (dist - state.pull) * 0.12;
+    outPos.copy(outTarget).addScaledVector(desired, state.pull);
   }
 
   return {
@@ -109,12 +117,14 @@ export function createThirdPerson({ physics, scene, spawn }) {
       body.setTranslation({ x: p.x, y: p.y + HALF + RADIUS + 0.03, z: p.z }, true);
       body.setNextKinematicTranslation({ x: p.x, y: p.y + HALF + RADIUS + 0.03, z: p.z });
       state.facing = yaw; state.yaw = yaw; state.vy = -1; state.grounded = true;
+      hasPrev = false;
       syncVisual();
       pos.set(p.x, p.y, p.z);
     },
 
     /** Fixed-step physics update. */
     fixedUpdate(dt, input, active) {
+      { const t0 = body.translation(); prevT.set(t0.x, t0.y, t0.z); hasPrev = true; }
       if (!state.enabled) return;
       move.set(0, 0, 0);
       if (state.lockT > 0) state.lockT -= dt;

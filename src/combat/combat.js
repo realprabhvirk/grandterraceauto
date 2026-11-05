@@ -151,7 +151,7 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
             damageCar(c, dmg);
             ring(damageLog, { t: +st.t.toFixed(2), car: c.type, player: c === active, dmg: +dmg.toFixed(2), speed: +speed.toFixed(1), dv: +k.peak.toFixed(2), kmh: +(Math.abs(c.body.state.speed) * 3.6).toFixed(0), normal: k.contact.normal, tag: k.contact.tag, pos: [c.position.x, c.position.y, c.position.z].map((q) => +q.toFixed(1)) });
             if (carHit && !k.other.body?.body) { damageCar(k.other, dmg); if (k.other.isPolice && c === active) emit('policeDamaged', { car: k.other }); }
-            if (c === active) audio.crash(Math.min(1, (speed - 3) / 18));
+            if (c === active) { audio.crash(Math.min(1, (speed - 3) / 18)); c.crashShake = Math.min(1, 0.25 + dmg / 8); controls.chase.shake?.(Math.min(0.8, dmg / 10)); }
           }
         }
         const v = c.body.body.linvel(); k.prev.x = v.x; k.prev.y = v.y; k.prev.z = v.z;

@@ -54,7 +54,7 @@ export function createPhysics(world) {
     add(RAPIER.ColliderDesc.cuboid(hx, 60, hz).setTranslation(x, 30, z), 'boundary');
   }
 
-  let acc = 0;
+  let acc = 0, lastSteps = 0;
   const listeners = [];
   return {
     world: phys,
@@ -69,11 +69,17 @@ export function createPhysics(world) {
     /** Advance with a fixed step; calls every listener before each world step. */
     step(dt) {
       acc = Math.min(acc + dt, STEP * 5);
+      lastSteps = 0;
       while (acc >= STEP) {
         for (const fn of listeners) fn(STEP);
         phys.step();
         acc -= STEP;
+        lastSteps++;
       }
     },
+    /** Physics steps run in the last step() call (0, 1, 2...). */
+    get lastSteps() { return lastSteps; },
+    /** How far we are into the next fixed step (0..1): render interpolation factor. */
+    get alpha() { return acc / STEP; },
   };
 }

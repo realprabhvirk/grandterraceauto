@@ -214,7 +214,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       const m = car.body.body.mass();
       car.body.body.applyImpulse({ x: hit.nx * m * dv, y: 0, z: hit.nz * m * dv }, true);
       damageCar(car, DAMAGE.policeContact);
-      car.body.impact = Math.max(car.body.impact || 0, 0.5);
+      car.crashShake = Math.max(car.crashShake || 0, 0.5);
       controls.chase.shake?.(0.6);
       audio.crash?.(0.35);
       // Ramming a cop is a crime; being nudged by one isn't.

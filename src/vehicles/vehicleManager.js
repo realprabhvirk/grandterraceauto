@@ -45,10 +45,12 @@ export function createVehicles({ physics, scene, world }) {
         const z = asleep(car);
         if (z) { if (!car.sleeping) { car.sleeping = true; car.body.body.sleep(); } continue; }
         car.sleeping = false;
+        car.capturePrev(); // pose before this fixed step (render interpolation)
         car.body.update(dt, car === active ? input : null);
       }
     },
-    sync() { for (const car of cars) if (!car.impounded && !car.sleeping) car.sync(); },
+    /** alpha = fraction into the next physics step (render interpolation between the last two poses). */
+    sync(alpha = 1) { for (const car of cars) if (!car.impounded && !car.sleeping) car.sync(alpha); },
     setFocus(p) { focus.x = p.x; focus.z = p.z; },
     get sleepingCount() { return cars.filter((c) => c.sleeping).length; },
     /** Add a drivable car (e.g. a carjacked traffic car). Returns it, or null if no slots left. */

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 11:34)**
-- Done: PHASE 5.2 complete (phantom crash fixed, gun shop on the maps)
+**STATUS (2026-11-05 11:53)**
+- Done: Phase 5.2 + 5.3 step 1 (random shaking fixed: render interpolation, crash-only shake)
 - Broken: phase4 'police officer on foot knocked down' still red (known)
-- Next: Phase 5.3: random shaking + cop-shooting = 5 stars
+- Next: 5.3 step 2: shooting a cop = 5 stars
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -349,3 +349,7 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - **Phantom crash:** root causes were (1) crash damage triggered by any big per-step velocity change with no contact check (crest landings / dips / suspension bottoming counted as crashes) and (2) the car remembering its velocity before its own grip/downforce impulses and speed caps (a boost cut looked like a 7 m/s hit; teleports too). Fix: crashes need a real solid, non-ground contact (normal |y| <= 0.6, not terrain), lastVel taken after our own impulses, teleport resets it. Collider owner/type tags, damage + ignored-impact ring buffers (debug.damageEvents / ignoredImpacts), F3 shows the last damage cause. scripts/phantomtest.mjs: 13 routes at full throttle + boost -> 0 damage events; ghost scan 0 stray colliders.
 - **Gun shop on the maps:** distinct purple crosshair icon placed at the real door, on top of other markers, labelled on the full map; legend added; Terrace Central + Quick Stop markers added (were missing). The full map opens at its default zoom each time.
 - **Check by hand:** drive flat out (Shift) along Grand Terrace, the ring road and downtown - no random damage (F3 shows "DMG none" or a real cause); open the map (Tab twice) and find the purple crosshair "Barrel & Bolt".
+
+## PHASE 5.3 LOG
+- 11:53 Step 1 RANDOM SHAKING - root causes: (1) physics runs at a fixed 60 Hz but cars and the walker were drawn at the raw physics pose, so every frame that ran 0 or 2 physics steps (vsync drift / frame-time jitter: 33 of 615 frames on a Grand Terrace run) jumped a whole step and the camera following it stuttered; (2) the cabin camera shook from body.impact, a per-step velocity-jump signal that also fires on bumps and landings; (3) the walk camera's pull-in raycast snapped in/out instantly when grazing geometry.
+  FIX: render interpolation between the last two physics poses for every car and the walker (physics.alpha), camera shake only from verified crashes (combat sets crashShake) and police contact, camera pull-in eases back out (instant in). New jitter monitor (window.__gta.jitter) + scripts/shaketest.mjs: walk/run/jump/POV/standing/drive chase-cabin-cinematic/crests/Northgate all smooth with zero shake when nothing is hit, a 25 m/s crash still shakes; e.g. Grand Terrace crests focus jitter 0.20 -> 0.015 m/frame. phantomtest 17/17 still clean.

@@ -148,7 +148,9 @@ export function createCabinView(camera, mirrors = null) {
       // Pose: eye in car space, car orientation x look offsets, plus impact shake.
       car.model.updateMatrixWorld(true);
       eyeW.copy(cab.eye).applyMatrix4(car.model.matrixWorld);
-      st.shake = Math.max(st.shake * Math.exp(-dt * 6), car.body.impact || 0);
+      // Shake only from real crashes (combat sets crashShake on a verified collision), never from bumps.
+      st.shake = Math.max(st.shake * Math.exp(-dt * 6), car.crashShake || 0);
+      car.crashShake = 0;
       eyeW.x += (Math.random() - 0.5) * st.shake * 0.08;
       eyeW.y += (Math.random() - 0.5) * st.shake * 0.08;
       camera.position.copy(eyeW);

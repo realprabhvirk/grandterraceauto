@@ -55,7 +55,7 @@ try {
       const L = W.town.plan.link.samples, link = L.map((s) => ({ x: s.x - s.nx * 1.8, z: s.z - s.nz * 1.8 })).filter((_, i) => i % 3 === 0);
       const inbound = (r) => r.points.slice(0, Math.floor(r.points.length * 0.38));
       return [
-        { name: 'Grand Terrace', pts: R[0].points, speed: 30 },
+        { name: 'Grand Terrace', pts: R[0].points, speed: 22 }, // winding: the blind autopilot leaves the road above ~25 m/s
         ...R.slice(1).map((r) => ({ name: `${r.name} (in)`, pts: inbound(r), speed: 24 })),
         { name: 'Terrace Link', pts: link, speed: 32 },
         { name: 'Ring road north', pts: d.lanePoints(x0 + 6, z0, x1 - 12, z0), speed: 70 },

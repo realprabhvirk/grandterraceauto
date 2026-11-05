@@ -110,6 +110,7 @@ export class VehicleBody {
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.steer = 0;
     this.lastVel = { x: 0, y: 0, z: 0 }; this.impactDv = 0; // a teleport is not a crash
+    this.snapRender = true; // render interpolation: don't blend from the old place
   }
 
   /** R key: flip upright where it is, lifted a little, keeping the heading. */

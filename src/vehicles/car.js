@@ -62,7 +62,16 @@ export class Car {
     this.sync();
   }
 
-  get position() { return this.body.position; }
+  /** Rendered (interpolated) position - what the camera and the rest of the game see. */
+  get position() { return this.renderPos || this.body.position; }
+
+  /** Physics pose before a fixed step (for render interpolation). */
+  capturePrev() {
+    const t = this.body.body.translation(), r = this.body.body.rotation();
+    if (!this.prevPos) { this.prevPos = new THREE.Vector3(); this.prevQuat = new THREE.Quaternion(); }
+    this.prevPos.set(t.x, t.y, t.z); this.prevQuat.set(r.x, r.y, r.z, r.w);
+    this.hasPrev = true;
+  }
 
   setLights(on) {
     this.lights = on;
@@ -71,11 +80,21 @@ export class Car {
   }
 
   /** Copy physics transform to the meshes + wheels, update light states. */
-  sync() {
+  sync(alpha = 1) {
     const b = this.body.body;
     const t = b.translation(), r = b.rotation();
     this.group.position.set(t.x, t.y, t.z);
     this.group.quaternion.set(r.x, r.y, r.z, r.w);
+    // Fixed 60 Hz physics, any-rate rendering: blend the last two physics poses so motion is
+    // smooth even when a frame runs 0 or 2 physics steps (that stutter read as random shaking).
+    if (this.body.snapRender) { this.body.snapRender = false; this.hasPrev = false; }
+    if (this.hasPrev && alpha < 1) {
+      this.group.position.lerpVectors(this.prevPos, this.group.position, alpha);
+      _q.set(r.x, r.y, r.z, r.w);
+      this.group.quaternion.copy(this.prevQuat).slerp(_q, alpha);
+    }
+    if (!this.renderPos) this.renderPos = new THREE.Vector3();
+    this.renderPos.copy(this.group.position);
     this.group.updateMatrixWorld(true);
     const st = this.body.state;
     this.tailMesh.material = st.braking || this.body.parked && this.driver ? CAR_MAT.tailBrake : this.lights ? CAR_MAT.tailRun : CAR_MAT.tailOff;
