@@ -35,3 +35,18 @@ No source changes were uncommitted at handoff. Snapshot was made before creating
 ## Findings and results
 
 Sub-task 1 complete: isolated Vite 8.3.5 server ready on 5180 (launcher PID 24296), separate cache. Initial Vite and Edge launches failed with sandbox spawn EPERM; retried successfully with approval. GTA_URL override added to the four baseline tests, defaults unchanged. With GTA_URL=http://127.0.0.1:5180/ and SHOTS unset, `.\dev.cmd node scripts/walktest.mjs` passed 7/7, exit 0 (codex-walktest.log). No game source changed. Sub-tasks 2-3 pending. Full command output is kept in ignored local *.log files; committed summaries record failures as well as successes.
+
+### Baseline results (sub-task 2)
+
+All commands use `.\dev.cmd node scripts/<name>.mjs`, GTA_URL=http://127.0.0.1:5180/, SHOTS unset, headless Edge 960x540; browsers ran singly and closed.
+
+| Command | Result | Evidence and limits |
+| --- | --- | --- |
+| walktest | PASS 7/7, exit 0 | Porch, wall, jump, fly toggle. codex-walktest.log. |
+| phase2test | PASS 16/16, exit 0 | Driving and night 60 fps; 212/235 calls. codex-phase2test.log. |
+| drivetest | PASS 4 physics route checks, exit 0 | Grand Terrace complete, 54 km/h max, 6.5 deg tilt; Wattle complete. Hillcrest stuck 12/32 and Banksia stuck 9/31 but their physics-only assertions pass. Do NOT claim all routes completed. codex-drivetest.log. |
+| phantomtest | FAIL 1/19, exit 1 | 13 routes: zero damage and zero ignored jumps >4 m/s; scan 7737 samples clean; boost 172 vs 166 km/h. Wall 0 damage instead of 8-12; pole broke, parked hit 0.2 damage. One reported pass is only the hard-coded motorway n/a. codex-phantomtest.log. |
+| phantomtest regress | FAIL 1/3, exit 1 | Fresh browser reproduced wall=0, pole=true, parkedLoss=0.2. codex-phantom-regress.log. |
+| handoffCrashProbe | Diagnostic completed, exit 0 | Same wall coordinates/25 m/s, with step/contact sampling: 11.16 damage, dv 26.41, door:tcDoor normal (0,0,-1), health 88.84. No ignored event. codex-crash-probe.log. |
+
+The wall regression is not explained by suite state alone (also fails singly), and the probe's success means it is not a universally broken wall fixture. Additional per-step sampling changes timing; contact-window/frame scheduling is a hypothesis, not an established root cause. Preserve this failure for task 003's real-crash acceptance. No damage threshold, collision rule or assertion was changed. Prior intermittent traffic launches and night-fps 49 did not reproduce in these single baseline runs; this does not close them.
