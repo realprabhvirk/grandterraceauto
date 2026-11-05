@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate vibe
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -800,8 +800,41 @@ try {
       return { res, traffic: g.traffic.cars.filter((t) => inN(t.pos.x, t.pos.z)).length, peds: g.peds.peds.filter((p) => inN(p.pos.x, p.pos.z) && p.ch.root.visible).length };
     });
     check('northgate drive: Northgate Rd end to end, no NaN, no flips', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 200, drv.res);
-    check('northgate: traffic and NPCs present', drv.traffic >= 1 && drv.peds >= 6, { traffic: drv.traffic, peds: drv.peds });
+    check('northgate: traffic and NPCs present', drv.traffic >= 1 && drv.peds >= 4, { traffic: drv.traffic, peds: drv.peds });
     check('no page errors (northgate)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 5.4: Industrial (no highway)
+  if (run('industrial')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, I = g.world.town.industrial, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(835, -300, 0); await wait(2500);
+      const info = g.renderer.info.render, inI = (x, z) => x > 690 && x < 985 && z < -280 && z > -485;
+      const f0 = I.forklift.dist, p0 = I.forklift.pos.clone(); await wait(1500);
+      return {
+        y: +g.controls.player.position.y.toFixed(2), wh: I.warehouses, cont: I.containers, landmarks: I.landmarks.map((l) => l.name),
+        forkMoved: +(I.forklift.pos.distanceTo(p0)).toFixed(2), forkSpeed: +((I.forklift.dist - f0) / 1.5).toFixed(2),
+        workers: g.peds.peds.filter((p) => p.home && inI(p.pos.x, p.pos.z) && p.role === 'worker').length,
+        lanes: g.traffic.graph.lanes.filter((l) => l.pts.some((p) => inI(p.x, p.z))).length,
+        places: g.world.places.filter((p) => inI(p.x, p.z)).map((p) => p.kind), props: g.world.town.propCars.filter((p) => inI(p.x, p.z)).length,
+        calls: info.calls, fps: g.stats().fps,
+      };
+    });
+    check('industrial: warehouses, container stacks, graffiti, gantry crane', r.wh >= 6 && r.cont >= 40 && r.landmarks.length >= 2, r);
+    check('industrial: slow forklift doing laps, port workers', r.forkMoved > 1 && r.forkSpeed < 2.5 && r.workers >= 3, { forkMoved: r.forkMoved, forkSpeed: r.forkSpeed, workers: r.workers });
+    check('industrial: lanes, minimap marker, stealable utes, flat, perf', r.lanes >= 20 && r.places.includes('industry') && r.props >= 2 && Math.abs(r.y + 4.4) < 0.3 && r.calls < 500 && r.fps >= 45, r);
+    const drv = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      for (const t of [...g.traffic.cars]) if ((Math.abs(t.pos.x - 790) < 8 || Math.abs(t.pos.z + 470) < 8) && t.pos.z < -200) g.traffic.removeCar(t);
+      const res = await d.drivePoints([...d.lanePoints(790, -222, 790, -458), ...d.lanePoints(800, -470, 958, -470)], { speed: 15, timeout: 60 });
+      return { res };
+    });
+    check('industrial drive: King St + Wharf Rd end to end, no NaN, no flips', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 300, drv.res);
+    check('no page errors (industrial)', errors.length === 0, errors.slice(0, 3));
   }
   // ------------------------------------------------------------ Step 6: vibe pass
   if (run('vibe')) {

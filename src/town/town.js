@@ -16,6 +16,7 @@ import { SHOP_X, ROW_Z } from './townBuildings.js';
 import { buildDowntown } from '../districts/downtown.js';
 import { buildBeach } from '../districts/beach.js';
 import { buildNorthgate } from '../districts/northgate.js';
+import { buildIndustrial } from '../districts/industrial.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
@@ -138,6 +139,15 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   out.places.push(...ng.places);
   out.npcSpots.push(...ng.npcSpots);
   for (const ch of ng.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
+  // Industrial estate north of downtown (no highway - see DECISIONS.md).
+  const ind = buildIndustrial({ parent: group, atlas, rng: rng.fork(12) });
+  out.industrial = ind;
+  out.chunks.push(...ind.chunks);
+  out.colliders.push(...ind.colliders);
+  out.places.push(...ind.places);
+  out.npcSpots.push(...ind.npcSpots);
+  out.updaters.push(...ind.updaters);
+  for (const ch of ind.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

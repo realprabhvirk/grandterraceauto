@@ -10,7 +10,7 @@ export function zoneLevels(p, dusk = 0) {
     return Math.max(0, 1 - Math.hypot(dx, dz) / m);
   };
   const beach = inRect(600, 1010, 55, 300, 90);
-  const city = Math.max(inRect(320, 980, -230, 50, 60) * (p.x > 610 ? 1 : 0.6), inRect(330, 630, -480, -280, 40) * 0.35);
+  const city = Math.max(inRect(320, 980, -230, 50, 60) * (p.x > 610 ? 1 : 0.6), inRect(330, 630, -480, -280, 40) * 0.35, inRect(690, 980, -480, -280, 40) * 0.9); // industrial machinery hum
   const suburb = Math.max(0, inRect(-230, 230, -230, 230, 60) - city * 0.5);
   const day = 1 - dusk;
   return {

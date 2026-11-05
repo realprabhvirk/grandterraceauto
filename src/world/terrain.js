@@ -13,7 +13,7 @@ MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
 
 // Terrace Town Centre: a flat graded district east of the end of Grand Terrace.
 export const TOWN = { h: -4.4, x0: 300, x1: 1000, z0: -245, z1: 75, margin: 34 };
-export const NORTHGATE = { x0: 305, x1: 655, z0: -505, z1: -240 }; // graded flat at TOWN.h
+export const NORTHGATE = { x0: 305, x1: 1000, z0: -505, z1: -240 }; // Northgate + Industrial, graded flat at TOWN.h
 const LINK = { x0: 200, x1: 320, z0: -125, z1: -45 }; // valley between the suburb and town
 /** Terrace Beach (south of downtown): promenade at town level, a 1.2 m sea wall, sand at 1:20
  *  down to the water (WATER_Y) and on under it. Blends into the hills over 30 m at x0 / x1. */

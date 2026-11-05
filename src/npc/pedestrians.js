@@ -12,7 +12,7 @@ import { boxB, merge, paint } from '../utils/geom.js';
 import { G_NPC } from '../physics/physicsWorld.js';
 import { makeRng } from '../utils/rng.js';
 
-const COUNT = 10, SLEEP_DIST = 120, NEAR_DIST = 45; // Phase 5: ~60 people in total across all districts
+const COUNT = 9, SLEEP_DIST = 120, NEAR_DIST = 45; // Phase 5: ~60 people in total across all districts
 const DEAD_FADE = 5, DEAD_RESPAWN = 30; // shot: lie ~5 s, fade 1.2 s, back ~30 s later (out of sight)
 const RADIUS = 0.28, HALF = 0.55;
 // Roles: walker, jogger, dogWalker, shopper (bags) walk lines; sitter, picnic, cop, worker,
@@ -47,7 +47,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   // Northgate residents (block loops north of the ring road).
   const ngLines = [];
   for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z < -250) ngLines.push(k);
-  if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' }, { role: 'walker', area: 'north' });
+  if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' });
   if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);

@@ -1,8 +1,8 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 06:48)**
-- Done: Phase 5 steps 1-6 (district 4 industrial+highway skipped, see DECISIONS)
+**STATUS (2026-11-05 06:52)**
+- Done: Phase 5 steps 1-6 (all 4 districts; the highway part of district 4 skipped, see DECISIONS)
 - Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
 - Next: Phase 5 step 7: wrap-up (full suite, perf, README, build, summary)
 <!-- /STATUS -->
@@ -245,3 +245,4 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 - 06:33 Step 5.2 Beach done: src/districts/beach.js (promenade + sea wall + railings, sand slope, animated water + foam, drivable pier, Surf Shack kiosk, lifeguard tower, volleyball, towels/umbrellas, 12+ palms, beach car park, sunbathers / volleyball / lifeguard / vendor + promenade walkers, 12 boid seagulls). phase5test beach 10/10 (85 draw calls, 60 fps).
 - 06:42 Step 5.3 Northgate done: src/districts/northgate.js + NORTH grid in townPlan (36 houses, Northgate State School with oval - staff only, Northgate Plaza + 20-car car park, water tower, residents, 2 traffic cars start there). phase5test northgate 8/8 (163 draw calls, 60 fps); phase4 town 11/11, walktest pass.
 - 06:48 Step 5.4 Industrial + highway SKIPPED (multi-level roads vs single heightfield + kinematic traffic; see DECISIONS). Step 6 vibe pass done: drifting clouds, day birds, zone ambience (wind/birds, waves, city hum, crickets), optional day/night cycle (Shift+N / ?cycle), ~62 people with far ones asleep, pooled warm shop light. phase5test vibe 8/8, beach 10/10, phase4 npcs 9/9.
+- 06:52 Step 5.4 Industrial estate added after all (no highway): src/districts/industrial.js on a 4x3 grid north of downtown via King St (6 warehouses with roller doors + sawtooth roofs, 114 containers in stacks, fenced yards, graffiti walls, gantry crane, forklift lapping a yard, port workers, stealable utes). phase5test industrial 5/5 (72 calls, 60 fps); vibe 8/8, northgate 8/8 (threshold 4 visible residents after the people cap).
