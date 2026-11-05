@@ -37,6 +37,7 @@ import { addEmergencyKit } from './vehicles/emergency.js';
 import { hideProp } from './town/townKit.js';
 import { createPlayerWeapons } from './weapons/playerWeapons.js';
 import { createCopGuns } from './police/copGuns.js';
+import { createGunShopMenu } from './ui/gunShopMenu.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -145,6 +146,9 @@ controls.hooks.onPropSteal = (p) => {
 const viewmodel = createViewmodel();
 const weapons = createPlayerWeapons({ scene, camera, controls, physics, world, peds, police, vehicles, traffic, breakables, particles, audio, wanted, combat, viewmodel, theft });
 const copGuns = createCopGuns({ scene, police, controls, combat, world, physics, audio, fx: weapons.fx });
+// Barrel & Bolt: E at the counter opens the buy menu.
+const gunShop = createGunShopMenu({ arsenal: weapons.arsenal, wallet, input: controls.input, audio, hud: statusHud });
+if (world.town) world.town.hooks.openGunShop = () => gunShop.openMenu();
 renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -154,7 +158,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, gunShop,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();

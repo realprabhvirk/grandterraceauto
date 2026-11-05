@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 06:14)**
-- Done: Phase 5 steps 1-3: fixes a-k, guns, cops with guns (3+ stars, bursts, LOS 40 m, car-window shooters)
+**STATUS (2026-11-05 06:17)**
+- Done: Phase 5 steps 1-4: fixes a-k, guns, cops with guns, Barrel & Bolt gun shop
 - Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
-- Next: Phase 5 step 4: Barrel & Bolt gun shop
+- Next: Phase 5 step 5: map expansion (downtown first)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -240,3 +240,4 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 - 05:50 Step 1 done (fixes a-k). New scripts/phase5test.mjs sections pov cabin zoom carhp burn stars push arrest ko steal parked: all pass (cabin: 9/9 road rays clear for all 4 car types, dash top at 79-99% of screen height; 3-star chase: nearest cop 61 m after 12 s, contact 0 s). Updated old tests for the new rules (emotes = hold G + 1-4, no player damage in cars, KO/busted cutscene timings). phase4test combat/police 12/12, phase2test 16/16, walktest pass, drivetest pass (physics).
 - 06:09 Step 2 done (guns). New src/weapons/ (weaponStats, arsenal, gunModels, ik, hitscan, gunFx, viewmodel, playerWeapons) + ui/weaponHud. scripts/weaponsUnit.mjs 26/26 (damage, zones, falloff, ammo/reload, auto/semi, pump, spread, holster, caps, save). phase5test guns 28/28 (IK: grip/foregrip within 5 mm for all 4 guns, muzzle 0.4-0.75 m ahead; kill+fade timing; heat events; FP ADS). phase2 16/16, walk pass.
 - 06:14 Step 3 done (cops with guns): src/police/copGuns.js; officers get pistol / SMG / one rifle by stars, IK hold, bursts with LOS <=40 m, accuracy 35% at 20 m; cars shoot from the window. phase5test copguns 7/7; push/arrest/ko 12/12 and phase4 police 6/6 still pass.
+- 06:17 Step 4 done: Barrel & Bolt gun shop on Terrace Pde (enterable, counter, racks, glass cabinet, shopkeeper) + HTML buy menu (src/ui/gunShopMenu.js). phase5test shop 12/12.

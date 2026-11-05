@@ -13,7 +13,7 @@ const C = PALETTE.town;
 export const SHOPS = [
   // North side of Terrace Pde (face +z), then south side (face -z), west -> east.
   { kind: 'cafe', name: 'BEAN THERE CAFE' }, { kind: 'bakery', name: 'GOLDEN CRUST BAKERY' }, { kind: 'chemist', name: 'PARADE CHEMIST' },
-  { kind: 'barber', name: 'SHARP CUTS BARBER' }, { kind: 'hardware', name: 'TERRACE HARDWARE' },
+  { kind: 'barber', name: 'SHARP CUTS BARBER' }, { kind: 'guns', name: 'BARREL & BOLT', interior: true }, // Phase 5: enterable gun shop (townInteriors.js)
   { kind: 'electronics', name: 'VOLT ELECTRONICS' }, { kind: 'fashion', name: 'THREADS FASHION' }, { kind: 'bank', name: 'TERRACE SAVINGS BANK' },
   { kind: 'takeaway', name: 'WOK & ROLL TAKEAWAY' }, { kind: 'bottle', name: 'CORNER BOTTLE SHOP' },
 ];
@@ -94,6 +94,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     const north = k < 5, x = SHOP_X[k % 5];
     const ch = chunk(north ? 'b10' : 'b11');
     const F = frame(x, north ? ROW_Z.north : ROW_Z.south, 0, north ? yN : yS, T.h);
+    if (s.interior) { out.places.push({ kind: 'shop', x, z: F.cz, label: 'Barrel & Bolt (guns)' }); return; }
     shopfront(ch, atlas, F, { w: 16.6, d: 14, name: s.name, wall: C.shopWalls[k % C.shopWalls.length], awning: C.awnings[k % C.awnings.length] });
     out.places.push({ kind: 'shop', x, z: F.cz, label: s.name });
   });

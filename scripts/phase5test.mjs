@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -618,6 +618,60 @@ try {
     check('cops shoot the car: car health drops', car.carHits > 0 && car.carHealth < 100, car);
     check('in a car the player never takes bullet damage', car.hp >= 90, car);
     check('no page errors (copguns)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 4: Barrel & Bolt
+  if (run('shop')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, A = g.weapons.arsenal, S = g.gunShop, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const T = g.world.town, c = T.interiors.counters.gunShop;
+      A.state.owned.delete('shotgun'); A.state.owned.delete('rifle'); A.holster();
+      A.state.ammo.pistol.reserve = 0;
+      g.wallet.set(2000);
+      d.teleport(c.x, c.z + 1.1, Math.PI); await wait(500);
+      const prompt = d.state().prompt;
+      await d.tap('KeyE'); await wait(200);
+      const opened = { open: S.open, locked: g.controls.input.locked, visible: !!document.querySelector('.gta-panel button[data-k]') };
+      const c0 = g.wallet.cash;
+      const b1 = S.buy('ammo:pistol');
+      const afterAmmo = { cash: g.wallet.cash - c0, reserve: A.state.ammo.pistol.reserve };
+      A.state.ammo.pistol.reserve = 96;
+      const c1 = g.wallet.cash;
+      const b2 = S.buy('ammo:pistol');
+      const capBlocked = { bought: b2, cash: g.wallet.cash - c1, reserve: A.state.ammo.pistol.reserve };
+      const b3 = S.buy('ammo:rifle'); // no rifle yet
+      const c2 = g.wallet.cash;
+      const b4 = S.buy('gun:shotgun');
+      const shotgun = { bought: b4, cash: g.wallet.cash - c2, owns: A.owns('shotgun') };
+      g.wallet.set(1000);
+      const b5 = S.buy('gun:rifle'); // $1,000 is not enough
+      const cashLeft = g.wallet.cash;
+      g.wallet.add(1000);
+      const b6 = S.buy('gun:rifle');
+      const b7 = S.buy('gun:rifle'); // already owned
+      await wait(100);
+      const ev = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true });
+      document.body.dispatchEvent(ev);
+      await wait(200);
+      const closed = { open: S.open, locked: g.controls.input.locked };
+      const sel3 = A.select(3), sel4 = A.select(4);
+      const keeper = T.interiors.people.find((p) => p.role === 'gunshop');
+      const shootable = g.weapons.hitscan.targets().some((t) => t.ch === keeper?.ch);
+      return { prompt, opened, b1, afterAmmo, capBlocked, b3, shotgun, b5, cashLeft, b6, b7, closed, sel3, sel4, keeper: !!keeper, shootable, place: g.world.places.some((p) => /Barrel/.test(p.label)) };
+    });
+    check('counter prompt: E to shop', /Barrel & Bolt/.test(r.prompt || ''), r.prompt);
+    check('E opens the buy menu, game input paused', r.opened.open && r.opened.locked && r.opened.visible, r.opened);
+    check('ammo pack: -$30, +24 pistol rounds', r.b1 && r.afterAmmo.cash === -30 && r.afterAmmo.reserve === 24, r.afterAmmo);
+    check('cannot buy past the ammo cap', !r.capBlocked.bought && r.capBlocked.cash === 0 && r.capBlocked.reserve === 96, r.capBlocked);
+    check('no ammo for a gun you do not own', r.b3 === false);
+    check('shotgun $600 -> owned', r.shotgun.bought && r.shotgun.cash === -600 && r.shotgun.owns, r.shotgun);
+    check('rifle needs $1,200 (refused when short, bought after)', r.b5 === false && r.cashLeft < 1200 && r.b6 && r.b7 === false, { b5: r.b5, cashLeft: r.cashLeft, b6: r.b6, b7: r.b7 });
+    check('Esc closes the menu, input back', !r.closed.open && !r.closed.locked, r.closed);
+    check('bought guns unlock slots 3 and 4', r.sel3 && r.sel4);
+    check('shopkeeper is there and never in the fight (not a target)', r.keeper && !r.shootable);
+    check('minimap / places list the gun shop', r.place);
+    check('no page errors (shop)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

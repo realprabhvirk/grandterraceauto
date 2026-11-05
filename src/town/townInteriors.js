@@ -9,7 +9,8 @@ import { createCharacter } from '../player/character.js';
 import { roleOutfit } from '../npc/outfits.js';
 import { frame, makeChunk } from './townKit.js';
 import { T } from './townPlan.js';
-import { ROW_Z } from './townBuildings.js';
+import { ROW_Z, SHOP_X } from './townBuildings.js';
+import { createGun } from '../weapons/gunModels.js';
 
 const C = PALETTE.town, SHOW = 25;
 const PRODUCTS = ['#c8553e', '#3f7fc0', '#e2b33a', '#4f9a55', '#8a5aa8', '#e7e1d4', '#d27a3c'];
@@ -151,6 +152,69 @@ export function buildTownInteriors({ parent, atlas, rng }) {
       if (near) cashier.animate({ dt, speed: 0, grounded: true, crouch: false, action: null, steer: 0 });
     });
     out.quickStopCentre = centre;
+  }
+  // ======================= Barrel & Bolt (gun shop, north side of Terrace Pde) ==================
+  {
+    const ch = makeChunk('barrel-bolt'), inside = makeChunk('barrel-bolt-inside');
+    const W = 16.6, D = 14, H = 3.8, HT = 7.4;
+    const F = frame(SHOP_X[4], ROW_Z.north, 0, 1, y);
+    const wall = '#6f5a48';
+    shell(ch, F, { w: W, d: D, h: H, wall, doorX: 0, doorW: 1.9, inner: '#d8cbb4', floor: '#6b5a4a' });
+    ch.block(F, W, HT - H, D, 0, H, -D / 2, wall);                 // upper floor (solid)
+    ch.box(F, W + 0.2, 0.5, 0.5, 0, HT, -0.15, '#efe9dd');          // cornice
+    ch.box(F, W, 1.2, 0.2, 0, HT + 0.5, -0.1, wall);
+    for (const x of [-W / 3, 0, W / 3]) ch.box(F, 1.8, 1.6, 0.12, x, 4.9, 0.05, '#4d6577', { glassy: true });
+    for (const s of [-1, 1]) ch.box(F, 4.6, 2.0, 0.1, s * 4.6, 0.7, 0.05, '#3a4650', { glassy: true }); // barred windows
+    for (const s of [-1, 1]) for (let k = 0; k < 6; k++) ch.box(F, 0.05, 2.0, 0.06, s * (2.6 + k * 0.8), 0.7, 0.12, '#2b2b2e');
+    ch.box(F, W - 0.4, 0.18, 2.6, 0, 3.15, 1.3, '#2f3a33');           // awning
+    ch.box(F, W - 0.4, 0.45, 0.06, 0, 2.75, 2.58, '#2f3a33');
+    ch.box(F, W - 1.2, 1.0, 0.1, 0, 3.45, 0.06, '#1f1f22');
+    atlas.sign(F, atlas.row('BARREL & BOLT', '#1f1f22', '#e2c25a', 'bold 46px Arial'), W - 1.4, 0.82, 0, 3.95, 0.13);
+    // Counter across the shop, glass display cabinet, wall racks of rifles / shotguns.
+    inside.block(F, 7.5, 1.0, 0.9, 0, 0.05, -5.2, '#4a3a2e');
+    inside.box(F, 7.5, 0.06, 0.95, 0, 1.05, -5.2, '#8a7a62');
+    inside.block(F, 3.2, 0.9, 0.8, -5.2, 0.05, -2.6, '#4a3a2e');      // glass cabinet base
+    inside.box(F, 3.2, 0.5, 0.8, -5.2, 0.95, -2.6, '#9fc4d6', { glassy: true });
+    inside.box(F, W - 0.8, 2.4, 0.08, 0, 0.6, -D + 0.42, '#8a6446'); // pegboard
+    const gunGeo = (id, part = 'body') => createGun(id).parts[part]?.geometry;
+    const place = (geo, lx, ly, lz, rotY, rotZ = 0) => {
+      if (!geo) return;
+      const p = F.toW(lx, lz);
+      const m = new THREE.Matrix4().makeRotationY(F.rot + rotY).multiply(new THREE.Matrix4().makeRotationZ(rotZ)).setPosition(p.x, y + ly, p.z);
+      inside.solid.push(geo.clone().applyMatrix4(m));
+    };
+    const rackZ = -D + 0.52;
+    ['rifle', 'shotgun', 'rifle', 'shotgun', 'smg', 'rifle'].forEach((id, k) => {
+      const lx = -5.5 + (k % 3) * 4.6, ly = 1.2 + Math.floor(k / 3) * 0.75;
+      for (const part of ['body', 'mag', 'pump']) place(gunGeo(id, part), lx, ly, rackZ, Math.PI / 2);
+    });
+    ['pistol', 'pistol', 'smg', 'pistol'].forEach((id, k) => {
+      for (const part of ['body', 'slide', 'mag']) place(gunGeo(id, part), -6.3 + k * 0.75, 0.99, -2.6, -Math.PI / 2 + 0.3, Math.PI / 2);
+    });
+    for (const x of [-4, 0, 4]) inside.box(F, 2.4, 0.06, 0.6, x, H - 0.12, -6, '#fffbe8'); // ceiling lights
+    const people = new THREE.Group();
+    const kp = F.toW(1.2, -6.4);
+    const keeper = npc(people, rng, kp.x, kp.z, F.rot, y, 'shopkeeper');
+    out.people.push({ role: 'gunshop', ch: keeper });
+    const insideChunk = inside.finish(parent);
+    insideChunk.group.add(people);
+    out.chunks.push(ch.finish(parent));
+    out.colliders.push(...ch.colliders, ...inside.colliders);
+    const door = buildSwingDoor({ id: 'bbDoor', ...F.toW(0, -0.15), y, w: 1.8, h: 2.4, rot: F.rot, color: '#2f3a33' });
+    parent.add(door.group);
+    out.doors.push(door);
+    out.toggles.push(...door.toggles);
+    out.targets.push(door.target);
+    const counter = F.toW(1.2, -4.45);
+    out.counters.gunShop = { x: counter.x, y, z: counter.z };
+    const centre = F.toW(0, -D / 2);
+    out.updaters.push((dt, { focus }) => {
+      door.update(dt);
+      const near = Math.hypot(focus.x - centre.x, focus.z - centre.z) < SHOW + D / 2;
+      insideChunk.group.visible = near;
+      if (near) keeper.animate({ dt, speed: 0, grounded: true, crouch: false, action: null, steer: 0 });
+    });
+    out.gunShopCentre = centre;
   }
   void MAT;
   return out;

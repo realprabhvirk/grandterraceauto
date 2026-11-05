@@ -108,6 +108,9 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;
+  // Barrel & Bolt counter: E opens the buy menu (main.js wires hooks.openGunShop).
+  const gs = inner.counters.gunShop;
+  if (gs) out.targets.push({ id: 'gunShopCounter', key: 'E', range: 2.0, position: () => gs, label: 'Press E to shop (Barrel & Bolt)', action: () => out.hooks.openGunShop?.() });
   out.targets.push({ id: 'quickStopCounter', key: 'E', range: 2.0, position: () => q, label: 'Press E to buy a snack ($20)', action: () => out.hooks.buySnack?.() });
   return out;
 }
