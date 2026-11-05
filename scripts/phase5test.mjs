@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -974,6 +974,83 @@ try {
     check('(f) witness killed during the delay: report cancelled', r.f.witnesses >= 1 && r.f.heat === 0 && r.fCancelled === 1, { f: r.f, cancelled: r.fCancelled });
     check('(g) cop 50 m away with line of sight: counts', r.g.witnesses >= 1 && r.g.heat === 25, r.g);
     check('no page errors (witness)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 5.1 step 4: full map + navigation
+  if (run('map')) {
+    await load();
+    await fresh();
+    const tab = () => page.keyboard.press('Tab');
+    let m = await ev(() => ({ mode: window.__gta.mapUI.mode }));
+    await tab(); await wait(200);
+    const opened = await ev(async () => {
+      const g = window.__gta, t0 = g.physics.world.timestep, p0 = g.controls.player.position.clone();
+      const steps0 = g.renderer.info.render.frame;
+      // Is the world paused? Hold W for a moment: the player must not move.
+      g.controls.input.setVirtual('KeyW', true); await new Promise((q) => setTimeout(q, 500)); g.controls.input.setVirtual('KeyW', false);
+      const moved = g.controls.player.position.distanceTo(p0);
+      const ov = [...document.querySelectorAll('div')].find((d) => d.style.zIndex === '30');
+      return { mode: g.mapUI.mode, open: g.mapUI.open, locked: !!document.pointerLockElement, moved: +moved.toFixed(3), overlay: ov && getComputedStyle(ov).display !== 'none', t0, steps0 };
+    });
+    check('Tab: minimap -> full map (overlay, pointer lock released, world paused)', m.mode === 1 && opened.mode === 2 && opened.open && opened.overlay && !opened.locked && opened.moved < 0.01, { start: m, opened });
+    // Click on the map at the screen position of a world point near the town centre.
+    const target = { x: 505, z: -60 };
+    const sp = await ev((t) => { const M = window.__gta.mapUI; M.st.scale = 2; M.st.cx = t.x + 20; M.st.cz = t.z + 10; M.draw(); const [sx, sy] = M.toScreen(t.x, t.z), r = M.st && document.querySelector('canvas[style*="100%"]').getBoundingClientRect(); return { x: r.left + sx, y: r.top + sy }; }, target);
+    await page.mouse.click(sp.x, sp.y);
+    await wait(200);
+    const wp = await ev(() => ({ wp: window.__gta.nav.waypoint, route: window.__gta.nav.route.length, beacon: window.__gta.scene.getObjectByName('waypoint-beacon')?.visible }));
+    const off = wp.wp ? Math.hypot(wp.wp.x - target.x, wp.wp.z - target.z) : 999;
+    check('click sets a waypoint at the matching world spot (<10 m) with a route + beacon', off < 10 && wp.route > 2 && wp.beacon, { off: +off.toFixed(1), ...wp });
+    // Wheel + pinch zoom the map, never the page.
+    const z = await ev(() => {
+      const M = window.__gta.mapUI, box = document.querySelector('canvas[style*="100%"]').parentElement, s0 = M.st.scale;
+      const e1 = new WheelEvent('wheel', { deltaY: -200, cancelable: true, bubbles: true, clientX: 400, clientY: 300 }); box.dispatchEvent(e1);
+      const e2 = new WheelEvent('wheel', { deltaY: -30, ctrlKey: true, cancelable: true, bubbles: true, clientX: 400, clientY: 300 }); box.dispatchEvent(e2);
+      return { s0, s1: M.st.scale, prevented: e1.defaultPrevented && e2.defaultPrevented, scale: window.visualViewport ? window.visualViewport.scale : 1 };
+    });
+    check('wheel / pinch zoom the map, page zoom untouched', z.s1 !== z.s0 && z.prevented && z.scale === 1, z);
+    // Drag pans.
+    const c0 = await ev(() => ({ cx: window.__gta.mapUI.st.cx }));
+    await page.mouse.move(500, 300); await page.mouse.down(); await page.mouse.move(400, 300, { steps: 5 }); await page.mouse.up();
+    const c1 = await ev(() => ({ cx: window.__gta.mapUI.st.cx, wp: !!window.__gta.nav.waypoint, clicks: window.__gta.mapUI.st.clicks }));
+    check('drag pans (and does not set a new waypoint)', c1.cx > c0.cx + 20 && c1.clicks === 1, { c0, c1 });
+    // Persisted across reloads.
+    const saved = await ev(() => JSON.parse(localStorage.getItem('gta-waypoint') || 'null'));
+    check('waypoint saved to localStorage', saved && Math.abs(saved.x - wp.wp.x) < 0.01);
+    // Right-click clears.
+    await page.mouse.click(sp.x, sp.y, { button: 'right' });
+    await wait(150);
+    const cleared = await ev(() => ({ wp: window.__gta.nav.waypoint, route: window.__gta.nav.route.length }));
+    check('right-click clears the waypoint', cleared.wp === null && cleared.route === 0, cleared);
+    // Marker snap: click on the hospital marker.
+    const hs = await ev(() => { const M = window.__gta.mapUI, pl = window.__gta.world.places.find((p) => p.kind === 'hospital'), [sx, sy] = M.toScreen(pl.x, pl.z), r = document.querySelector('canvas[style*="100%"]').getBoundingClientRect(); return { x: r.left + sx + 6, y: r.top + sy + 4, px: pl.x, pz: pl.z }; });
+    await page.mouse.click(hs.x, hs.y); await wait(150);
+    const snap = await ev(() => window.__gta.nav.waypoint);
+    check('clicking a marker snaps the waypoint to that place', snap && Math.abs(snap.x - hs.px) < 0.01 && Math.abs(snap.z - hs.pz) < 0.01 && !!snap.label, snap);
+    // Close (Tab -> hidden), the world runs again; Esc also closes.
+    await tab(); await wait(300);
+    const closed = await ev(async () => {
+      const g = window.__gta, p0 = g.controls.player.position.clone();
+      g.controls.input.setVirtual('KeyW', true); await new Promise((q) => setTimeout(q, 600)); g.controls.input.setVirtual('KeyW', false);
+      return { mode: g.mapUI.mode, open: g.mapUI.open, moved: +g.controls.player.position.distanceTo(p0).toFixed(2), locked: g.controls.input.locked };
+    });
+    check('Tab again closes the map (hidden), the world resumes', closed.mode === 0 && !closed.open && closed.moved > 0.5 && !closed.locked, closed);
+    await tab(); await tab(); await wait(150);
+    await page.keyboard.press('Escape'); await wait(150);
+    const esc = await ev(() => ({ open: window.__gta.mapUI.open, settings: [...document.querySelectorAll('div')].some((d) => /Settings/i.test(d.textContent || '') && getComputedStyle(d).display !== 'none' && d.children.length < 30 && d.offsetHeight > 0 && d.style.zIndex === '25') }));
+    check('Esc closes the full map', !esc.open, esc);
+    // Route recompute + arrival.
+    const nav = await ev(async () => {
+      const g = window.__gta, N = g.nav, d = g.debug;
+      d.teleport(470, -92, 0);
+      N.set(612, -60, null, g.controls.player.position);
+      const len = N.route.length;
+      d.teleport(470, 30, 0); N.st.checkT = 0; await new Promise((q) => setTimeout(q, 300));
+      const rer = N.st.reroutes;
+      d.teleport(612, -62, 0); await new Promise((q) => setTimeout(q, 300));
+      return { len, rer, after: N.waypoint };
+    });
+    check('route re-computed when off the path; waypoint clears on arrival', nav.len > 2 && nav.rer >= 1 && nav.after === null, nav);
+    check('no page errors (map)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

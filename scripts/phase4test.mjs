@@ -260,7 +260,8 @@ try {
       const v0 = g.minimap.visible;
       await g.debug.tap('Tab');
       window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }));
-      const v1 = g.minimap.visible;
+      const v1 = g.minimap.visible; // Phase 5.1: Tab = minimap -> full map -> hidden -> minimap
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }));
       window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }));
       return { drawn: px[3] > 0, v0, v1, v2: g.minimap.visible, places: g.world.places.map((p) => p.kind) };
     });

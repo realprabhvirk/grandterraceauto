@@ -31,6 +31,8 @@ import { createPolice } from './police/policeManager.js';
 import { createTheft } from './police/theft.js';
 import { createCrimeWitness } from './police/crimeWitness.js';
 import { createMinimap } from './ui/minimap.js';
+import { createNavigation } from './ui/navigation.js';
+import { createMapUI } from './ui/fullMap.js';
 import { createCyclists } from './npc/cyclists.js';
 import { createViewmodel } from './weapons/viewmodel.js';
 import { createCutscene } from './camera/cutscene.js';
@@ -135,6 +137,11 @@ world.cutscene = cutscene; world.lighting = lighting;
 const heroLot = world.layout.hero;
 world.places = [{ kind: 'home', x: heroLot.x, z: heroLot.z, label: '62 Grand Terrace' }, ...(world.town?.places || [])];
 const minimap = createMinimap(world);
+// Waypoint navigation + full map (Tab: hidden -> minimap -> full map; the full map pauses the game).
+const nav = createNavigation({ scene, camera, traffic, terrain: world.terrain });
+nav.load();
+const mapState = () => ({ player: controls.focus(), heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen });
+const mapUI = createMapUI({ world, minimap, nav, input: controls.input, canvas: renderer.domElement, getState: mapState });
 
 // --- Stealable parked props (town car park, petrol pumps, police bay, ambulance) -------------
 for (const p of world.town?.propCars || []) controls.registerProp(p);
@@ -172,7 +179,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, gunShop, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -180,9 +187,10 @@ let frames = 0;
 renderer.setAnimationLoop(() => {
   timer.update();
   const rdt = Math.min(timer.getDelta(), 0.1);
-  const dt = rdt * cutscene.timeScale; // slow motion during the KO cutscene
+  const paused = mapUI.open; // the full map pauses the world
+  const dt = paused ? 0 : rdt * cutscene.timeScale; // slow motion during the KO cutscene
   vehicles.setFocus(controls.focus());
-  physics.step(dt);
+  if (!paused) physics.step(dt);
   vehicles.sync();
   controls.update(dt);
   cutscene.update(rdt);
@@ -192,7 +200,7 @@ renderer.setAnimationLoop(() => {
   police.update(dt);
   copGuns.update(dt);
   theft.update(dt, world.terrain);
-  { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
+  { const f = controls.focus(); minimap.update(rdt, { ...mapState(), route: nav.route, waypoint: nav.waypoint }); nav.update(rdt, f, paused); mapUI.update(); }
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   skyLife.update(dt, { dusk: lighting.dusk });

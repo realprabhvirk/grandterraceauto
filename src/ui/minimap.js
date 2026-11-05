@@ -42,13 +42,16 @@ export function createMinimap(world) {
     for (const a of world.areas || []) { b.fillStyle = a.color; b.fillRect(a.x0 + half, a.z0 + half, a.x1 - a.x0, a.z1 - a.z0); }
   }
   refresh();
-  window.addEventListener('keydown', (e) => { if (e.code === 'Tab') { e.preventDefault(); visible = !visible; canvas.style.display = visible ? 'block' : 'none'; } });
+  // Tab is handled by the map UI (fullMap.js): hidden -> minimap -> full map.
 
   return {
     refresh,
     get visible() { return visible; },
     toggle() { visible = !visible; canvas.style.display = visible ? 'block' : 'none'; },
-    update(dt, { player, heading, police = [], stars = 0, lastSeen = null }) {
+    setVisible(v) { visible = !!v; canvas.style.display = visible ? 'block' : 'none'; },
+    get bg() { return bg; },
+    get half() { return half; },
+    update(dt, { player, heading, police = [], stars = 0, lastSeen = null, route = [], waypoint = null }) {
       if (!visible) return;
       acc += dt;
       if (acc < 0.1) return;
@@ -66,6 +69,8 @@ export function createMinimap(world) {
         g.strokeStyle = 'rgba(79,123,216,.85)'; g.fillStyle = 'rgba(79,123,216,.12)'; g.lineWidth = 2;
         g.beginPath(); g.arc(cx, cz, (40 + stars * 25) * k, 0, Math.PI * 2); g.fill(); g.stroke();
       }
+      if (route.length > 1) { g.strokeStyle = '#ffcf4a'; g.lineWidth = 3; g.lineJoin = g.lineCap = 'round'; g.beginPath(); route.forEach((p, i) => { const [x, z] = P(p.x, p.z); i ? g.lineTo(x, z) : g.moveTo(x, z); }); g.stroke(); }
+      if (waypoint) { const [x, z] = P(waypoint.x, waypoint.z), r = Math.hypot(x - SIZE / 2, z - SIZE / 2), lim = SIZE / 2 - 6; const fx = r > lim ? SIZE / 2 + ((x - SIZE / 2) / r) * lim : x, fz = r > lim ? SIZE / 2 + ((z - SIZE / 2) / r) * lim : z; g.fillStyle = '#ffcf4a'; g.strokeStyle = '#241e1a'; g.lineWidth = 1.5; g.beginPath(); g.arc(fx, fz, 5, 0, Math.PI * 2); g.fill(); g.stroke(); }
       g.font = 'bold 11px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       for (const pl of world.places || []) {
         const [x, z] = P(pl.x, pl.z), [t, col] = ICON[pl.kind] || ['?', '#fff'];
