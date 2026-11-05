@@ -1,7 +1,7 @@
 # Task 010 - music player
 
 ## Intent and state
-Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A and M1 complete; M2-M8 pending.
+Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A, M1 and M2 complete; M3-M8 pending.
 
 ## Phase A evidence (2026-11-06, clock checked with Get-Date)
 
@@ -87,3 +87,10 @@ Playback decoding is verified in headless Edge, not listening quality or a separ
 - `.\dev.cmd node scripts/musicIndextest.mjs`: exit 0, 8/8 including missing/empty, aliases/order, URL encoding, fallback, byte copies, stale cleanup, path separation and actual SHA-256 source/copy equality.
 - One further headless Edge run fetched `/music/playlist.json` and played each `/music/<encoded file>`: Kaali 0.439 s, GTA Mohali 0.668 s, Bexley 0.654 s advanced; expected durations as above, no media errors. Browser closed. `git check-ignore` confirms generated manifest ignored; `git ls-files` lists only the three source MP3s, no generated audio.
 - Regression scope: no runtime module imports or gameplay behavior changed, so exercised index generation and served playback; gameplay regressions reserved for integration. No screenshots/build/dependencies. Next: M2.
+
+## M2 result
+
+- Files: src/audio/musicConfig.js, src/audio/musicPlayer.js, scripts/musicEnginetest.mjs. New modules are deliberately not imported by main until the planned integration step. One reusable media element; no new AudioContext; subscribable track/change/notice events for M3. Playback intent starts false and is not persisted. A trusted gesture unlocks playback, and explicit Play is required; leaving a car preserves that intent while a deliberate Pause clears it. Main will supply real elapsed time and current car/cutscene state.
+- `$env:GTA_URL='http://127.0.0.1:5180/'; .\dev.cmd node scripts/musicEnginetest.mjs`: exit 0, **23 checks passed** (codex-music-engine.log). All real tracks decoded/advanced with expected durations. Natural ended events exercised repeat-one, last-to-first all and end-stop off. Other coverage: gesture gate despite autoplay launch flag, single element reuse, previous rule, seek/clamps, volume/master/local mute, shuffle/history, 0.5 s exit fade and actual timeline suspension/resume, deliberate pause across re-entry, on-foot playback when car-only disabled, cutscene gain 0.4, reload settings without playback, corrupt/denied storage, empty/missing playlist, failed-file skip, all-failed stop, recovered-file retry, rapid switching followed by pause, dispose and no script errors.
+- Initial test failure exposed stale cached media-error state on retry after all tracks failed. Explicit Play now clears the old error and reloads the selected failed resource. Added a regression that changes the corrupt response to real audio and verifies the same player recovers; no assertion weakened.
+- Browser closed. Zero screenshots. UI toasts, actual game master/M key and lifecycle connections are **not yet verified**: notices are only events at M2, and the harness supplied master/car/cutscene state. Those remain M3-M6 acceptance work. No connected gameplay module changed, so existing game regression suites are pending integration, not claimed run here. Next M3.
