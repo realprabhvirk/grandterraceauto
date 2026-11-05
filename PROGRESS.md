@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 11:09)**
-- Done: Phase 5.2 steps 1-2 (phantom crash fixed, gun shop + POI markers)
-- Broken: phase4 'police officer on foot knocked down' still red (from 5.1)
-- Next: 5.2 step 3: wrap-up
+**STATUS (2026-11-05 11:34)**
+- Done: PHASE 5.2 complete (phantom crash fixed, gun shop on the maps)
+- Broken: phase4 'police officer on foot knocked down' still red (known)
+- Next: Phase 5.3: random shaking + cop-shooting = 5 stars
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -343,3 +343,9 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
   FIX: crashes now need a real solid, non-ground contact (Rapier contact pairs, normal |y| <= 0.6, terrain/road/curb ignored) during the 0.12 s window; lastVel is taken after our own impulses; teleport resets it. Every collider has an owner/type tag; last 30 damage events + last 30 ignored jumps via debug.damageEvents()/ignoredImpacts(); the F3 overlay shows the last cause.
   RESULT (scripts/phantomtest.mjs): 13 routes at full throttle + boost (Grand Terrace, cul-de-sacs, Terrace Link, ring road x4, Pde/downtown, Northgate Rd, King St, Wharf Rd): 0 damage events; ghost scan over 6759 lane samples: 0 static colliders in the corridor; flat straight 173 km/h vs 166 configured; wall 25 m/s = 11.1, pole breaks, parked car still hurts. Highway: doesn't exist (skipped in Phase 5).
 - 11:09 Step 2: why the gun shop was hard to find - its marker existed but used the generic green '$' shop icon at a guessed spot (block centre), identical to the 10 other shops. Now: its own icon (crosshair in a purple circle, drawn on top, labelled "Barrel & Bolt" on the full map) placed from the real door; shared icon module src/ui/mapIcons.js; legend on the full map. Fixed POIs: Terrace Central and Quick Stop had no markers at all (added from their doors). All POIs checked (house 62, police, hospital, department store, Quick Stop, gun shop, parks, beach, downtown, industrial, school, shopping centre; highway not built). phase5test pois 7/7, map 11/11.
+- 11:34 Step 3: full suite once: weaponsUnit 26/26, phase5test 178/178 (all 32 sections), phantomtest 21/21 (one Wattle Rise run lost health once without a crash event - it was a breakable prop hit, which is now logged too; re-run clean), phase4 all pass except the known cop knock-down, phase2 16/16, walk pass, drivetest pass on re-run (first run: autopilot got stuck in traffic on Grand Terrace). Perf: 72-202 draw calls, 52-60 fps (cabin + mirrors slowest). Build OK (5.28 MB).
+
+## PHASE 5.2 SUMMARY (2026-11-05, 11:34)
+- **Phantom crash:** root causes were (1) crash damage triggered by any big per-step velocity change with no contact check (crest landings / dips / suspension bottoming counted as crashes) and (2) the car remembering its velocity before its own grip/downforce impulses and speed caps (a boost cut looked like a 7 m/s hit; teleports too). Fix: crashes need a real solid, non-ground contact (normal |y| <= 0.6, not terrain), lastVel taken after our own impulses, teleport resets it. Collider owner/type tags, damage + ignored-impact ring buffers (debug.damageEvents / ignoredImpacts), F3 shows the last damage cause. scripts/phantomtest.mjs: 13 routes at full throttle + boost -> 0 damage events; ghost scan 0 stray colliders.
+- **Gun shop on the maps:** distinct purple crosshair icon placed at the real door, on top of other markers, labelled on the full map; legend added; Terrace Central + Quick Stop markers added (were missing). The full map opens at its default zoom each time.
+- **Check by hand:** drive flat out (Shift) along Grand Terrace, the ring road and downtown - no random damage (F3 shows "DMG none" or a real cause); open the map (Tab twice) and find the purple crosshair "Barrel & Bolt".

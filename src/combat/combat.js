@@ -164,7 +164,7 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
         for (const it of broken) {
           const v = c.body.body.linvel();
           c.body.body.setLinvel({ x: v.x * 0.82, y: v.y, z: v.z * 0.82 }, true); // lose some speed ploughing through
-          damageCar(c, propDamage(it.set, c.body.state.speed));
+          { const pd = propDamage(it.set, c.body.state.speed); damageCar(c, pd); ring(damageLog, { t: +st.t.toFixed(2), car: c.type, player: c === active, dmg: +pd.toFixed(2), speed: +Math.abs(c.body.state.speed).toFixed(1), dv: 0, kmh: +(Math.abs(c.body.state.speed) * 3.6).toFixed(0), normal: [0, 0, 0], tag: `breakable:${it.set.name}`, pos: [it.x, it.y, it.z].map((q) => +q.toFixed(1)) }); }
           if (it.set.sparks) particles.sparks(new THREE.Vector3(it.x, it.y + it.set.h * 0.85, it.z));
           audio.snap();
           if (c === active) {
