@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 18:34)**
-- Done: Phase 6.1 steps 0-1 (baseline, docs/PHANTOM_CRASHES.md)
-- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged); phantom crashes deferred (doc)
-- Next: 6.1 step 2: speeding pull-over pursuit
+**STATUS (2026-11-05 18:46)**
+- Done: Phase 6.1 steps 0-2 (baseline, phantom notes, pull-over pursuit)
+- Broken: highway autopilot spin (logged); phantom crashes deferred (doc); life bus-stop check flaky
+- Next: 6.1 step 3: airport
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -413,3 +413,8 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 
 ### 2026-11-05 18:34 — Step 1: phantom-crash notes (docs only)
 - docs/PHANTOM_CRASHES.md written for a separate discussion (summary, history with hashes, 5.2 root causes + fix, test coverage gaps, current damage pipeline, debug tools, UNTESTED hypotheses, a what-to-record template, next steps). **The fix is deliberately deferred**: no collision/damage/physics/camera code was changed. Noted gap: phantomtest's "highway + ramps" check is still a hard-coded n/a.
+
+### 2026-11-05 18:46 — Step 2: speeding = pull-over pursuit, then a fine
+- SPEEDING.CAMERAS_ENABLED=false (src/police/speedingConfig.js): no cameras spawned, no CAMERA AHEAD signs, no camera map icons/legend (code kept). Radar cops now have their own full-map icon ("R").
+- src/police/pullOver.js: a radar post's patrol car (or a cruiser) hands over to one pursuit PoliceCar: lights + siren, follows the player's breadcrumb trail 9 m behind (6.5 m when stopped), <= 0.95x player speed (outrunnable), catches up at 19 m/s when you're slow, backs off inside 5 m (cars can't touch: police collision group). Stop < 2 m/s with it within 8 m for 1 s → officer walks to your window, 3 s "Issuing fine..." bar → -$200 → it drives off and the post / cruiser resets. Drive off while issuing → pursuit resumes. No LOS 8 s / > 150 m → "You lost the police"; 90 s → gives up; becoming wanted cancels; 20 s per-cop cooldown; EVADE_STARS=0. HUD: flashing red/blue PULL OVER + hint.
+- Test `pullover` (replaces `enforce`) 14/14 (2 fix attempts on the stop approach: trail points behind the cop, braking profile). Regression: signs/pois/map/speeding/copstars pass; `life` "buses pull up at stops" failed once in a batch (0 stops in 35 s), passed on rerun - flaky, logged.

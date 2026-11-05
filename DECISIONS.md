@@ -147,3 +147,4 @@ One line per judgment call made during the autonomous build.
 - P6.5: radar posts + cameras show as one 'camera' map kind (full map only) to avoid minimap clutter; cruisers can't be carjacked (trafficCop flag).
 - P6.6a: bank + electronics stay facades (nothing sensible to sell without new systems); barber sells hair colour as a bonus; Pde shops keep their old names.
 - P6.6b: running a red light is not a crime (not in spec; arcade). Landmarks: stadium on a graded pad south of The Esplanade, TV tower on the southern hill (highest point), City Hall in the block interior behind the hospital facing Station St. Laneways skipped (time).
+- P6.1 step 2: after a fine the cop drives off for 8 s, then its post car / cruiser simply reappears at its post / lane (no drive-back pathing). The officer at a radar post rides in the pursuit car (hidden from the post while it's away). Detection rules unchanged.

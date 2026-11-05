@@ -365,7 +365,7 @@ export function createPolice({ scene, physics, world, traffic, vehicles, control
       // Siren: loudest nearby pursuing car.
       let lvl = 0;
       if (stars) for (const c of cars) lvl = Math.max(lvl, 1 - Math.hypot(c.pos.x - target.x, c.pos.z - target.z) / 80);
-      audio.siren(Math.max(lvl, world.playerSiren ? 0.8 : 0));
+      audio.siren(Math.max(lvl, world.playerSiren ? 0.8 : 0, world.pullOverSiren || 0));
     },
   };
 }

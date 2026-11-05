@@ -1324,61 +1324,86 @@ try {
     check('limits: motorway 100, ramps 80', r.limits.every(([n, l]) => (/Ramp/.test(n) ? l === 80 : l === 100)), r.limits);
     check('no page errors (highway)', errors.length === 0, errors.slice(0, 3));
   }
-  // ------------------------------------------------------------ 6.5: speed cameras + traffic cops
-  if (run('enforce')) {
+  // ------------------------------------------------------------ 6.1 step 2: speeding = pull-over pursuit, then a fine
+  if (run('pullover') || run('enforce')) {
     await load();
     await fresh();
     const r = await ev(async () => {
-      const g = window.__gta, d = g.debug, S = g.speeding, C = g.speedCams, TC = g.trafficCops, wait = (ms) => new Promise((q) => setTimeout(q, ms));
-      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t); // (cruisers too: isolate cameras / radar posts)
+      const g = window.__gta, d = g.debug, S = g.speeding, TC = g.trafficCops, PO = g.pullOver, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const frames = async (n, fn) => { for (let k = 0; k < n; k++) { fn?.(); await new Promise((q) => requestAnimationFrame(q)); } };
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t); // isolate the radar posts
       g.wanted.clear(true); g.police.reset(); g.wallet.set(5000);
       d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen && c.type === 'sedan')); await wait(1400);
-      const car = g.controls.car; car.health = 100; car.dead = false; car.body.dead = false;
-      const cam = C.cams.find((c) => c.id === 'cam-ring-n');
-      const pass = async (kmh, back = 26) => {
-        const right = { x: -cam.tz, z: cam.tx }, lat = (cam.road.halfW || 4.5) + 1.6 - 2.2;
-        const x = cam.x + right.x * lat - cam.tx * back, z = cam.z + right.z * lat - cam.tz * back;
-        car.body.teleport(x, g.world.terrain.getHeight(x, z), z, Math.atan2(cam.tx, cam.tz)); await wait(250);
-        const v = { x: cam.tx * kmh / 3.6, y: 0, z: cam.tz * kmh / 3.6 };
-        car.body.body.setLinvel(v, true); car.body.lastVel = { ...v };
-        const t0 = performance.now(); while (performance.now() - t0 < 1600) { const vv = car.body.body.linvel(); car.body.body.setLinvel({ x: v.x, y: vv.y, z: v.z }, true); await new Promise((q) => requestAnimationFrame(q)); }
+      const car = g.controls.car; car.health = 100;
+      const out = { cams: g.speedCams.cams.length, camPlaces: g.world.places.filter((p) => p.kind === 'camera').length, aheadSigns: g.world.network.cameraAheadSigns.length, radarPlaces: g.world.places.filter((p) => p.kind === 'radar').length };
+      const hold = (vx, vz) => { const vv = car.body.body.linvel(); car.body.body.setLinvel({ x: vx, y: vv.y, z: vz }, true); car.body.lastVel = { x: vx, y: vv.y, z: vz }; };
+      const radarAt = async (post, dist, side, speed = 35, ms = 300) => {
+        const fx = Math.sin(post.yaw), fz = Math.cos(post.yaw), x = post.x + fx * dist + fz * side, z = post.z + fz * dist - fx * side;
+        car.body.teleport(x, g.world.terrain.driveHeight(x, z, post.y + 3), z, post.yaw + Math.PI); await wait(200);
+        await frames(Math.round(ms / 16), () => hold(-fx * speed, -fz * speed));
       };
-      const out = {}, h0 = g.wanted.heat, c0 = g.wallet.cash;
-      const f0 = S.st.fines; await pass(110); out.cam = { fines: S.st.fines - f0, cash: g.wallet.cash - c0, flashes: C.st.flashes, limit: cam.road.speedLimit };
-      const f1 = S.st.fines; await pass(110); out.camCooldown = S.st.fines - f1;
-      // At the limit (+10 allowed) on a fresh camera: Terrace Pde downtown camera would need its own pass; use cooldown-free id via a new camera check.
-      const camKing = C.cams.find((c) => c.id === 'cam-king');
-      const f2 = S.st.fines; Object.assign(cam, {}); // (cam-ring-n is cooling down) - drive past cam-king at its limit
-      { const c = camKing, right = { x: -c.tz, z: c.tx }, lat = (c.road.halfW || 4.5) + 1.6 - 2.2; const x = c.x + right.x * lat - c.tx * 26, z = c.z + right.z * lat - c.tz * 26;
-        car.body.body.setLinvel({ x: 0, y: 0, z: 0 }, true); car.body.lastVel = { x: 0, y: 0, z: 0 }; await wait(300); car.body.teleport(x, g.world.terrain.getHeight(x, z), z, Math.atan2(c.tx, c.tz)); car.body.body.setLinvel({ x: 0, y: 0, z: 0 }, true); await wait(250); const kmh = 49; const v = { x: c.tx * kmh / 3.6, y: 0, z: c.tz * kmh / 3.6 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v };
-        const t0 = performance.now(); while (performance.now() - t0 < 2400) { const vv = car.body.body.linvel(); car.body.body.setLinvel({ x: v.x, y: vv.y, z: v.z }, true); await new Promise((q) => requestAnimationFrame(q)); } }
-      out.atLimit = { fines: S.st.fines - f2, checks: C.st.checks };
-      // Radar cop: in front with LOS catches; behind a wall / out of arc doesn't (sees() geometry checks).
-      const post = TC.posts[0];
-      const fx = Math.sin(post.yaw), fz = Math.cos(post.yaw);
-      const radarAt = async (dist, side = 0) => { const x = post.x + fx * dist + fz * side, z = post.z + fz * dist - fx * side; car.body.teleport(x, g.world.terrain.driveHeight(x, z, post.y + 3), z, post.yaw + Math.PI); await wait(250); const v = { x: -fx * 35, y: 0, z: -fz * 35 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v }; await wait(250); const ss = S.status(); window.__dbgRadar = { over: ss?.over, kmh: ss?.kmh ?? ss?.speed, limit: ss?.limit, sees: TC.sees(post.x, post.y, post.z, post.yaw, car.position, false), car: [car.position.x, car.position.y, car.position.z].map(Math.round), post: [post.x, post.y, post.z].map(Math.round) }; };
-      const f3 = S.st.fines; await radarAt(35, 8.5); out.radar = { fines: S.st.fines - f3, catches: TC.st.catches, post: post.id, dbg: window.__dbgRadar };
-      const P = { x: post.x - fx * 30, y: post.y, z: post.z - fz * 30 };
-      out.behind = TC.sees(post.x, post.y, post.z, post.yaw, P, false);
-      out.wall = TC.sees(540, -4.4, -81, Math.PI, { x: 540, y: -4.4, z: -110 }, false); // Terrace Central's facade in between
+      const P0 = TC.posts[0], h0 = g.wanted.heat;
+      // 1. Speeding past a radar post with line of sight -> pursuit, no stars, no fine yet.
+      const f0 = S.st.fines, c0 = g.wallet.cash;
+      await radarAt(P0, 35, 8.5);
+      out.start = { state: PO.st.state, stars: g.wanted.stars, fines: S.st.fines - f0, away: P0.away, catcher: PO.st.catcher?.id };
+      // 2. Keep driving at 25 m/s along the motorway for 3 s: the cop follows, never faster than 0.95x, never rams.
+      const fx = -Math.sin(P0.yaw), fz = -Math.cos(P0.yaw);
+      PO.st.maxCopKmh = 0;
+      await frames(180, () => hold(fx * 25, fz * 25));
+      out.follow = { state: PO.st.state, maxCopKmh: +PO.st.maxCopKmh.toFixed(0), dist: +PO.st.dist.toFixed(1) };
+      // 3. Stop: the cop pulls up behind, officer walks up, 3 s issuing, -$200 once, pursuit over.
+      const t0 = performance.now(); let issued = null;
+      while (performance.now() - t0 < 14000 && PO.st.state !== 'leaving' && PO.st.state !== 'idle') { hold(0, 0); if (PO.st.state === 'issuing' && issued === null) issued = +((performance.now() - t0) / 1000).toFixed(1); await new Promise((q) => requestAnimationFrame(q)); }
+      out.stop = { issuedAfter: issued, state: PO.st.state, fines: S.st.fines - f0, cash: g.wallet.cash - c0, stars: g.wanted.stars, minGap: +PO.st.minGap.toFixed(1), officer: PO.officer.root.visible };
+      await wait(PO.st.state === 'leaving' ? 9000 : 100);
+      out.after = { state: PO.st.state, postBack: !P0.away };
+      // 4. Drive off while it's issuing: pursuit resumes, no fine; then flee > 150 m: lost, no fine.
+      const P1 = TC.posts[1], f1 = S.st.fines;
+      await radarAt(P1, 30, 8.5, 0, 100); PO.start(P1.catcher); // detection itself is covered above
+      const st1 = PO.st.state;
+      let t1 = performance.now();
+      while (performance.now() - t1 < 12000 && PO.st.state !== 'issuing') { hold(0, 0); await new Promise((q) => requestAnimationFrame(q)); }
+      const issuing = PO.st.state === 'issuing';
+      await wait(800);
+      const g1 = { x: Math.sin(P1.yaw + Math.PI), z: Math.cos(P1.yaw + Math.PI) };
+      await frames(40, () => hold(g1.x * 12, g1.z * 12));
+      out.driveOff = { started: st1, issuing, state: PO.st.state, resumed: PO.st.resumed, fines: S.st.fines - f1 };
+      const lost0 = PO.st.lost, p = car.position;
+      car.body.teleport(p.x + g1.x * 220, g.world.terrain.getHeight(p.x + g1.x * 220, p.z + g1.z * 220), p.z + g1.z * 220, Math.atan2(g1.x, g1.z)); await wait(400);
+      out.flee = { state: PO.st.state, lost: PO.st.lost - lost0, fines: S.st.fines - f1, stars: g.wanted.stars };
+      // 5. Same post again within the cooldown: no pursuit.
+      await frames(6, () => hold(g1.x * 35, g1.z * 35)); out.cooldown = S.cooling(P1.id) > 15 && PO.st.state === 'idle' ? 'idle' : `no cooldown (${S.cooling(P1.id)})`; // the post we just lost
+      // 6. Wrong arc (driving away behind the officer), wanted, siren: no pursuit. Wanted mid-pursuit cancels.
+      const P2 = TC.posts[2];
+      await radarAt(P2, -25, 8.5, -35); out.behind = PO.st.state;
+      g.wanted.add('test', 25); await radarAt(P2, 35, 8.5); out.wanted = PO.st.state; g.wanted.clear(true); g.police.reset();
+      car.emergency = { on: true, update() {} }; await radarAt(P2, 35, 8.5); out.siren = PO.st.state; car.emergency = null;
+      const cx0 = PO.st.cancelled;
+      PO.start(TC.posts[3].catcher); const s3 = PO.st.state; g.wanted.add('test', 25); await wait(300);
+      out.midWanted = { started: s3, state: PO.st.state, cancelled: PO.st.cancelled - cx0, postBack: !TC.posts[3].away };
+      g.wanted.clear(true); g.police.reset();
+      out.wall = TC.sees(540, -4.4, -81, Math.PI, { x: 540, y: -4.4, z: -110 }, false);
       out.clear = TC.sees(520, -4.4, -81, Math.PI / 2, { x: 550, y: -4.4, z: -86 }, false);
-      // Wanted / siren: no fine anywhere.
-      g.wanted.add('test', 25); const f4 = S.st.fines; await radarAt(35, 8.5); out.wanted = S.st.fines - f4; g.wanted.clear(true); g.police.reset();
-      car.emergency = { on: true, update() {} }; const f5 = S.st.fines; await radarAt(35, 8.5); out.siren = S.st.fines - f5; car.emergency = null;
       out.heat = g.wanted.heat - h0;
-      out.cruisers = TC.cruisers.length; out.cams = C.cams.length; out.posts = TC.posts.length;
-      out.onMap = g.world.places.filter((p) => p.kind === 'camera').length;
+      out.police = g.debug.damageEvents().filter((e) => /police|pullover/.test(e.tag)).length;
       g.controls.respawnAt(car.position, 0);
       return out;
     });
-    check('speeding past a camera: one -$200 fine + flash', r.cam.fines === 1 && r.cam.cash === -200 && r.cam.flashes >= 1, r.cam);
-    check('same camera again within 20 s: no second fine', r.camCooldown === 0, r);
-    check('at the limit past a camera: nothing', r.atLimit.fines === 0, r.atLimit);
-    check('radar cop in front with line of sight catches you', r.radar.fines === 1, r.radar);
-    check('radar: behind the officer / behind a wall -> not seen; clear view -> seen', r.behind === false && r.wall === false && r.clear === true, { behind: r.behind, wall: r.wall, clear: r.clear });
-    check('no fines while wanted or with the siren on; never any heat from speeding', r.wanted === 0 && r.siren === 0 && r.heat === 0, r);
-    check('9 cameras + 5 radar posts + 2 cruisers, cameras on the full map', r.cams >= 8 && r.posts >= 5 && r.cruisers === 2 && r.onMap >= 8, { cams: r.cams, posts: r.posts, cruisers: r.cruisers, onMap: r.onMap });
-    check('no page errors (enforce)', errors.length === 0, errors.slice(0, 3));
+    check('cameras disabled: none spawned, no CAMERA AHEAD signs, no camera map icons (radar cops shown)', r.cams === 0 && r.camPlaces === 0 && r.aheadSigns === 0 && r.radarPlaces === 5, { cams: r.cams, camPlaces: r.camPlaces, aheadSigns: r.aheadSigns, radar: r.radarPlaces });
+    check('speeding past a radar cop with line of sight -> pull-over pursuit, 0 stars, no fine yet', r.start.state === 'pursuit' && r.start.stars === 0 && r.start.fines === 0 && r.start.away, r.start);
+    check('cop follows, never faster than 0.95x your speed (90 km/h -> <= 86)', r.follow.state === 'pursuit' && r.follow.maxCopKmh <= 87, r.follow);
+    check('stop beside the cop -> officer walks up, -$200 once, pursuit ends, no stars', r.stop.issuedAfter !== null && r.stop.fines === 1 && r.stop.cash === -200 && r.stop.stars === 0, r.stop);
+    check('the cop never rams (stays > 4 m away)', r.stop.minGap > 4 && r.police === 0, { minGap: r.stop.minGap, policeHits: r.police });
+    check('after the fine the cop drives off and the post resets', r.after.state === 'idle' && r.after.postBack, r.after);
+    check('drive off while it is issuing -> pursuit resumes, no fine', r.driveOff.started === 'pursuit' && r.driveOff.issuing && r.driveOff.state === 'pursuit' && r.driveOff.resumed >= 1 && r.driveOff.fines === 0, r.driveOff);
+    check('flee (> 150 m) -> "lost the police", pursuit over, no fine, no stars', r.flee.state === 'idle' && r.flee.lost === 1 && r.flee.fines === 0 && r.flee.stars === 0, r.flee);
+    check('same cop again within 20 s: no new pursuit', r.cooldown === 'idle', { cooldown: r.cooldown });
+    check('out of the officer\'s arc / wanted / siren on: no pursuit', r.behind === 'idle' && r.wanted === 'idle' && r.siren === 'idle', { behind: r.behind, wanted: r.wanted, siren: r.siren });
+    check('becoming wanted mid-pursuit cancels the pull-over', r.midWanted.started === 'pursuit' && r.midWanted.state === 'idle' && r.midWanted.cancelled === 1 && r.midWanted.postBack, r.midWanted);
+    check('radar: behind a wall not seen, clear view seen', r.wall === false && r.clear === true, { wall: r.wall, clear: r.clear });
+    check('never any heat from speeding', r.heat === 0, { heat: r.heat });
+    check('no page errors (pullover)', errors.length === 0, errors.slice(0, 3));
   }
   // ------------------------------------------------------------ 6.6a: kit shops (enterable + buy menus)
   if (run('shops')) {

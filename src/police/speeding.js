@@ -1,5 +1,6 @@
-// Speeding: only a FINE, only when something actually catches you (a speed camera or a traffic
-// cop - see speedCameras.js / trafficCops.js). No heat, no stars, no chase. No fines while wanted,
+// Speeding: a FINE when something catches you. Phase 6.1: traffic cops start a pull-over pursuit
+// (pullOver.js) and fine you via applyFine() once you stop; speed cameras are off by default
+// (SPEEDING.CAMERAS_ENABLED). No heat, no stars. No fines while wanted,
 // on foot, or in an emergency vehicle with the siren on. Cash never goes below 0 (wallet clamps).
 import { SPEEDING } from './speedingConfig.js';
 import { limitAt } from '../world/speedLimits.js';
@@ -27,6 +28,21 @@ export function createSpeeding({ world, controls, wallet, hud, audio }) {
   return {
     st, status, blocked,
     update(dt) { st.t += dt; },
+    /** Start a catcher's cooldown (lost pursuit). */
+    cooldown(id) { cool.set(id, st.t + SPEEDING.cooldown); },
+    /** Seconds left on a catcher's cooldown (0 = ready). */
+    cooling(id) { return Math.max(0, (cool.get(id) ?? -1e9) - st.t); },
+    /** Pull-over completed: fine now (the player has stopped, so 'over' no longer applies). */
+    applyFine(id, kind = 'pull over') {
+      if ((world.wanted?.stars || 0) > 0) return false;
+      cool.set(id, st.t + SPEEDING.cooldown);
+      wallet.add(-SPEEDING.fine);
+      st.fines++; st.total += SPEEDING.fine;
+      st.last = { id, kind };
+      hud.message(`SPEEDING FINE  -$${SPEEDING.fine}`, 2.5, '#ffcf4a');
+      audio.ding?.(520); setTimeout(() => audio.ding?.(390), 160);
+      return true;
+    },
     /** A camera / traffic cop caught the player: fine if all the rules allow. Returns true if fined. */
     tryFine(id, kind = 'camera') {
       const s = status(), why = blocked(s, id);

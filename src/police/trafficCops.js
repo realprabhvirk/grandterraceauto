@@ -49,11 +49,20 @@ export function createTrafficCops({ scene, world, physics, traffic, speeding }) 
     // Radar gun in the right hand.
     const gun = new THREE.Mesh(paint(new THREE.BoxGeometry(0.08, 0.1, 0.22).translate(0, -0.3, 0.08), '#2b2b2e', 0.02), MAT.solid);
     ch.bones.rElbow.add(gun);
-    posts.push({ id: spot.id, x: s.x, y, z: s.z, yaw: s.yaw, ch, lamps, flashT: 0, catches: 0 });
-    world.places?.push({ kind: 'camera', x: s.x, z: s.z, label: 'Radar cop' });
+    const post = { id: spot.id, x: s.x, y, z: s.z, yaw: s.yaw, ch, lamps, flashT: 0, catches: 0, carG, col, away: false };
+    post.catcher = { id: spot.id, kind: 'post', pose: { x: carX, y, z: carZ, yaw: carG.rotation.y },
+      hide() { post.away = true; carG.visible = false; col.setEnabled(false); ch.root.visible = false; },
+      restore() { post.away = false; carG.visible = true; col.setEnabled(true); ch.root.visible = true; } };
+    posts.push(post);
+    world.places?.push({ kind: 'radar', x: s.x, z: s.z, label: 'Radar cop' });
   }
   // Two cruising patrol cars in the traffic system.
   const cruisers = traffic.cars.filter((c) => c.trafficCop);
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (const c of cruisers) c.catcher = { id: c.id, kind: 'cruiser', get pose() { return { x: c.pos.x, y: c.pos.y, z: c.pos.z, yaw: Math.atan2(c.fwd.x, c.fwd.z) }; },
+    hide() { c.suspended = true; c.group.visible = false; c.body.setEnabled(false); for (let k = 0; k < 4; k++) c.wheels.setMatrixAt(c.wheelOffset + k, ZERO); c.wheels.instanceMatrix.needsUpdate = true; },
+    restore() { c.suspended = false; c.group.visible = true; c.body.setEnabled(true); } };
+  const hooks = { spot: null }; // set by main.js: pull-over pursuit (Phase 6.1)
 
   const los = (a, b) => {
     const d = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
@@ -70,13 +79,16 @@ export function createTrafficCops({ scene, world, physics, traffic, speeding }) 
     if (!(f > cosHalf || (bothArcs && f < -cosHalf))) return false;
     return los({ x, y: y + 1.5, z }, { x: p.x, y: p.y + 1, z: p.z });
   }
-  function caught(id, onCatch) {
-    if (speeding.tryFine(id, 'traffic cop')) { st.catches++; st.last = id; onCatch(); return true; }
-    return false;
+  function caught(catcher, onCatch) {
+    const s = speeding.status();
+    if (speeding.blocked(s, catcher.id)) return false;
+    const ok = hooks.spot ? hooks.spot(catcher) : speeding.tryFine(catcher.id, 'traffic cop');
+    if (ok) { st.catches++; st.last = catcher.id; onCatch(); }
+    return ok;
   }
 
   return {
-    posts, cruisers, st, sees,
+    posts, cruisers, st, sees, hooks,
     update(dt) {
       const s = speeding.status();
       for (const p of posts) {
@@ -85,13 +97,13 @@ export function createTrafficCops({ scene, world, physics, traffic, speeding }) 
         p.ch.animate({ dt, speed: 0, grounded: true, crouch: false, action: p.flashT > 0 ? 'point' : 'look', steer: 0 });
         const on = p.flashT > 0 && Math.floor(p.flashT * 6) % 2 === 0;
         p.lamps[0].material = p.flashT > 0 ? (on ? RED : OFF) : OFF; p.lamps[1].material = p.flashT > 0 ? (on ? OFF : BLUE) : OFF;
-        if (s && s.over && sees(p.x, p.y, p.z, p.yaw, s.car.position, false)) caught(p.id, () => { p.flashT = RADAR.flash; p.catches++; });
+        if (!p.away && s && s.over && sees(p.x, p.y, p.z, p.yaw, s.car.position, false)) caught(p.catcher, () => { p.flashT = RADAR.flash; p.catches++; });
       }
       for (const c of cruisers) {
-        if (!traffic.cars.includes(c)) continue;
+        if (!traffic.cars.includes(c) || c.suspended) continue;
         c.copFlashT = Math.max(0, (c.copFlashT || 0) - dt);
         if (c.emergency) { c.emergency.on = c.copFlashT > 0; c.emergency.update(dt); }
-        if (s && s.over && sees(c.pos.x, c.pos.y, c.pos.z, Math.atan2(c.fwd.x, c.fwd.z), s.car.position, true)) caught(c.id, () => { c.copFlashT = RADAR.flash; });
+        if (s && s.over && sees(c.pos.x, c.pos.y, c.pos.z, Math.atan2(c.fwd.x, c.fwd.z), s.car.position, true)) caught(c.catcher, () => { c.copFlashT = RADAR.flash; });
       }
     },
   };

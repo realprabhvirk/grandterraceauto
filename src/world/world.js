@@ -21,6 +21,7 @@ import { HWY, BRIDGES } from '../city/highwayPlan.js';
 import { buildHighway } from '../city/highway.js';
 import { landmarkLots } from '../city/landmarks.js';
 import { cameraAheadSigns } from '../city/cameraPlan.js';
+import { SPEEDING } from '../police/speedingConfig.js';
 import { fbm } from '../utils/noise.js';
 
 export function buildWorld(scene) {
@@ -64,7 +65,7 @@ export function buildWorld(scene) {
   for (const r of network.allRoads) r.street = r.street || r.name;
   assignSpeedLimits(network.allRoads);
   // City-wide signage: street-name blades at every junction, speed-limit signs (breakable, no heat).
-  network.cameraAheadSigns = cameraAheadSigns(network.allRoads);
+  network.cameraAheadSigns = SPEEDING.CAMERAS_ENABLED ? cameraAheadSigns(network.allRoads) : []; // Phase 6.1: cameras off by default
   const citySigns = buildStreetSigns({ network, plan, terrain });
   scene.add(citySigns.group);
   const highway = buildHighway({ scene, terrain });

@@ -72,7 +72,7 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
     update(dt, { player, night, extra = [] }) {
       lights?.update(dt);
       const obstacles = [];
-      for (const c of cars) obstacles.push({ self: c, x: c.pos.x, z: c.pos.z, speed: c.v, len: c.cfg.L });
+      for (const c of cars) if (!c.suspended) obstacles.push({ self: c, x: c.pos.x, z: c.pos.z, speed: c.v, len: c.cfg.L });
       for (const c of vehicles.cars) {
         const p = c.position, driven = c === vehicles.active;
         obstacles.push({ x: p.x, z: p.z, speed: Math.abs(c.body.state.speed), len: c.cfg.L, parked: !driven && Math.abs(c.body.state.speed) < 0.5, player: driven });
@@ -81,12 +81,13 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
       for (const o of extra) obstacles.push(o); // police cars
       const lanes = graph.lanes;
       for (const c of cars) {
+        if (c.suspended) continue; // a traffic cop's cruiser handed over to a pull-over pursuit
         if (c.lights !== night) c.setLights(night);
         c.update(dt, { lanes, obstacles, honk });
       }
       wheels.instanceMatrix.needsUpdate = true;
     },
     /** For pedestrians (dodging) and the minimap. */
-    movers() { return cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })); },
+    movers() { return cars.filter((c) => !c.suspended).map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })); },
   };
 }

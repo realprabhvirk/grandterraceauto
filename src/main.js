@@ -47,6 +47,8 @@ import { createAmbience } from './audio/ambience.js';
 import { createSpeeding } from './police/speeding.js';
 import { createSpeedLimitHud } from './ui/speedLimitHud.js';
 import { createSpeedCameras } from './police/speedCameras.js';
+import { createPullOver } from './police/pullOver.js';
+import { SPEEDING } from './police/speedingConfig.js';
 import { createTrafficCops } from './police/trafficCops.js';
 import { buildLandmarks } from './city/landmarks.js';
 import { activitySpots } from './npc/activitySpots.js';
@@ -176,8 +178,10 @@ const skyLife = createSkyLife(scene);
 // Speeding: fines only when a camera / traffic cop catches you (no heat). HUD: limit sign + street chip.
 const speeding = createSpeeding({ world, controls, wallet, hud: statusHud, audio });
 const limitHud = createSpeedLimitHud();
-const speedCams = createSpeedCameras({ scene, world, physics, controls, speeding, audio });
+const speedCams = SPEEDING.CAMERAS_ENABLED ? createSpeedCameras({ scene, world, physics, controls, speeding, audio }) : { cams: [], st: { flashes: 0, checks: 0 }, update() {} }; // Phase 6.1: off by default
 const trafficCops = createTrafficCops({ scene, world, physics, traffic, speeding });
+const pullOver = createPullOver({ scene, world, physics, controls, speeding, hud: statusHud, wanted, traffic });
+trafficCops.hooks.spot = (catcher) => pullOver.start(catcher);
 const landmarks = buildLandmarks({ scene, physics, terrain: world.terrain });
 world.places.push(...landmarks.places);
 world.speeding = speeding;
@@ -201,7 +205,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, jitter, speeding, limitHud, speedCams, trafficCops, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -226,7 +230,7 @@ renderer.setAnimationLoop(() => {
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   speeding.update(dt);
-  if (!paused) { speedCams.update(dt); trafficCops.update(dt); landmarks.update(dt, lighting.dusk); }
+  if (!paused) { speedCams.update(dt); trafficCops.update(dt); pullOver.update(dt); landmarks.update(dt, lighting.dusk); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());
   skyLife.update(dt, { dusk: lighting.dusk });
   {

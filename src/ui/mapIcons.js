@@ -18,7 +18,8 @@ export const ICON = {
   beach: { t: '~', c: '#3fa8d0', label: 'Beach', pri: 7 },
   school: { t: 'S', c: '#e08a30', label: 'School', pri: 7 },
   industry: { t: 'I', c: '#9a8a78', label: 'Industrial', pri: 6 },
-  camera: { t: 'C', c: '#e2c22a', label: 'Speed camera / radar cop', pri: 3, fullOnly: true, noLabel: true },
+  camera: { t: 'C', c: '#e2c22a', label: 'Speed camera', pri: 3, fullOnly: true, noLabel: true },
+  radar: { t: 'R', c: '#4f7bd8', label: 'Radar cop', pri: 3, fullOnly: true, noLabel: true },
   ramp: { t: 'M', c: '#3a8a4a', label: 'Highway on/off ramp', pri: 5 },
 };
 /** Draw order: low priority first, the gun shop last (on top). */
