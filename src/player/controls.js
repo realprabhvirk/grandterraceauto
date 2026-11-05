@@ -38,6 +38,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     if (inCar && carCam === 'cabin') { cabin.enter(car); player.character.setHeadVisible(false); } else cabin.exit();
     if (inCar && carCam === 'cinematic') cinematic.enter(); else cinematic.exit();
     if (inCar && carCam !== 'cabin') player.character.setHeadVisible(true);
+    if (mode !== 'walk') player.character.mesh.visible = true;
     setNear((mode === 'walk' && footCam === 'first') || (inCar && carCam === 'cabin') ? 0.05 : 0.25);
     hud.setVisible(!!inCar && carCam !== 'cinematic');
   }
@@ -58,7 +59,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
 
   // Every car offers "Press F to drive" at its driver's door.
   // Hooks set by main.js (theft / carjack -> wanted level).
-  const hooks = { onTheft: null, onCarjack: null };
+  const hooks = { onTheft: null, onCarjack: null, onPropSteal: null };
   let breakT = 0;
   /** Drivable cars: hero (owned) = F; anything else = hold F to break in (stolen). */
   function registerCar(c) {
@@ -73,6 +74,17 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
   }
   for (const c of vehicles.cars) registerCar(c);
   vehicles.onAdded?.(registerCar);
+  /** Parked props merged into the town (car park, petrol pumps, police bay, ambulance): hold F to steal. */
+  function registerProp(p) {
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), lx = -(p.cfg.W / 2), lz = p.cfg.seat[2];
+    const door = { x: p.x + c * lx + s * lz, y: world.terrain.getHeight(p.x, p.z), z: p.z - s * lx + c * lz };
+    interact.register({
+      id: p.id, prop: p, range: p.cfg.L / 2 + 0.9, label: 'Hold F to break in',
+      position: () => door,
+      enabled: () => mode === 'walk' && !player.state.action && !p.hidden,
+      action: () => {},
+    });
+  }
   /** Traffic cars can be carjacked (police cars can't). */
   function registerTraffic(t, list) {
     interact.register({
@@ -114,8 +126,8 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     ch.root.rotation.set(0, 0, 0);
   }
 
-  function beginExit() {
-    if (Math.abs(car.body.state.speed) > MAX_EXIT_SPEED) { flash('Slow down to get out'); return; }
+  function beginExit(eject = false) {
+    if (!car.dead && !eject && Math.abs(car.body.state.speed) > MAX_EXIT_SPEED) { flash('Slow down to get out'); return; }
     const spot = findExitSpot(physics, car, world.terrain, { radius: RADIUS, half: HALF });
     lastExit = { local: spot.local.map((v) => +v.toFixed(2)), ghost: !!spot.ghostCar };
     if (spot.ghostCar) {
@@ -136,7 +148,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     ch.root.rotation.set(0, startYaw, 0);
     const door = carLocalToWorld(car, -(car.cfg.W / 2 + 0.55), 0, car.cfg.seat[2]);
     const outYaw = Math.atan2(spot.position.x - door.x, spot.position.z - door.z) || startYaw;
-    trans = { t: 0, from: tmp.clone(), door, spot: spot.position, startYaw, outYaw };
+    trans = { t: 0, from: tmp.clone(), door, spot: spot.position, startYaw, outYaw, eject };
     car.driver = null;
     vehicles.setActive(null);   // parked: brakes to a stop on its own
     car.setLights(car.lights && lighting.dusk > 0.5); // leave lights on at night only
@@ -164,7 +176,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     get lastExit() { return lastExit; },
     /** Current camera: third/first on foot, chase/cabin/cinematic in a car, else the mode. */
     get cameraMode() { return mode === 'walk' ? footCam : mode === 'drive' ? carCam : mode; },
-    cabin, cinematic, hooks, registerTraffic,
+    cabin, cinematic, hooks, registerTraffic, registerProp,
     /** Get into a car (used by carjacking). */
     enterCar(c) { beginEnter(c); },
     player, input, chase, panel, hud, interact, settings,
@@ -185,7 +197,8 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           if (flyReturn === 'drive') vehicles.setActive(null);
         }
       }
-      if (input.pressed('KeyN') || input.pressed('KeyT')) {
+      if (input.pressed('KeyT') && mode === 'drive' && car?.emergency) flash(car.emergency.toggle() ? 'Lights + siren ON' : 'Lights + siren off');
+      if (input.pressed('KeyN')) {
         lighting.toggleDusk();
         const night = lighting.target > 0.5;
         if (car && (mode === 'drive' || mode === 'enter')) car.setLights(night);
@@ -204,12 +217,16 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
       if (mode === 'walk') {
         player.update(dt, input, camera, true);
         const target = interact.update(player.position, 'walk');
-        if (target?.car && !target.car.hero && !target.car.unlocked) {
+        if (target?.prop || (target?.car && !target.car.hero && !target.car.unlocked)) {
           // Break-in: hold F for 1.2 s.
           if (input.down('KeyF')) {
             breakT += dt;
             prompt.show('F', `Breaking in... ${Math.min(100, Math.floor((breakT / 1.2) * 100))}%`);
-            if (breakT >= 1.2) { breakT = 0; target.car.unlocked = target.car.stolen = true; hooks.onTheft?.(target.car); beginEnter(target.car); }
+            if (breakT >= 1.2) {
+              breakT = 0;
+              const c = target.prop ? hooks.onPropSteal?.(target.prop) : target.car;
+              if (c) { c.unlocked = c.stolen = true; hooks.onTheft?.(c); beginEnter(c); }
+            }
           } else breakT = 0;
         } else {
           breakT = 0;
@@ -221,7 +238,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
         if (input.pressed('KeyL')) car.setLights(!car.lights);
         if (input.pressed('KeyR')) car.body.resetUpright(world.terrain.getHeight(car.position.x, car.position.z));
         if (carCam === 'cabin') cabin.update(dt, car, input, car.health ?? 100);
-        else if (carCam === 'cinematic') cinematic.update(dt, car);
+        else if (carCam === 'cinematic') { input.wheel(); cinematic.update(dt, car); } // cinematic ignores zoom
         else chase.update(dt, car, input);
         player.update(dt, input, camera, false, { steer: car.body.steer / car.cfg.steer });
         if (input.pressed('KeyF')) beginExit();
@@ -278,7 +295,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           applyCam();
         }
       } else if (mode === 'exit') {
-        trans.t += dt / EXIT_T;
+        trans.t += dt / (trans.dur || EXIT_T);
         const t = Math.min(1, trans.t);
         if (t < 0.45) {
           const k = ease(t / 0.45);
@@ -305,6 +322,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           player.state.yaw = trans.startYaw;
           player.setEnabled(true);
           chase.restoreFov();
+          if (trans.eject) { player.state.action = 'stumble'; player.state.lockT = 1.1; setTimeout(() => { if (player.state.action === 'stumble') player.state.action = null; }, 1100); }
           applyCam();
           car = null;
           mode = 'walk';
@@ -351,5 +369,9 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
     /** Test helper: enter a car immediately (no walk-up). */
     debugEnter(c) { beginEnter(c); trans.t = 0.999; },
     debugExit() { if (car && mode === 'drive') beginExit(); },
+    /** Forced exit (burning car): no speed check, short stumble on landing. */
+    eject() { if (car && mode === 'drive') beginExit(true); },
+    /** Pulled out by a police officer (slower exit, no stumble - the bust cutscene follows). */
+    pullOut(dur = 1.2) { if (car && mode === 'drive') { beginExit(true); if (trans) { trans.dur = dur; trans.eject = false; trans.pulled = true; } } },
   };
 }

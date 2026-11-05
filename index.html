@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Grand Terrace Auto</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1a17; color: #f1e6d2; font-family: system-ui, sans-serif; }
-      #app { position: fixed; inset: 0; }
+      html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; overscroll-behavior: none; background: #1d1a17; color: #f1e6d2; font-family: system-ui, sans-serif; }
+      #app { position: fixed; inset: 0; touch-action: none; overscroll-behavior: none; }
+      #app canvas { touch-action: none; overscroll-behavior: none; display: block; }
     </style>
   </head>
   <body>

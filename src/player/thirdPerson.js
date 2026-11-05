@@ -9,8 +9,17 @@ import { G_PLAYER, groups, GROUP } from '../physics/physicsWorld.js';
 
 export const RADIUS = 0.32, HALF = 0.55; // capsule: total height 2*(HALF+RADIUS) = 1.74 m
 const WALK = 4.2, RUN = 7.6, CROUCH = 1.9, ACCEL = 9, JUMP = 5.4, GRAVITY = -18;
-const CAM = { dist: 5.2, min: 1.6, max: 11, height: 1.55, crouchHeight: 1.05, pitchMin: -0.35, pitchMax: 1.2 };
-const EMOTES = { Digit1: 'wave', Digit2: 'dance', Digit3: 'sit', Digit4: 'point' };
+const CAM = { dist: 4.6, min: 1.8, max: 8, height: 1.55, crouchHeight: 1.05, pitchMin: -0.35, pitchMax: 1.2 };
+const EMOTES = { Digit1: 'wave', Digit2: 'dance', Digit3: 'sit', Digit4: 'point' }; // hold G + 1-4
+export const FP_FOV = { min: 60, max: 100, def: 75 };
+
+/** Ease the camera FOV toward f (snaps when close). */
+function setFov(camera, f, dt) {
+  if (Math.abs(camera.fov - f) < 0.05) return;
+  camera.fov += (f - camera.fov) * Math.min(1, dt * 10);
+  if (Math.abs(camera.fov - f) < 0.1) camera.fov = f;
+  camera.updateProjectionMatrix();
+}
 
 export function createThirdPerson({ physics, scene, spawn }) {
   const { world, RAPIER } = physics;
@@ -46,6 +55,9 @@ export function createThirdPerson({ physics, scene, spawn }) {
     firstPerson: false,
     fpPitch: 0,
     bob: 0,
+    fpFov: FP_FOV.def,
+    lockT: 0,               // stumble / cutscene: ignore movement input
+    aim: null,              // set by the weapons: { on } (over-the-shoulder / ADS)
   };
   const pos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
@@ -82,7 +94,7 @@ export function createThirdPerson({ physics, scene, spawn }) {
 
     /** Turn the walker on/off (off while driving: collider disabled, no movement). */
     /** Switch first-person on/off (hides the head, tighter near plane is set by the caller). */
-    setFirstPerson(on) { state.firstPerson = on; character.setHeadVisible(!on); if (on) state.fpPitch = 0; },
+    setFirstPerson(on) { state.firstPerson = on; character.setHeadVisible(!on); character.mesh.visible = !on; if (on) state.fpPitch = 0; },
     setEnabled(on) {
       state.enabled = on;
       collider.setEnabled(on);
@@ -101,7 +113,8 @@ export function createThirdPerson({ physics, scene, spawn }) {
     fixedUpdate(dt, input, active) {
       if (!state.enabled) return;
       move.set(0, 0, 0);
-      if (active) {
+      if (state.lockT > 0) state.lockT -= dt;
+      if (active && state.lockT <= 0) {
         const f = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0);
         const r = (input.down('KeyD') ? 1 : 0) - (input.down('KeyA') ? 1 : 0);
         if (f || r) {
@@ -158,14 +171,17 @@ export function createThirdPerson({ physics, scene, spawn }) {
       if (!active) return;
       // Edge-triggered keys are read per frame (physics may run 0 or 2 steps in a frame).
       if (input.pressed('Space')) state.jumpQueued = true;
-      for (const [code, name] of Object.entries(EMOTES)) {
+      if (input.down('KeyG')) for (const [code, name] of Object.entries(EMOTES)) {
         if (input.pressed(code)) state.action = state.action === name ? null : name;
       }
       const look = input.look(dt);
+      state.lastLook = look;
       state.yaw -= look.x * 0.0028;
       if (state.firstPerson) {
         // First person: eye at the head (head bone hidden), pitch +-85 deg, subtle walk bob.
         state.fpPitch = THREE.MathUtils.clamp(state.fpPitch + look.y * 0.0022, -1.48, 1.48);
+        state.fpFov = THREE.MathUtils.clamp(state.fpFov + input.wheel() * 4, FP_FOV.min, FP_FOV.max);
+        setFov(camera, state.fpFov * (state.aim?.on ? 0.78 : 1), dt);
         state.bob += dt * state.speed * 2.2;
         character.eyeWorld(camera.position);
         camera.position.y += Math.sin(state.bob) * 0.025 * Math.min(1, state.speed / 4);
@@ -176,6 +192,7 @@ export function createThirdPerson({ physics, scene, spawn }) {
       }
       state.pitch = THREE.MathUtils.clamp(state.pitch + look.y * 0.0022, CAM.pitchMin, CAM.pitchMax);
       state.dist = THREE.MathUtils.clamp(state.dist + input.wheel() * 0.6, CAM.min, CAM.max);
+      setFov(camera, state.aim?.on ? 52 : 60, dt);
       cameraPose(camera.position, camTarget);
       camera.lookAt(camTarget);
     },

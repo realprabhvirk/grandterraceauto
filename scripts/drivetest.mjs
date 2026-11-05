@@ -25,6 +25,8 @@ const results = [];
 for (let i = 0; i < routes.length; i++) {
   // Cul-de-sacs: simple centreline driving, physics-only pass condition (Phase 3 change).
   const simple = i > 0;
+  // Phase 5: a wrecked car ejects the driver, so every route starts with a repaired car.
+  await page.evaluate(() => { const c = window.__gta.controls.car; if (c) { c.health = 100; c.dead = false; c.body.dead = false; } });
   await page.evaluate(([i, simple]) => { window.__run = window.__gta.debug.drive(i, { speed: simple ? 9 : 15, timeout: simple ? 60 : 160, simple }).then((r) => (window.__runResult = r)); window.__runResult = null; }, [i, simple]);
   const slug = routes[i].name.toLowerCase().replace(/\s+/g, '-');
   let shots = 0, res = null;

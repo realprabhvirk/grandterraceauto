@@ -84,7 +84,7 @@ await shot('08-out');
 
 // 6. Emotes + crouch.
 for (const [key, name] of [['Digit1', 'wave'], ['Digit2', 'dance'], ['Digit3', 'sit'], ['Digit4', 'point']]) {
-  await page.keyboard.press(key);
+  await page.keyboard.down('KeyG'); await page.waitForTimeout(60); await page.keyboard.press(key); await page.waitForTimeout(60); await page.keyboard.up('KeyG'); // Phase 5: emotes = hold G + 1-4
   await page.waitForTimeout(900);
   s = await state();
   check(`emote ${name}`, s.action === name, `action=${s.action}`);

@@ -2,12 +2,16 @@
 // knock-out -> hospital respawn -$200), car damage for every car, breakable props, people
 // knocked down by cars. Emits events (pedHit, propBroken, policeDamaged) for the wanted system.
 import * as THREE from 'three';
-import { damageCar, repairCar, updateCarDamage } from './carDamage.js';
+import { damageCar, repairCar, updateCarDamage, BURN_TIME } from './carDamage.js';
 
 const REGEN_DELAY = 20, REGEN_RATE = 0.5;
 
-export function createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud, spawns, world }) {
-  const st = { hp: 100, lastHit: -999, t: 0, ko: false, koT: 0, airTop: null, hitCd: 0 };
+export const KO_TIME = 4.5;
+
+export function createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud, spawns, world, cutscene = null }) {
+  const st = { hp: 100, lastHit: -999, t: 0, ko: false, koT: 0, airTop: null, hitCd: 0, burn: null, blocked: 0 };
+  /** In (or getting into / out of) any vehicle: the car soaks all damage, never the player. */
+  const inVehicle = () => controls.mode === 'drive' || controls.mode === 'enter' || controls.mode === 'exit';
   const listeners = {};
   const emit = (e, d) => (listeners[e] || []).forEach((f) => f(d));
   const allCars = () => [...vehicles.cars, ...traffic.cars, ...(world.police ? world.police.cars : [])];
@@ -15,6 +19,7 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
 
   function damagePlayer(n, why = '') {
     if (st.ko || n <= 0) return;
+    if (inVehicle()) { st.blocked += n; return; }
     st.hp = Math.max(0, st.hp - n);
     st.lastHit = st.t;
     if (st.hp <= 0) knockOut(why);
@@ -22,7 +27,11 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
 
   function knockOut() {
     st.ko = true; st.koT = 0;
-    hud.fade(true);
+    if (!cutscene) { hud.fade(true); return; }
+    // Slow-mo collapse, camera rises + orbits, desaturated: KNOCKED OUT -> hospital.
+    const ps = controls.player.state;
+    ps.action = 'collapse'; ps.lockT = 99;
+    cutscene.play('ko', { dur: KO_TIME, timeScale: 0.3, title: 'KNOCKED OUT', sub: 'Hospital bill  -$200', color: '#ff6a3a', desat: true, focus: () => controls.player.position, startAngle: ps.facing + 2.4, onEnd: respawn });
   }
 
   function respawn() {
@@ -30,8 +39,9 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
     controls.respawnAt(sp.position, sp.yaw);
     wallet.add(-200);
     st.hp = 100; st.ko = false; st.lastHit = st.t;
+    controls.player.state.action = null; controls.player.state.lockT = 0;
     hud.fade(false);
-    hud.message('KNOCKED OUT  -$200', 3);
+    if (!cutscene) hud.message('KNOCKED OUT  -$200', 3);
     restoreHeroCar();
     emit('respawn', { reason: 'ko' });
   }
@@ -48,6 +58,8 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
   return {
     get hp() { return st.hp; },
     get ko() { return st.ko; },
+    get burning() { return st.burn; },
+    get state() { return st; },
     damagePlayer, respawn, restoreHeroCar, damageCar,
     on(e, f) { (listeners[e] = listeners[e] || []).push(f); },
     emit,
@@ -56,8 +68,20 @@ export function createCombat({ controls, vehicles, traffic, peds, breakables, pa
     update(dt) {
       st.t += dt;
       st.hitCd -= dt;
-      if (st.ko) { st.koT += dt; if (st.koT > 1.1) respawn(); return; }
+      if (st.ko) { st.koT += dt; if (!cutscene && st.koT > 1.1) respawn(); return; }
       const mode = controls.mode, active = mode === 'drive' ? controls.car : null;
+
+      // --- Destroyed car: burns ~5 s; F gets out any time, else ejected with a stumble ---------
+      if (active && active.dead && (!st.burn || st.burn.car !== active)) {
+        st.burn = { car: active, t: active.dmg?.burnT || 0 };
+        hud.message('Car on fire - get out!', BURN_TIME, '#ff8a3a');
+        emit('carOnFire', { car: active });
+      }
+      if (st.burn) {
+        st.burn.t += dt;
+        if (mode !== 'drive' || controls.car !== st.burn.car) st.burn = null;
+        else if (st.burn.t >= BURN_TIME) { controls.eject?.(); st.burn = null; }
+      }
 
       // --- Car impacts: every Rapier car (player, parked) -----------------------------------
       for (const c of vehicles.cars) {

@@ -1,9 +1,16 @@
 // Police car: a TrafficCar (cheap kinematic lane follower) with a flashing light bar and
 // three behaviours: 'route' (A* lane route toward the player), 'chase' (direct steering when
-// within ~40 m with a clear line - boxes in / rams, never shoots), 'patrol' (wander lanes).
+// within ~40 m with a clear line), 'patrol' (wander lanes). Chasing cops flank the player
+// (3 m beside/behind) instead of ramming; after any contact they RECOVER for 1.5 s (brake to
+// half the player's speed, steer away). Their collider ignores other cars (soft contact is
+// resolved by the police manager), so a cop can never pin the player's car.
 import * as THREE from 'three';
 import { TrafficCar } from '../traffic/trafficCar.js';
 import { groups, GROUP } from '../physics/physicsWorld.js';
+
+/** Police body: solid for the walker / NPCs, but no rigid contact with cars (see policeManager). */
+const G_POLICE = groups(GROUP.CAR, GROUP.STATIC | GROUP.PLAYER | GROUP.NPC);
+const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
 const RED = new THREE.MeshBasicMaterial({ color: '#ff2a2a' }), BLUE = new THREE.MeshBasicMaterial({ color: '#2a6bff' });
 const OFF = new THREE.MeshBasicMaterial({ color: '#2a2a2e' });
@@ -26,6 +33,9 @@ export class PoliceCar extends TrafficCar {
     this.model.add(bar);
     this.physics = opts.physics;
     this.chaseYaw = 0;
+    this.body.collider(0).setCollisionGroups(G_POLICE);
+    this.side = (parseInt(String(opts.id).replace(/D/g, ''), 10) || 0) % 2 ? 1 : -1; // flank side
+    this.recoverT = 0; this.contactCd = 0; this.crewOut = 0;
   }
 
   pickExit(exits) { const next = this.route[0]; const e = exits.find((x) => x.lane === next); if (e) this.route.shift(); return e || null; }
@@ -38,17 +48,28 @@ export class PoliceCar extends TrafficCar {
     const on = Math.floor(this.flash * 6) % 2 === 0;
     this.lampL.material = on ? RED : OFF;
     this.lampR.material = on ? OFF : BLUE;
-    if (this.mode !== 'chase') { super.update(dt, ctx); return; }
-    // Direct chase: steer toward the player, slow to box them in, nudge/ram when close.
-    const tgt = ctx.target, dx = tgt.x - this.pos.x, dz = tgt.z - this.pos.z, d = Math.hypot(dx, dz);
-    const want = Math.atan2(dx, dz);
+    this.recoverT -= dt; this.contactCd -= dt;
     let yaw = Math.atan2(this.fwd.x, this.fwd.z);
-    let dy = want - yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-    yaw += Math.max(-1.8 * dt, Math.min(1.8 * dt, dy));
-    // Box in: stop half a car length + 3 m away (ram only if the player keeps moving).
-    const stopD = this.cfg.L / 2 + 3.0, moving = (ctx.targetSpeed || 0) > 3;
-    const speedWant = d < stopD + 2 ? (moving ? 8 : Math.max(0, (d - stopD) * 2)) : Math.min(17, 6 + d * 0.5);
-    this.v += Math.max(-9 * dt, Math.min(4 * dt, speedWant - this.v));
+    // Officer out of the car: stay parked.
+    if (this.crewOut > 0) { this.v = Math.max(0, this.v - 12 * dt); this.speed = this.v; this.directMove(dt, yaw); return; }
+    if (this.mode !== 'chase') { if (ctx.routeCruise) this.cruise = ctx.routeCruise; super.update(dt, ctx); return; }
+    const tgt = ctx.target, ts = ctx.targetSpeed || 0, tf = ctx.targetFwd, moving = ts > 3;
+    const dx0 = tgt.x - this.pos.x, dz0 = tgt.z - this.pos.z, d0 = Math.hypot(dx0, dz0);
+    // Goal: a flank point 3 m beside + 3 m behind a moving player, else the player.
+    let gx = tgt.x, gz = tgt.z;
+    if (moving && tf && d0 < 30) { gx = tgt.x - tf.x * 3 - tf.z * this.side * 3; gz = tgt.z - tf.z * 3 + tf.x * this.side * 3; }
+    const dx = gx - this.pos.x, dz = gz - this.pos.z, d = Math.hypot(dx, dz);
+    let want = Math.atan2(dx, dz);
+    if (this.recoverT > 0) want = yaw + Math.max(-0.6, Math.min(0.6, angDiff(Math.atan2(-dx0, -dz0), yaw))); // steer away
+    yaw += Math.max(-1.8 * dt, Math.min(1.8 * dt, angDiff(want, yaw)));
+    const maxV = ctx.maxV || 17, stopD = this.cfg.L / 2 + 3.0;
+    let speedWant;
+    if (this.recoverT > 0) speedWant = 0.5 * ts;
+    else if (!moving) speedWant = d0 < stopD + 2 ? Math.max(0, (d0 - stopD) * 2) : Math.min(maxV, 6 + d0 * 0.5);
+    else speedWant = Math.min(maxV, Math.max(0, ts + (d - 2) * 0.3));
+    // Close behind a fast player: never faster than 0.95x their speed (5 stars: 1.0x).
+    if (tf && ts > 8 && d0 < 6 && (this.pos.x - tgt.x) * tf.x + (this.pos.z - tgt.z) * tf.z < 0) speedWant = Math.min(speedWant, ts * (ctx.tailCap || 0.95));
+    this.v += Math.max(-9 * dt, Math.min(2.8 * dt, speedWant - this.v)); // never out-accelerates a hero car
     // Don't drive into walls: if something solid is just ahead, stop and fall back to the lanes.
     const { world, RAPIER } = this.physics;
     const hit = world.castRay(new RAPIER.Ray({ x: this.pos.x, y: this.pos.y + 0.8, z: this.pos.z }, { x: Math.sin(yaw), y: 0, z: Math.cos(yaw) }), 3 + this.v * 0.3, true, undefined, STATIC_ONLY);

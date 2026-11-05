@@ -1,6 +1,8 @@
 // window.__gta.debug - helpers for the Playwright scripts (and for poking at things
 // from the browser console). Nothing here is used by normal play.
+import * as THREE from 'three';
 import { buildRoutes, runAutopilot } from '../vehicles/autopilot.js';
+import { MAT } from '../art/materials.js';
 
 export function createDebugApi({ world, vehicles, controls, camera }) {
   const hero = () => vehicles.cars.find((c) => c.hero);
@@ -138,6 +140,74 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
         peds: g.peds.peds.filter((p) => inTown(p.pos.x, p.pos.z)).length,
         storeInside: T.interiors.chunks.length, places: world.places?.length,
       };
+    },
+    /**
+     * Cabin camera check (call while in the cabin cam): rays from the eye to road points
+     * 6/10/20 m ahead at lateral -1.5/0/+1.5 m; any solid car-interior mesh in the way counts as
+     * blocked. Also the projected top edge of the dash/binnacle (0 = top of the screen, 1 = bottom).
+     */
+    cabinCheck() {
+      const car = controls.car, cab = car?.cabin;
+      if (!cab) return null;
+      camera.updateMatrixWorld(true); car.model.updateMatrixWorld(true);
+      const meshes = [];
+      car.model.traverse((o) => { if (o.isMesh && o.material === MAT.solid) { let v = true; for (let p = o; p; p = p.parent) if (!p.visible) v = false; if (v) meshes.push(o); } });
+      const f = car.body.forward(), r = { x: -f.z, z: f.x }, eye = camera.position.clone();
+      const ray = new THREE.Raycaster(), blocked = [];
+      for (const ahead of [6, 10, 20]) for (const lat of [-1.5, 0, 1.5]) {
+        const x = car.position.x + f.x * ahead + r.x * lat, z = car.position.z + f.z * ahead + r.z * lat;
+        const p = new THREE.Vector3(x, world.terrain.getHeight(x, z) + 0.05, z), d = p.distanceTo(eye);
+        ray.set(eye, p.clone().sub(eye).normalize()); ray.far = d - 0.05;
+        const hit = ray.intersectObjects(meshes, false)[0];
+        if (hit) blocked.push({ ahead, lat, by: hit.object.name || hit.object.parent?.name || 'mesh', at: +hit.distance.toFixed(2) });
+      }
+      const [sx] = car.cfg.seat;
+      const proj = (y, z) => { const v = new THREE.Vector3(sx, y, z).applyMatrix4(car.model.matrixWorld).project(camera); return +((1 - v.y) / 2).toFixed(3); };
+      const dashTopY = Math.min(proj(cab.dashTop, cab.dashZ), proj(cab.dashTop + 0.04, cab.dashZ - 0.11));
+      return { type: car.type, blocked, rays: 9, dashTopY, fov: camera.fov, eyeY: +(eye.y - car.position.y).toFixed(2) };
+    },
+    /**
+     * Scripted chase: the driven car goes to the start of Grand Terrace, wanted = stars, two
+     * cops placed 8-12 m behind in chase mode, then autopilot flat out for `seconds`.
+     */
+    async chaseTest({ stars = 3, seconds = 12, speed = 34 } = {}) {
+      const g = window.__gta, car = controls.car;
+      if (!car) throw new Error('not driving');
+      // The town ring road: a 280 m straight then the corner.
+      const X = world.town.plan.nodes.map((n) => n.x), Z = world.town.plan.nodes.map((n) => n.z);
+      const x0 = Math.min(...X), x1 = Math.max(...X), z0 = Math.min(...Z), z1 = Math.max(...Z);
+      const pts = [];
+      for (let x = x0 + 6; x <= x1 - 12; x += 4) pts.push({ x, z: z0 - 2.2 });
+      for (let z = z0 + 12; z <= z1 - 12; z += 4) pts.push({ x: x1 + 2.2, z });
+      const route = { points: pts }, [a, b] = pts;
+      const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+      car.body.teleport(a.x, world.terrain.getHeight(a.x, a.z), a.z, yaw);
+      controls.chase.reset(car);
+      g.wanted.clear(true); g.wanted.add('test', [0, 20, 60, 120, 200, 300][stars] + 1);
+      g.police.reset();
+      await new Promise((r) => setTimeout(r, 300));
+      for (const [back, side] of [[9, 1.6], [13, -1.6]]) {
+        g.police.spawnOne({ x: a.x, y: 0, z: a.z });
+        const c = g.police.cars[g.police.cars.length - 1];
+        if (!c) continue;
+        const fx = Math.sin(yaw), fz = Math.cos(yaw);
+        c.pos.set(a.x - fx * back - fz * side, 0, a.z - fz * back + fx * side); c.fwd.set(fx, 0, fz); c.mode = 'chase'; c.v = 6;
+      }
+      // A clear path (spec): traffic on the ring road's north side and east corner is removed.
+      for (const t of [...g.traffic.cars]) if ((Math.abs(t.pos.z - z0) < 10 && t.pos.x > x0 - 10) || (Math.abs(t.pos.x - x1) < 10 && t.pos.z < z0 + 120)) g.traffic.removeCar(t);
+      g.police.st.contactTime = 0; g.police.st.contacts = 0;
+      const res = await runAutopilot({ car, input: controls.input, terrain: world.terrain, points: route.points, obstacles: [], speed, timeout: seconds });
+      const p = car.position, d = g.police.cars.map((c) => +Math.hypot(c.pos.x - p.x, c.pos.z - p.z).toFixed(1));
+      return { reason: res.reason, time: res.time, wp: res.waypoints, stalls: res.stalls, nearest: Math.min(...d), d, contactTime: +g.police.st.contactTime.toFixed(2), contacts: g.police.st.contacts, maxKmh: res.maxSpeed, dist: res.dist, cops: g.police.cars.length };
+    },
+    /** Put a patrol car (chase mode, stopped) at a world point facing yaw. */
+    placeCop(x, z, yaw = 0) {
+      const g = window.__gta;
+      g.police.spawnOne({ x, y: 0, z });
+      const c = g.police.cars[g.police.cars.length - 1];
+      if (!c) return null;
+      c.pos.set(x, world.terrain.getHeight(x, z), z); c.fwd.set(Math.sin(yaw), 0, Math.cos(yaw)); c.mode = 'chase'; c.v = 0;
+      return c.id;
     },
     /** Press a key for one frame (virtual). */
     async tap(code) { controls.input.setVirtual(code, true); await new Promise((r) => setTimeout(r, 80)); controls.input.setVirtual(code, false); await new Promise((r) => setTimeout(r, 60)); },

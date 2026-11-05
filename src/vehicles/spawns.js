@@ -58,6 +58,31 @@ export function buildSpawns(world) {
     }
   }
 
+  // Phase 5: 1-2 more parked cars on every 2nd street (>=12 m from driveways, clear of the
+  // cul-de-sac pads and junctions, >=8 m apart).
+  const extra = [];
+  network.roads.forEach((road, ri) => {
+    if (ri % 2 === 0) return;
+    const want = 1 + (rng.next() < 0.5 ? 1 : 0);
+    let got = 0;
+    const S = road.samples;
+    for (let f = 0.08 + rng.next() * 0.06; f < 0.94 && got < want; f += 0.02) for (const side of (got + ri) % 2 ? [1, -1] : [-1, 1]) {
+      if (got >= want) break;
+      const s = S[Math.floor(f * (S.length - 1))];
+      const lat = side * (ROAD.halfW - 1.05);
+      const x = s.x + s.nx * lat, z = s.z + s.nz * lat;
+      if (cuts.some((c) => Math.hypot(c.x - x, c.z - z) < 12)) continue;
+      if (network.pads.some((p) => Math.hypot(p.x - x, p.z - z) < p.r + 32)) continue; // keep the cul-de-sac approach clear
+      if (network.junctions.some((j) => Math.hypot(j.x - x, j.z - z) < 24)) continue;
+      if (Math.hypot(hero.sample.x - x, hero.sample.z - z) < 20) continue;
+      if (spots.some((o) => Math.hypot(o.x - x, o.z - z) < 8)) continue;
+      const dir = side > 0 ? -1 : 1;
+      spots.push({ x, z, yaw: Math.atan2(s.tx * dir, s.tz * dir), extra: true });
+      got++; f += 0.1;
+    }
+    extra.push(got);
+  });
+
   // Types + paints: every type appears at least once, colours never repeat.
   const types = ['hatch', 'ute', 'suv', 'sedan', 'hatch', 'suv', 'ute'];
   const paints = [...PALETTE.cars.paints];

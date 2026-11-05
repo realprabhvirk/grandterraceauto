@@ -150,7 +150,7 @@ try {
     const after = await ev(() => ({ s: window.__gta.debug.state(), broken: window.__pole.broken }));
     check('ramming a power pole breaks it', after.broken, after.broken);
     check('car health dropped', after.s.carHealth < 100, { before: before.carHealth, after: after.s.carHealth });
-    check('player health dropped (fast impact)', after.s.health < 100, after.s.health);
+    check('player health unchanged in a car (Phase 5: the car takes it all)', after.s.health >= before.health, { before: before.health, after: after.s.health });
     // Hit a pedestrian (stood still for the test).
     const hit = await ev(async () => {
       const g = window.__gta, p = g.peds.peds.find((q) => q.ch.root.visible && q.state !== 'down') || g.peds.peds[0];
@@ -173,8 +173,9 @@ try {
     // Knock-out -> hospital respawn, -$200.
     const ko = await ev(async () => {
       const g = window.__gta, cash0 = g.wallet.cash;
+      if (g.controls.mode === 'drive') { g.controls.respawnAt(g.controls.car.position, 0); await new Promise((r) => setTimeout(r, 300)); }
       g.combat.damagePlayer(500, 'test');
-      await new Promise((r) => setTimeout(r, 2200));
+      await new Promise((r) => setTimeout(r, 6000)); // Phase 5: 4.5 s KO cutscene
       const sp = g.spawns.hospital().position, p = g.controls.player.position;
       return { cash0, cash: g.wallet.cash, mode: g.controls.mode, d: +Math.hypot(p.x - sp.x, p.z - sp.z).toFixed(2), hp: g.combat.hp };
     });
@@ -210,7 +211,10 @@ try {
       const g = window.__gta, cop = g.police.cars[0], p = g.controls.car.position, f = g.controls.car.body.forward();
       cop.pos.set(p.x + f.x * 7, p.y, p.z + f.z * 7); cop.mode = 'chase';
       const cash0 = g.wallet.cash, stolen = g.controls.car;
-      await new Promise((r) => setTimeout(r, 6000));
+      // Phase 5: an officer gets out, pulls the player out, BUSTED cutscene (~5 s).
+      const t0 = performance.now(); let seen = false;
+      while (performance.now() - t0 < 20000) { if (g.cutscene.active) seen = true; else if (seen) break; await new Promise((r) => setTimeout(r, 100)); }
+      await new Promise((r) => setTimeout(r, 300));
       const sp = g.spawns.police().position, q = g.controls.player.position;
       return { cash0, cash: g.wallet.cash, stars: g.wanted.stars, mode: g.controls.mode, d: +Math.hypot(q.x - sp.x, q.z - sp.z).toFixed(1), impounded: !!stolen.impounded };
     });
@@ -304,13 +308,13 @@ try {
     check('town perf: draw calls < 450, fps >= 45', perf.calls < 450 && perf.fps >= 45, perf);
     // Respawn points: hospital (KO) and police station are in town.
     await ev(() => window.__gta.combat.damagePlayer(500, 'test'));
-    await wait(3500);
+    await wait(6000);
     s = await st();
     const sp = await ev(() => ({ h: window.__gta.spawns.hospital().position, pol: window.__gta.spawns.police().position }));
     check('KO respawns at the town hospital', Math.hypot(s.player[0] - sp.h.x, s.player[2] - sp.h.z) < 4, { player: s.player, h: sp.h });
     check('police respawn point is the town station', sp.pol.x > 300 && Math.abs(sp.pol.z + 92) < 3, sp.pol);
     // Ring road loop in the hero car.
-    await ev(() => window.__gta.debug.enter());
+    await ev(() => { const c = window.__gta.vehicles.cars.find((x) => x.hero); c.health = 100; c.dead = false; c.body.dead = false; window.__gta.debug.enter(); });
     await wait(800);
     const loop = await ev(() => window.__gta.debug.driveTownLoop());
     check('drove the ring road loop', loop.ok, loop);

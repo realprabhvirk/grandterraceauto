@@ -14,11 +14,11 @@ export function frame(cx, cz, fx, fz, y = 0) {
 
 /** Collects geometry + colliders for one chunk of the town. */
 export function makeChunk(name) {
-  const solid = [], glass = [], colliders = [];
+  const solid = [], glass = [], colliders = [], props = [];
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   const grow = (x, z, r = 0) => { minX = Math.min(minX, x - r); maxX = Math.max(maxX, x + r); minZ = Math.min(minZ, z - r); maxZ = Math.max(maxZ, z + r); };
   const ch = {
-    name, solid, glass, colliders,
+    name, solid, glass, colliders, props,
     /** Box in frame-local coords (bottom at ly). */
     box(F, w, h, d, lx, ly, lz, color, { glassy = false, jitter } = {}) {
       const p = F.toW(lx, lz);
@@ -35,13 +35,34 @@ export function makeChunk(name) {
     finish(parent) {
       const group = new THREE.Group();
       group.name = `town-${name}`;
-      if (solid.length) { const m = new THREE.Mesh(merge(solid), MAT.solid); m.castShadow = m.receiveShadow = true; group.add(m); }
-      if (glass.length) { const m = new THREE.Mesh(merge(glass), MAT.glass); m.receiveShadow = true; group.add(m); }
+      // Props merged into this chunk (stealable parked cars) remember their vertex ranges so
+      // they can be collapsed out of the merged mesh when they turn into real cars.
+      const starts = (list) => { const m = new Map(); let n = 0; for (const g of list) { m.set(g, n); n += g.attributes.position.count; } return m; };
+      const sS = starts(solid), sG = starts(glass);
+      for (const p of props) {
+        p.ranges = { solid: p.solidGeos.map((g) => [sS.get(g), g.attributes.position.count]), glass: p.glassGeos.map((g) => [sG.get(g), g.attributes.position.count]) };
+        p.meshes = {};
+      }
+      if (solid.length) { const m = new THREE.Mesh(merge(solid), MAT.solid); m.castShadow = m.receiveShadow = true; group.add(m); for (const p of props) p.meshes.solid = m; }
+      if (glass.length) { const m = new THREE.Mesh(merge(glass), MAT.glass); m.receiveShadow = true; group.add(m); for (const p of props) p.meshes.glass = m; }
+      for (const p of props) { delete p.solidGeos; delete p.glassGeos; }
       parent.add(group);
       return { group, x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: Math.hypot(maxX - minX, maxZ - minZ) / 2 };
     },
   };
   return ch;
+}
+
+/** Remove a merged prop (see finish) from its chunk mesh by collapsing its vertices. */
+export function hideProp(p) {
+  for (const k of ['solid', 'glass']) {
+    const m = p.meshes?.[k];
+    if (!m) continue;
+    const a = m.geometry.attributes.position;
+    for (const [s, n] of p.ranges[k]) a.array.fill(0, s * 3, (s + n) * 3);
+    a.needsUpdate = true;
+  }
+  p.hidden = true;
 }
 
 /**

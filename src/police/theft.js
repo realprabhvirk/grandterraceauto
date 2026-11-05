@@ -28,7 +28,8 @@ export function createTheft({ scene, controls, vehicles, traffic, peds, police, 
     return peds.peds.some((p) => p.ch.root.visible && p.state !== 'down' && Math.hypot(p.pos.x - pos.x, p.pos.z - pos.z) < 30 && los({ x: p.pos.x, y: p.pos.y + 1.6, z: p.pos.z }, at));
   }
 
-  controls.hooks.onTheft = (car) => { if (witnessed(car.position)) wanted.add('theft'); };
+  // Witnessed theft: police vehicle +60, ambulance +30, anything else +25.
+  controls.hooks.onTheft = (car) => { if (witnessed(car.position)) wanted.add(car.emergency?.kind === 'police' ? 'theftPolice' : car.emergency?.kind === 'ambulance' ? 'theftAmbulance' : 'theft'); };
   controls.hooks.onCarjack = (t) => {
     const p = t.pos, yaw = Math.atan2(t.fwd.x, t.fwd.z);
     const door = carLocalToWorld(t, -(t.cfg.W / 2 + 0.5), 0, t.cfg.seat[2]);

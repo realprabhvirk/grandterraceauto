@@ -17,6 +17,9 @@ const LAMP = {
   engine: new THREE.MeshBasicMaterial({ color: '#ffb02e' }),
 };
 const YAW_MAX = THREE.MathUtils.degToRad(110), PITCH_MAX = THREE.MathUtils.degToRad(35);
+// Eye 7 cm higher than Phase 4 (0.66), dash top 4 cm under the belt line. FOV zooms 65-85.
+const EYE_Y = 0.73, DASH_DROP = 0.04;
+export const CABIN_FOV = { min: 65, max: 85, def: 75 };
 
 function seg(a, b, t, color) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
@@ -31,13 +34,13 @@ function buildCabin(car, mirrorMats) {
   const [z0, z1] = c.cabin, [r0, r1] = c.roofSpan, belt = c.belt, roof = c.roof;
   const [sx, sy, sz] = c.seat;
   const solid = [];
-  const dashZ = z1 - 0.3;
-  solid.push(boxB(c.W - 0.24, 0.32, 0.6, 0, belt - 0.24, dashZ, IN.dash));            // dashboard
-  solid.push(boxB(0.62, 0.14, 0.22, sx, belt + 0.08, dashZ - 0.22, IN.dash));         // gauge binnacle hood
+  const dashZ = z1 - 0.3, dashTop = belt - DASH_DROP;
+  solid.push(boxB(c.W - 0.24, 0.26, 0.42, 0, dashTop - 0.26, dashZ + 0.06, IN.dash));   // dashboard (low + short)
+  solid.push(boxB(0.42, 0.05, 0.14, sx, dashTop - 0.01, dashZ - 0.19, IN.dash));       // slim gauge binnacle hood
   solid.push(box(c.W - 0.3, 0.02, 0.5, 0, c.clearance + 0.16, (z0 + z1) / 2, IN.trim)); // floor
   for (const s of [1, -1]) {
     solid.push(boxB(0.06, belt - c.clearance - 0.12, z1 - z0, s * hw, c.clearance + 0.1, (z0 + z1) / 2, IN.trim)); // door cards
-    solid.push(seg([s * hw, belt, z1 - 0.05], [s * tw, roof - 0.02, r1], 0.09, IN.trim));                         // A-pillars
+    solid.push(seg([s * hw, belt, z1 - 0.05], [s * tw, roof - 0.02, r1], 0.045, IN.trim));                        // A-pillars (thin)
     if (car.type !== 'ute') solid.push(seg([s * hw, belt, (z0 + z1) / 2], [s * tw, roof - 0.02, (r0 + r1) / 2], 0.1, IN.trim)); // B-pillars
     solid.push(seg([s * hw, belt, z0 + 0.05], [s * tw, roof - 0.02, r0], 0.12, IN.trim));                         // C-pillars
     // Seats: driver (s = -1 is the right-hand side) + passenger.
@@ -49,8 +52,8 @@ function buildCabin(car, mirrorMats) {
   const lining = new THREE.PlaneGeometry(tw * 2, r1 - r0).rotateX(Math.PI / 2).translate(0, roof - 0.04, (r0 + r1) / 2);
   solid.push(painted(lining, IN.lining, 0, 0, 0, 0.02));
   // Gauge faces.
-  const gz = dashZ - 0.11, gy = belt + 0.07;
-  for (const dx of [-0.13, 0.13]) solid.push(painted(new THREE.CircleGeometry(0.09, 16).rotateY(Math.PI), IN.gauge, sx + dx, gy, gz, 0.01));
+  const gz = dashZ - 0.155, gy = dashTop - 0.1;
+  for (const dx of [-0.13, 0.13]) solid.push(painted(new THREE.CircleGeometry(0.075, 16).rotateY(Math.PI), IN.gauge, sx + dx, gy, gz, 0.01));
   const group = new THREE.Group();
   group.add(new THREE.Mesh(merge(solid), MAT.solid));
 
@@ -58,7 +61,7 @@ function buildCabin(car, mirrorMats) {
   const needle = (dx) => {
     const p = new THREE.Group();
     p.position.set(sx + dx, gy, gz - 0.005);
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.075, 0.004).translate(0, 0.03, 0), new THREE.MeshBasicMaterial({ color: IN.needle }));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.007, 0.062, 0.004).translate(0, 0.025, 0), new THREE.MeshBasicMaterial({ color: IN.needle }));
     p.add(m);
     group.add(p);
     return p;
@@ -74,13 +77,13 @@ function buildCabin(car, mirrorMats) {
   });
   // Steering wheel: column tilt group -> spin group (rotates with steering).
   const col = new THREE.Group();
-  col.position.set(sx, sy + 0.36, sz + 0.5);
-  col.rotation.x = -0.38;
+  col.position.set(sx, sy + 0.32, sz + 0.5);
+  col.rotation.x = -0.42;
   const spin = new THREE.Group();
-  const rim = new THREE.TorusGeometry(0.19, 0.022, 6, 18);
+  const rim = new THREE.TorusGeometry(0.18, 0.013, 5, 20);
   const parts = [painted(rim, IN.wheel, 0, 0, 0, 0.03)];
-  for (const a of [Math.PI / 2, Math.PI * 7 / 6, Math.PI * 11 / 6]) parts.push(seg([0, 0, 0], [Math.cos(a) * 0.18, Math.sin(a) * 0.18, 0], 0.03, IN.wheel));
-  parts.push(painted(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 10).rotateX(Math.PI / 2), IN.trim, 0, 0, 0, 0.02));
+  for (const a of [Math.PI / 2, Math.PI * 7 / 6, Math.PI * 11 / 6]) parts.push(seg([0, 0, 0], [Math.cos(a) * 0.17, Math.sin(a) * 0.17, 0], 0.016, IN.wheel));
+  parts.push(painted(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10).rotateX(Math.PI / 2), IN.trim, 0, 0, 0, 0.02));
   spin.add(new THREE.Mesh(merge(parts), MAT.solid));
   col.add(spin);
   group.add(col);
@@ -97,11 +100,11 @@ function buildCabin(car, mirrorMats) {
   }
   group.visible = false;
   car.model.add(group);
-  return { group, speedo, tacho, lamps, spin, eye: new THREE.Vector3(sx, sy + 0.66, sz + 0.02) };
+  return { group, speedo, tacho, lamps, spin, dashTop, dashZ: dashZ - 0.15, eye: new THREE.Vector3(sx, sy + EYE_Y, sz + 0.02) };
 }
 
 export function createCabinView(camera, mirrors = null) {
-  const st = { yaw: 0, pitch: -0.05, idle: 0, shake: 0, active: null };
+  const st = { yaw: 0, pitch: -0.05, idle: 0, shake: 0, active: null, fov: CABIN_FOV.def };
   const eyeW = new THREE.Vector3(), q = new THREE.Quaternion(), e = new THREE.Euler(0, 0, 0, 'YXZ'), qOff = new THREE.Quaternion();
   const crack = document.createElement('div');
   crack.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .4s';
@@ -114,8 +117,14 @@ export function createCabinView(camera, mirrors = null) {
     get state() { return st; },
     /** Steering wheel rotation (rad) of the active car (for tests). */
     wheelAngle() { return st.active?.cabin ? st.active.cabin.spin.rotation.z : 0; },
-    enter(car) { car.cabin = car.cabin || buildCabin(car, mirrors?.materials); car.cabin.group.visible = true; st.active = car; st.yaw = 0; st.pitch = -0.05; },
-    exit() { if (st.active?.cabin) st.active.cabin.group.visible = false; st.active = null; crack.style.opacity = '0'; },
+    enter(car) {
+      car.cabin = car.cabin || buildCabin(car, mirrors?.materials); car.cabin.group.visible = true; st.active = car; st.yaw = 0; st.pitch = -0.05;
+      car.paintMesh.visible = false; // the hood + shell would block the road; the cabin interior stands in
+    },
+    exit() {
+      if (st.active?.cabin) { st.active.cabin.group.visible = false; st.active.paintMesh.visible = true; }
+      st.active = null; crack.style.opacity = '0';
+    },
     update(dt, car, input, health = 100) {
       if (st.active !== car) this.enter(car);
       const cab = car.cabin, s = car.body.state;
@@ -134,6 +143,8 @@ export function createCabinView(camera, mirrors = null) {
       st.pitch = THREE.MathUtils.clamp(st.pitch - look.y * 0.0022, -PITCH_MAX, PITCH_MAX);
       if (st.idle > 1.5) { st.yaw *= 1 - Math.min(1, dt * 2.5); st.pitch += (-0.05 - st.pitch) * Math.min(1, dt * 2.5); }
       const back = input.down('KeyB');
+      st.fov = THREE.MathUtils.clamp(st.fov + input.wheel() * 3, CABIN_FOV.min, CABIN_FOV.max);
+      if (Math.abs(camera.fov - st.fov) > 0.01) { camera.fov = st.fov; camera.updateProjectionMatrix(); }
       // Pose: eye in car space, car orientation x look offsets, plus impact shake.
       car.model.updateMatrixWorld(true);
       eyeW.copy(cab.eye).applyMatrix4(car.model.matrixWorld);

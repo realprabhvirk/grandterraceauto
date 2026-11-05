@@ -48,7 +48,7 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
 
   const out = {
     group, plan, atlas,
-    colliders: [...inner.colliders], trunks: [...gardens.trunks], poles: [], toggles: [...inner.toggles],
+    colliders: [...inner.colliders], trunks: [...gardens.trunks], poles: [], toggles: [...inner.toggles], propCars: [],
     targets: [...inner.targets], places: [...B.places, { kind: 'park', x: gardens.centre.x, z: gardens.centre.z, label: 'Central Gardens' }],
     breakables: props.defs, pedLines: props.lines, benches: gardens.benches, gardens, interiors: inner, stops: props.stops,
     chunks: [...inner.chunks], updaters: [...inner.updaters],
@@ -69,6 +69,7 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
     const c = ch.finish(group);
     out.chunks.push(c);
     out.colliders.push(...ch.colliders);
+    for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   }
   // Wattle Park out in the suburb.
   if (wattleSite) {

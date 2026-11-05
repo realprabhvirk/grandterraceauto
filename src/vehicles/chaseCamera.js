@@ -8,7 +8,7 @@ const BASE_FOV = 60, MAX_FOV = 74;
 
 export function createChaseCamera(camera, physics) {
   const { world, RAPIER } = physics;
-  const state = { yawOff: 0, pitch: 0.2, dist: 7.2, inited: false };
+  const state = { yawOff: 0, pitch: 0.2, dist: 7.2, inited: false, shake: 0 };
   const pos = new THREE.Vector3(), target = new THREE.Vector3(), want = new THREE.Vector3();
   const dir = new THREE.Vector3();
   let smoothYaw = 0;
@@ -74,12 +74,16 @@ export function createChaseCamera(camera, physics) {
       pos.lerp(want, state.inited ? k : 1);
       state.inited = true;
       camera.position.copy(pos);
+      if (state.shake > 0.01) { state.shake *= Math.exp(-dt * 5); camera.position.x += (Math.random() - 0.5) * state.shake * 0.5; camera.position.y += (Math.random() - 0.5) * state.shake * 0.35; }
       camera.lookAt(target);
       const fov = BASE_FOV + (MAX_FOV - BASE_FOV) * Math.min(1, Math.abs(speed) / 38);
       if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
     },
     /** Seed the smoothed position (used at the end of the enter blend). */
     seed(p) { pos.copy(p); },
+    /** Impact shake (0..1), decays over ~0.6 s. */
+    shake(a) { state.shake = Math.max(state.shake, a); },
+    get state() { return state; },
     restoreFov() { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); },
   };
 }

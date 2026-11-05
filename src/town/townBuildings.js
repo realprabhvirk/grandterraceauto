@@ -20,9 +20,10 @@ export const SHOPS = [
 export const SHOP_X = [435.6, 452.8, 470, 487.2, 504.4];
 export const ROW_Z = { north: T.Z[1] - T.front, south: T.Z[1] + T.front };
 
-/** Static parked car (merged into a chunk) + collider. */
+/** Static parked car (merged into a chunk) + switchable collider; stealable (becomes a real car). */
+let propId = 0;
 const carCache = new Map();
-export function staticCar(ch, x, z, yaw, type, color, extra = null) {
+export function staticCar(ch, x, z, yaw, type, color, extra = null, kind = 'civ') {
   const cfg = CAR_TYPES[type], key = `${type}|${color}`;
   if (!carCache.has(key)) {
     const g = buildCarGeometry(type, cfg, color);
@@ -35,13 +36,26 @@ export function staticCar(ch, x, z, yaw, type, color, extra = null) {
   }
   const c = carCache.get(key);
   const m = new THREE.Matrix4().makeRotationY(yaw).setPosition(x, T.h + 0.04, z);
-  ch.solid.push(c.paint.clone().applyMatrix4(m), ...c.wheels.map((w) => w.clone().applyMatrix4(m)));
-  ch.glass.push(c.glass.clone().applyMatrix4(m));
-  if (extra) for (const g of extra(cfg)) ch.solid.push(g.applyMatrix4(m));
+  const solidGeos = [c.paint.clone().applyMatrix4(m), ...c.wheels.map((w) => w.clone().applyMatrix4(m))];
+  if (extra) for (const g of extra(cfg)) solidGeos.push(g.applyMatrix4(m));
+  const glassGeos = [c.glass.clone().applyMatrix4(m)];
+  ch.solid.push(...solidGeos);
+  ch.glass.push(...glassGeos);
   const zMid = cfg.frontOverhang - cfg.L / 2 + cfg.wheelBase / 2;
   const cx = x + Math.sin(yaw) * zMid, cz = z + Math.cos(yaw) * zMid;
-  ch.colliders.push({ x: cx, y: T.h + cfg.roof / 2, z: cz, hx: cfg.W / 2, hy: cfg.roof / 2, hz: cfg.L / 2, rot: yaw });
+  const id = `propcar-${propId++}`;
+  const prop = { id, x, z, yaw, type, color, kind, solidGeos, glassGeos, cfg,
+    toggle: { id, x: cx, y: T.h + cfg.roof / 2, z: cz, hx: cfg.W / 2, hy: cfg.roof / 2, hz: cfg.L / 2, rot: yaw } };
+  ch.props.push(prop);
+  return prop;
 }
+
+/** Ambulance livery: blue + yellow bands and a red/blue light bar. */
+export const ambulanceExtras = (cfg) => [
+  paint(new THREE.BoxGeometry(cfg.W + 0.02, 0.16, cfg.L * 0.8).translate(0, cfg.belt - 0.12, -0.1), '#2f6fc0', 0.02),
+  paint(new THREE.BoxGeometry(cfg.W + 0.02, 0.08, cfg.L * 0.8).translate(0, cfg.belt - 0.24, -0.1), '#e2c25a', 0.02),
+  ...patrolExtras(cfg).slice(0, 3),
+];
 
 /** Police light bar + stripe for a static patrol car. */
 export const patrolExtras = (cfg) => [
@@ -103,7 +117,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     const bay = frame(397, ROW_Z.north - 1, 0, 1, T.h);
     ch.box(bay, 30, 0.04, 30, 0, 0.06, -15, C.carpark);
     for (let x = -12; x <= 12; x += 6) ch.box(bay, 0.12, 0.02, 6, x, 0.1, -9, C.line);
-    for (const [k, x] of [-9, -3, 3].entries()) staticCar(ch, 397 + x, ROW_Z.north - 9 + (k === 1 ? 0.3 : 0), 0, k === 1 ? 'suv' : 'sedan', '#f1f1ec', patrolExtras);
+    for (const [k, x] of [-9, -3, 3].entries()) staticCar(ch, 397 + x, ROW_Z.north - 9 + (k === 1 ? 0.3 : 0), 0, k === 1 ? 'suv' : 'sedan', '#f1f1ec', patrolExtras, 'police');
     out.spawns.police = { x: 358, z: T.Z[1] - T.hw - T.kerb - 2.3, yaw: 0 };
     out.places.push({ kind: 'police', x: 358, z: ROW_Z.north - 10, label: 'Police Station' });
     // Flats on the ring road behind.
@@ -151,6 +165,8 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     atlas.sign(pyl, atlas.row('FUEL  1.89', '#c4473a', '#ffffff'), 2.0, 0.9, 0, 4.7, 0.26, { u0: 0.3, u1: 0.7 });
     atlas.sign(pyl, atlas.row('FUEL  1.89', '#c4473a', '#ffffff'), 2.0, 0.9, 0, 4.7, -0.26, { u0: 0.3, u1: 0.7, back: true });
     out.places.push({ kind: 'shop', x: 358, z: -62, label: 'Petrol' });
+    staticCar(ch, 350.4, -62, 0, 'hatch', '#b98a4a');           // filling up at the pumps
+    staticCar(ch, 365.6, -61.5, Math.PI, 'ute', '#46566b');
     building(ch, frame(375, T.Z[2] - T.front, 0, 1, T.h), { w: 60, d: 16, floors: 3, wall: C.shopWalls[4] });
   }
 
@@ -174,13 +190,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     ch.box(amb, 9, 0.3, 16, 0, 4.2, 0, C.hBlue);
     for (const [x, z] of [[-4.2, -7.6], [4.2, -7.6], [-4.2, 7.6], [4.2, 7.6]]) ch.block(amb, 0.3, 4.2, 0.3, x, 0, z, '#d9d4c8');
     ch.box(amb, 8, 0.04, 15, 0, 0.06, 0, C.carpark);
-    const A = frame(598, -58, 0, -1, T.h);
-    ch.block(A, 2.1, 2.6, 5.6, 0, 0.35, 0, '#f4f1e8');
-    ch.box(A, 2.12, 0.4, 5.62, 0, 1.2, 0, '#2f6fc0');
-    ch.box(A, 2.12, 0.18, 5.62, 0, 1.75, 0, '#e2c25a');
-    ch.box(A, 1.9, 0.8, 0.1, 0, 1.6, 2.81, '#33414c', { glassy: true });
-    ch.box(A, 1.3, 0.16, 0.3, 0, 2.95, 2.2, '#c8322a');
-    for (const [x, z] of [[-0.95, 1.9], [0.95, 1.9], [-0.95, -1.8], [0.95, -1.8]]) ch.box(A, 0.25, 0.7, 0.7, x, 0, z, '#262628');
+    staticCar(ch, 598, -58, Math.PI, 'suv', '#f4f1e8', ambulanceExtras, 'ambulance'); // nose out toward Station St
     out.spawns.hospital = { x: 562, z: T.Z[1] + T.hw + T.kerb + 2.3, yaw: Math.PI };
     out.places.push({ kind: 'hospital', x: 562, z: ROW_Z.south + 12, label: 'Terrace Hospital' });
     building(ch, frame(565, T.Z[2] - T.front, 0, 1, T.h), { w: 60, d: 18, floors: 2, wall: C.office[2] });

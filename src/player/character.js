@@ -152,7 +152,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
 
   // Pose = plain object of joint angles; `cur` eases toward each frame's target.
   const zero = () => ({
-    rootY: 0, hipsY: 0, hipsZ: 0, torsoX: 0, torsoY: 0, torsoZ: 0, headX: 0, headY: 0, headZ: 0,
+    rootY: 0, hipsX: 0, hipsY: 0, hipsZ: 0, torsoX: 0, torsoY: 0, torsoZ: 0, headX: 0, headY: 0, headZ: 0,
     lsx: 0, lsz: 0.08, lex: 0, rsx: 0, rsz: -0.08, rex: 0,
     lhx: 0, lhz: 0, lkx: 0, rhx: 0, rhz: 0, rkx: 0,
   });
@@ -214,6 +214,45 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
         p.lhx = p.rhx = -0.12 * Math.abs(b);
         return p;
       }
+      case 'stumble': {
+        // Thrown out of a burning car: hunched forward, arms out for balance, staggering steps.
+        phase += s.dt * 9;
+        const sw = Math.sin(phase);
+        p.torsoX = 0.55; p.headX = -0.2; p.rootY = -0.12;
+        p.lsz = 1.1; p.rsz = -1.1; p.lsx = -0.6; p.rsx = -0.6; p.lex = p.rex = -0.5;
+        p.lhx = -0.5 + sw * 0.4; p.rhx = -0.5 - sw * 0.4; p.lkx = 0.6 + Math.max(0, sw) * 0.4; p.rkx = 0.6 + Math.max(0, -sw) * 0.4;
+        return p;
+      }
+      case 'collapse': {
+        // Knocked out: fall onto the back and lie limp (the whole body pivots at the hips).
+        p.rootY = -0.8; p.hipsX = -1.5; p.torsoX = -0.05; p.headY = 0.5; p.headX = -0.1;
+        p.lsz = 0.9; p.rsz = -0.7; p.lsx = -0.2; p.rsx = 0.1; p.lex = -0.3; p.rex = -0.6;
+        p.lhx = 0.05; p.rhx = -0.25; p.lkx = 0.15; p.rkx = 0.55; p.lhz = 0.1; p.rhz = -0.15;
+        return p;
+      }
+      case 'dead': {
+        // Shot: same limp fall, face down-ish to the side (no gore - the body fades out).
+        p.rootY = -0.8; p.hipsX = -1.5; p.hipsZ = 0.15; p.headY = -0.6;
+        p.lsz = 1.2; p.rsz = -0.4; p.lex = -0.4; p.rex = -0.2; p.lkx = 0.4; p.rkx = 0.1; p.lhx = -0.2;
+        return p;
+      }
+      case 'cuffed': {
+        // Busted: hands cuffed behind the back, head down.
+        p.lsx = p.rsx = 0.42; p.lsz = -0.12; p.rsz = 0.12; p.lex = p.rex = -1.0;
+        p.headX = 0.3; p.torsoX = 0.06;
+        return p;
+      }
+      case 'grab': {
+        // Police officer reaching for the player.
+        p.lsx = p.rsx = -1.35; p.lsz = -0.1; p.rsz = 0.1; p.lex = p.rex = -0.35; p.torsoX = 0.12;
+        return p;
+      }
+      case 'cower': {
+        // Civilian ducking from gunfire: crouched, arms over the head.
+        p.rootY = -0.4; p.torsoX = 0.6; p.headX = 0.3; p.lhx = p.rhx = -1.0; p.lkx = p.rkx = 1.6;
+        p.lsx = p.rsx = -2.4; p.lsz = 0.3; p.rsz = -0.3; p.lex = p.rex = -1.9;
+        return p;
+      }
       case 'look': {
         // Pause and look around.
         p.headY = 0.65 * Math.sin(t * 0.9); p.headX = -0.05; p.torsoY = 0.15 * Math.sin(t * 0.9);
@@ -258,7 +297,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
 
   function apply() {
     hips.position.y = HIP_HEIGHT + cur.rootY;
-    hips.rotation.set(0, cur.hipsY, cur.hipsZ);
+    hips.rotation.set(cur.hipsX, cur.hipsY, cur.hipsZ);
     torso.rotation.set(cur.torsoX, cur.torsoY, cur.torsoZ);
     head.rotation.set(cur.headX, cur.headY, cur.headZ);
     L.shoulder.rotation.set(cur.lsx, 0, cur.lsz); L.elbow.rotation.set(cur.lex, 0, 0);

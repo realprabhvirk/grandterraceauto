@@ -95,3 +95,18 @@ One line per judgment call made during the autonomous build.
 - P4 step 7: cyclists (3) are a separate light system on the traffic lanes, ride 1.1 m left of the lane centre; traffic treats them as slow movers; they can be knocked off (counts as hitting a person for the wanted level).
 - P4 step 7: roadworks are on Grand Terrace (auto-placed away from junctions, parked cars and 62); cones are breakable.
 - P4 step 7: in-store staff (2 cashiers, guard, 3 shoppers) are decorative (not in the ped system) - cars can't reach them.
+
+## Phase 5
+- P5 step 0: the baseline run was interrupted by my own edits (Vite reloads the test page); all suites were re-run after Step 1 instead.
+- P5 1a: POV hides the whole local skinned mesh (head + body); the viewmodel is a separate scene + camera (FOV 60) rendered after clearDepth, lit by its own hemi + directional light (no shadows, still one shadow light in the world). renderer.info is reset manually so F3/perf counts include both passes.
+- P5 1b: in the cabin cam the car's exterior paint mesh (hood + shell) is hidden; the cabin interior (dash, pillars, roof lining, doors) stands in. Eye +7 cm, dash top 4 cm below the belt line, A-pillars 4.5 cm, wheel rim 1.3 cm.
+- P5 1c: one wheel event = deltaY/100 notches (pinch: deltaY/25); third-person 1.8-8 m (default 4.6), POV FOV 60-100 (default 75), cabin 65-85 (default 75).
+- P5 1d: "in a car" includes getting in/out (modes enter/exit); blocked damage is only counted (combat.state.blocked) for tests.
+- P5 1e: a dead car you get into later (already burnt out) ejects you straight away - only possible via the debug API since dead cars can't be entered.
+- P5 1f: escape = 6 s unseen OR nearest cop >120 m -> 5 s of flashing -> cleared. Officers on foot count as cops for line of sight.
+- P5 1g: police colliders keep membership CAR but filter out CAR (no rigid contact with any car); manager does 2D OBB overlap -> pushes the cop out, impulse on the player capped 0.8-2.5 m/s, 1.2 s cooldown per cop. Chase accel 2.8 m/s2 (never out-accelerates a hero car); flank point 3 m behind + 3 m to the side (cops alternate sides).
+- P5 1g: the scripted chase test runs on the town ring road with traffic on that stretch removed ("clear path").
+- P5 1h: max 4 officers on foot (5 incl. cutscene extras), 1 per car (2 at 3+ stars) on foot; in-car arrests use one "puller". Officers walk through props (no navmesh) - kept simple.
+- P5 1i: cutscene time is real time (KO world runs at 0.3x underneath); the busted cutscene borrows the two nearest officers (or spawns them).
+- P5 1j: merged town parked cars stay merged until stolen: vertex ranges are recorded at merge time and collapsed when the prop becomes a real Car (switchable collider disabled). Ambulance is now a white 4WD with livery + light bar (was a box van) so the stolen one matches. T is now only lights+siren (N alone toggles night).
+- P5 1k: suburb only (town streets have bus stops/zebras/entrances to dodge); extra cars kept 32 m+ from turning circles. Parked cars >120 m from the focus stop simulating (Rapier body put to sleep).

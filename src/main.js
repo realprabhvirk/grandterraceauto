@@ -31,6 +31,10 @@ import { createPolice } from './police/policeManager.js';
 import { createTheft } from './police/theft.js';
 import { createMinimap } from './ui/minimap.js';
 import { createCyclists } from './npc/cyclists.js';
+import { createViewmodel } from './weapons/viewmodel.js';
+import { createCutscene } from './camera/cutscene.js';
+import { addEmergencyKit } from './vehicles/emergency.js';
+import { hideProp } from './town/townKit.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -96,7 +100,8 @@ const statusHud = createStatusHud();
 const spawns = createSpawnPoints(world);
 if (world.town) { spawns.setPolice(world.town.spawns.police); spawns.setHospital(world.town.spawns.hospital); }
 world.spawns = spawns;
-const combat = createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud: statusHud, spawns, world });
+const cutscene = createCutscene({ camera, input: controls.input, canvas: renderer.domElement });
+const combat = createCombat({ controls, vehicles, traffic, peds, breakables, particles, audio, wallet, hud: statusHud, spawns, world, cutscene });
 peds.onHit((e) => combat.emit('pedHit', e));
 cyclists.onHit((e) => combat.emit('pedHit', e));
 // Quick Stop: E at the counter buys a snack ($20, +25 health).
@@ -111,8 +116,10 @@ if (world.town) world.town.hooks.buySnack = () => {
 // --- Wanted level, police, theft ------------------------------------------------------------
 const wanted = createWanted(statusHud);
 world.wanted = wanted;
-const police = createPolice({ scene, physics, world, traffic, vehicles, controls, audio, wanted, hud: statusHud, wallet, spawns, camera });
+const police = createPolice({ scene, physics, world, traffic, vehicles, controls, audio, wanted, hud: statusHud, wallet, spawns, camera, cutscene });
 world.police = police;
+// Knocked out: wanted level and every cop reset too.
+combat.on('respawn', () => { wanted.clear(true); police.reset(); });
 const theft = createTheft({ scene, controls, vehicles, traffic, peds, police, wanted, physics, combat, world });
 
 // --- Minimap (Tab) ---------------------------------------------------------------------------
@@ -120,6 +127,20 @@ const heroLot = world.layout.hero;
 world.places = [{ kind: 'home', x: heroLot.x, z: heroLot.z, label: '62 Grand Terrace' }, ...(world.town?.places || [])];
 const minimap = createMinimap(world);
 
+// --- Stealable parked props (town car park, petrol pumps, police bay, ambulance) -------------
+for (const p of world.town?.propCars || []) controls.registerProp(p);
+controls.hooks.onPropSteal = (p) => {
+  const car = vehicles.spawn({ type: p.type, cfg: p.cfg, paint: p.color, x: p.x, z: p.z, yaw: p.yaw });
+  if (!car) return null;
+  hideProp(p);
+  physics.toggles[p.id]?.setEnabled(false);
+  if (p.kind === 'police' || p.kind === 'ambulance') addEmergencyKit(car, p.kind);
+  car.fromProp = p.id;
+  return car;
+};
+
+const viewmodel = createViewmodel();
+renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -128,18 +149,22 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
 let frames = 0;
 renderer.setAnimationLoop(() => {
   timer.update();
-  const dt = Math.min(timer.getDelta(), 0.1);
+  const rdt = Math.min(timer.getDelta(), 0.1);
+  const dt = rdt * cutscene.timeScale; // slow motion during the KO cutscene
+  vehicles.setFocus(controls.focus());
   physics.step(dt);
   vehicles.sync();
   controls.update(dt);
+  cutscene.update(rdt);
   traffic.update(dt, { player: controls.mode === 'walk' ? controls.player.position : null, night: lighting.dusk > 0.5, extra: [...police.movers(), ...cyclists.movers()] });
+  { const ac = controls.mode === 'drive' ? controls.car : null; world.playerSiren = !!ac?.emergency?.on; for (const c of vehicles.cars) c.emergency?.update(dt); }
   police.update(dt);
   theft.update(dt, world.terrain);
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
@@ -157,7 +182,11 @@ renderer.setAnimationLoop(() => {
   if (preset.noFog && controls.mode === 'fly') scene.fog.far = 1e5;
   if (controls.cameraMode === 'cabin') mirrors.update(renderer, scene, controls.car, dt); else mirrors.resetGuard();
   debugDraw.update(controls.focus());
+  if (cutscene.active) { controls.player.character.mesh.visible = true; controls.player.character.setHeadVisible(true); }
+  viewmodel.update({ active: !cutscene.active && controls.mode === 'walk' && controls.cameraMode === 'first', dt, speed: controls.player.state.speed, look: controls.player.state.lastLook || { x: 0, y: 0 }, aim: false, dusk: lighting.dusk, aspect: camera.aspect });
+  renderer.info.reset();
   renderer.render(scene, camera);
+  viewmodel.render(renderer);
   overlay.update(dt, controls.debugText());
   if (++frames > 3) window.__gta.ready = true;
 });

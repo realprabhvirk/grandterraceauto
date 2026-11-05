@@ -1,8 +1,10 @@
 // Wanted level: heat points -> 0-5 stars (thresholds 20/60/120/200/300).
-// Escape: once no cop has had line of sight for 20 s (30 s at 4-5 stars) or the nearest cop
-// is >200 m away, stars flash ("searching"); 10 s later the level clears.
+// Escape: once no cop has had line of sight for 6 s or the nearest cop is >120 m away, the
+// stars flash ("searching"); after 5 s of flashing the level clears and police stand down.
+// Any cop seeing the player again stops the flashing.
 const THRESH = [20, 60, 120, 200, 300];
-export const HEAT = { theft: 25, carjack: 40, pedHit: 30, pedHitRepeat: 15, prop: 10, policeDamage: 50, ramCop: 60, footpathScare: 10 };
+export const ESCAPE = { unseen: 6, far: 120, flash: 5 };
+export const HEAT = { theftPolice: 60, theftAmbulance: 30, shotsFired: 10, shootCiv: 50, killCiv: 80, shootCop: 100, killCop: 150, theft: 25, carjack: 40, pedHit: 30, pedHitRepeat: 15, prop: 10, policeDamage: 50, ramCop: 60, footpathScare: 10 };
 
 export function createWanted(hud) {
   const st = { heat: 0, stars: 0, unseen: 0, searching: false, searchT: 0, lastPedHit: -99, t: 0 };
@@ -33,13 +35,12 @@ export function createWanted(hud) {
     update(dt, { seen, nearest }) {
       st.t += dt;
       if (!st.stars) return;
-      const limit = st.stars >= 4 ? 30 : 20;
-      if (seen && nearest < 200) { st.unseen = 0; st.searching = false; st.searchT = 0; return; }
+      if (seen && nearest < ESCAPE.far) { st.unseen = 0; st.searching = false; st.searchT = 0; return; }
       st.unseen += dt;
-      if (st.unseen > limit || nearest > 200) {
+      if (st.unseen > ESCAPE.unseen || nearest > ESCAPE.far) {
         st.searching = true;
         st.searchT += dt;
-        if (st.searchT > 10) this.clear();
+        if (st.searchT > ESCAPE.flash) this.clear();
       }
     },
     /** Test helper: fast-forward the escape timers. */

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 01:00)**
-- Done: PHASE 4 COMPLETE (steps 0-8): bugs, cameras, damage, police, minimap, Terrace Town Centre, NPC variety, wrap-up
-- Broken: none known (see Phase 4 rough edges)
-- Next: Phase 5 (see suggestions at the end of this file)
+**STATUS (2026-11-05 05:50)**
+- Done: PHASE 4 complete; Phase 5 step 1 (fixes a-k: POV viewmodel, cabin view, zoom, no HP loss in cars, burning wrecks, stars escape, police soft contact, officers + arrests, KO/BUSTED cutscenes, steal any parked car, more parked cars)
+- Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
+- Next: Phase 5 step 2: guns
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -234,3 +234,7 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 4. **Multiplayer:** a small WebSocket server (authoritative positions + interpolation) - start with 2-4 players driving around together; see the multiplayer doc that was skipped in Phase 3.
 5. Polish: corner fillets + traffic lights at town intersections, interior lighting, ambient sound loop (skipped), pedestrians crossing at the zebras.
 - 01:00 P4 step 8 done: full suite passed (garage street-exit test made robust), perfscenes.mjs logged per-scene fps/draw calls, README controls + folders updated, npm run build OK, Phase 4 summary written.
+
+## PHASE 5 LOG
+- 05:03 Step 0: git clean, dev server up. Baseline run got interrupted by my own edits (Vite reload), so suites were re-run after Step 1.
+- 05:50 Step 1 done (fixes a-k). New scripts/phase5test.mjs sections pov cabin zoom carhp burn stars push arrest ko steal parked: all pass (cabin: 9/9 road rays clear for all 4 car types, dash top at 79-99% of screen height; 3-star chase: nearest cop 61 m after 12 s, contact 0 s). Updated old tests for the new rules (emotes = hold G + 1-4, no player damage in cars, KO/busted cutscene timings). phase4test combat/police 12/12, phase2test 16/16, walktest pass, drivetest pass (physics).
