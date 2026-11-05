@@ -18,7 +18,7 @@ export const ICON = {
   beach: { t: '~', c: '#3fa8d0', label: 'Beach', pri: 7 },
   school: { t: 'S', c: '#e08a30', label: 'School', pri: 7 },
   industry: { t: 'I', c: '#9a8a78', label: 'Industrial', pri: 6 },
-  camera: { t: 'C', c: '#e2c22a', label: 'Speed camera', pri: 3, fullOnly: true },
+  camera: { t: 'C', c: '#e2c22a', label: 'Speed camera / radar cop', pri: 3, fullOnly: true, noLabel: true },
   ramp: { t: 'M', c: '#3a8a4a', label: 'Highway on/off ramp', pri: 5 },
 };
 /** Draw order: low priority first, the gun shop last (on top). */
@@ -54,7 +54,7 @@ export function haloText(g, text, x, y, color = '#f6eedf', font = 'bold 12px sys
 export function drawLabels(g, markers) {
   const placed = [], out = [];
   g.font = 'bold 12px system-ui,sans-serif';
-  const order = [...markers].filter((m) => m.label).sort((a, b) => (ICON[b.kind]?.pri || 0) - (ICON[a.kind]?.pri || 0));
+  const order = [...markers].filter((m) => m.label && !ICON[m.kind]?.noLabel).sort((a, b) => (ICON[b.kind]?.pri || 0) - (ICON[a.kind]?.pri || 0));
   for (const m of order) {
     const w = g.measureText(m.label).width + 6, h = 15, r = { x0: m.x - w / 2, x1: m.x + w / 2, y0: m.y + 10, y1: m.y + 10 + h };
     if (placed.some((p) => r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0)) { m.labelHidden = true; continue; }

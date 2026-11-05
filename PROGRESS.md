@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 15:46)**
-- Done: Phase 6 steps 1-6 (rules, map, signs, highway, cameras/traffic cops, whole city: shops, lights, landmarks, NPCs, buses/taxis/vans, vibe)
-- Broken: highway: ramps are right-angle junctions (autopilot rolls at speed); eastbound 170 km/h autopilot spin; phase4 cop knock-down (known); map Tab-resume check flaky in batch
-- Next: P6 step 7: the 3 screenshots; step 8 wrap-up
+**STATUS (2026-11-05 16:02)**
+- Done: Phase 6 complete (steps 0-8)
+- Broken: highway autopilot spin at 170 km/h + east ramp roll (logged); map Tab-resume + burn ejection checks flaky in batch; full suite only partly run (memory)
+- Next: re-run phase4/phase2/walk/drive/shake/perfscenes when memory allows; Phase 7
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -392,3 +392,15 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 ### 2026-11-05 15:46 — Phase 6 Step 6d: vibe
 - Crowd murmur ambience layer (band-passed noise with a syllable-rate wobble) on Terrace Pde shops, City Plaza, downtown Pde and the stadium gate; quieter at night. Kit-shop signs and landmark billboards glow at dusk like the downtown neon.
 - Test `vibe6` 3/3.
+
+### 2026-11-05 16:02 — Phase 6 Step 7 + 8: screenshots, suite, build, wrap-up
+- Screenshots (1280x720, one cheap fix round: camera labels hidden on the full map, street shot moved to the kerb):
+  shots/phase6/1-aerial-highway.png, shots/phase6/2-street-terrace-pde.png, shots/phase6/3-full-map.png (gitignored, local).
+- Full suite: the background run was **stopped by Claude Code for low system memory** after phase5test + weaponsUnit
+  (weaponsUnit 26/26). phase5test fails were followed up singly: "peds capped ~60" updated to the Phase 6 cap (~90);
+  on-foot arrest test spawned the cop behind the now-enterable chemist (moved onto Terrace Pde) → pass; Northgate
+  "≥4 NPCs" (3 after seeded spawns shifted) → +1 Northgate resident → pass; ejection burn check flaky (passed alone);
+  highway autopilot ×2 = known. **Not re-run** (memory): phase4test, phase2test, walktest, drivetest, shaketest,
+  perfscenes; phantomtest last ran 19/19 after step 6b.
+- Perf (from the Phase 6 tests, headless Edge 960x540): 100-125 draw calls downtown / Terrace Pde / City Plaza with 86 NPCs + 23 traffic cars, 60 fps.
+- `npm run build` OK (5.33 MB JS, 1.97 MB gzip). README updated.

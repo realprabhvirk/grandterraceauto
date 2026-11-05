@@ -330,7 +330,7 @@ try {
       d.teleport(470, -92, Math.PI);
       g.wanted.add('test', 30);
       const busts0 = g.police.st.busts;
-      d.placeCop(470, -110, 0);
+      d.placeCop(500, -82.8, -Math.PI / 2); // on Terrace Pde (the old spot is behind the Phase 6 enterable chemist)
       const t0 = performance.now(); let officer = null, cs = null;
       while (performance.now() - t0 < 20000) {
         if (!officer && g.police.foot.alive.length) officer = (performance.now() - t0) / 1000;
@@ -884,7 +884,7 @@ try {
     check('clouds drift', r.c1 > r.c0 || r.c1 < r.c0 - 1000, { c0: r.c0, c1: r.c1 });
     check('birds by day, gone at night', r.birdsDay && !r.birdsNight);
     check('ambience by zone: birds/wind suburb, waves beach, traffic downtown, crickets at night', r.z.suburb.birds > 0.5 && r.z.beach.waves > 0.8 && r.z.downtown.traffic > 0.5 && r.z.night.crickets > 0.3 && r.z.suburb.waves === 0, r.z);
-    check('pedestrians capped ~60, far ones asleep', r.peds >= 50 && r.peds <= 64 && r.asleep > r.peds / 3, { peds: r.peds, asleep: r.asleep });
+    check('pedestrians capped ~90 (Phase 6), far ones asleep', r.peds >= 50 && r.peds <= 92 && r.asleep > r.peds / 3, { peds: r.peds, asleep: r.asleep });
     check('warm pooled light inside the store, off outside', r.inStore > 1 && r.outside === 0, { inStore: r.inStore, outside: r.outside });
     check('optional automatic day/night cycle reaches night', r.cycDusk > 0.95, { dusk: r.cycDusk });
     check('still exactly ONE shadow-casting light', r.lights === 1, { lights: r.lights });

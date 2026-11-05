@@ -47,7 +47,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   // Northgate residents (block loops north of the ring road).
   const ngLines = [];
   for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z < -250) ngLines.push(k);
-  if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' });
+  if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' }, { role: 'shopper', area: 'north' });
   if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);

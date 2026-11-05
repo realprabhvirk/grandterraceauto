@@ -21,6 +21,20 @@ inspired by Woodlands Estate, Waterford QLD, built around the hero house
   **Northgate** (second suburb, school, shopping centre) and an **industrial estate** (the highway was skipped) -
   plus clouds, birds, zone ambience and an optional day/night cycle. Arcade rules: hitscan only, no blood/gore,
   no explosions, adults only (the school has staff only); people who are shot go down and fade out.
+- **Phase 6:** road rules + a bigger city. **Speed limits** on every road (suburb 50, cul-de-sacs 30, town 50,
+  downtown 40, school zone 40, arterials 60, motorway 100, ramps 80) with a limit sign + street name next to the
+  speedometer; **speeding fines** ($200, limit + 10 margin, 20 s cooldown, never stars or a chase, none while wanted or
+  with the siren on) from 9 **speed cameras** (flash + shutter, "SPEED CAMERA AHEAD" signs), 5 **radar cops** (parked
+  patrol car + officer with a radar gun: 60 m, line of sight, front arc) and 2 cruising **patrol cars**. Crimes need a
+  witness; property damage / wrecking cars gives **no stars**. **Terrace Motorway** (north of the ring road, 2+2 lanes,
+  median barrier, bridges over Northgate Rd + King St North, on/off ramps, overhead gantries). City-wide **street signs**
+  (name blades at every junction, limit signs at road ends, school sign). The full map shows **labels, street names
+  and a legend**; waypoint routes are drawn **on the map / minimap only** (the driven part fades out).
+  **13 enterable shops** from one interior kit with buy menus (food/drinks heal $8-20 / +10..25, chemist $40 / +50,
+  clothes $60 shirt colour, barber hair colour), **traffic lights** at 6 Terrace Pde junctions that the AI obeys
+  (stop lines + zebra crossings), **City Hall clock tower** (real time), **Terrace Stadium**, a **TV tower** on the
+  southern hill, billboards, ~86 people with new activities (bus-stop waiters, street dancers, stadium fans...),
+  a **2-bus loop** with stops, **taxis** and **delivery vans**, crowd murmur and glowing signs at dusk.
 
 Three.js r187 + Rapier 0.21 (WASM physics) + Vite 8, vanilla JS modules.
 
@@ -84,7 +98,7 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | Key | Action |
 | --- | --- |
 | **Tab** | cycles hidden -> minimap -> **full map** -> hidden (Esc also closes the full map; the game pauses while it's open) |
-| Full map: **click** | set a waypoint (click a marker to snap to it): route on the map + minimap, a beacon in the world, a distance chip on screen |
+| Full map: **click** | set a waypoint (click a marker to snap to it): route on the full map + minimap (driven part fades), distance shown above the pin |
 | Full map: **right-click** / drag / wheel or pinch | clear the waypoint / pan / zoom |
 | **N** | toggle late afternoon <-> dusk/night (windows glow, neon + street lights + headlights on) |
 | **Shift + N** | slow automatic day/night cycle on/off (or start with `?cycle`) |
@@ -107,7 +121,8 @@ add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay
 .\dev.cmd node scripts/shot.mjs          # screenshots of every preset into shots/, fails on console errors
 .\dev.cmd node scripts/vehicle-sim.mjs   # headless car tuning bench (0-100, top speed, braking, roll, crest jumps)
 .\dev.cmd node scripts/phase4test.mjs    # Phase 4 (sections: garage cameras combat police minimap town npcs) - numeric asserts, no screenshots
-.\dev.cmd node scripts/phase5test.mjs    # Phase 5 + 5.1 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage witness map)
+.\dev.cmd node scripts/phase5test.mjs    # Phase 5-6 (sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe damage witness map pois copstars speeding mapnav signs highway enforce shops city life vibe6)
+.\dev.cmd node scripts/shots6.mjs        # Phase 6: the 3 screenshots in shots/phase6/ (aerial, street level, full map)
 .\dev.cmd node scripts/phantomtest.mjs   # 5.2: full-throttle runs on every route (no phantom damage), ghost-collider scan, top speed, real-crash regression
 .\dev.cmd node scripts/shaketest.mjs    # 5.3: camera jitter in every camera mode (walk/run/jump/POV/drive), shake only on real crashes
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
