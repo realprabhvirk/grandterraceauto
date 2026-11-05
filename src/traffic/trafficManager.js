@@ -7,6 +7,8 @@ import { PALETTE } from '../art/palette.js';
 import { buildLaneGraph } from './laneGraph.js';
 import { TrafficCar } from './trafficCar.js';
 import { makeRng } from '../utils/rng.js';
+import { addEmergencyKit } from '../vehicles/emergency.js';
+export const PATROL_CRUISERS = 2; // traffic cops cruising the motorway / ring road at the limit
 
 const COUNT = 14; // 6 start on Grand Terrace, the rest spread over the town + downtown grid
 const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '#b98a4a', '#2f4f6b', '#7c2f2f', '#e9e6dc', '#4f6b3a'];
@@ -14,7 +16,7 @@ const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '
 export function createTraffic({ scene, physics, world, vehicles, audio, count = COUNT }) {
   const rng = makeRng(4646);
   const graph = buildLaneGraph(world.network);
-  const wheels = createWheelInstances(count * 4).mesh;
+  const wheels = createWheelInstances((count + PATROL_CRUISERS) * 4).mesh;
   wheels.name = 'traffic-wheels';
   scene.add(wheels);
   const types = ['sedan', 'hatch', 'suv', 'ute', 'hatch', 'sedan'];
@@ -33,6 +35,16 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
     }));
   }
 
+  // Patrol cruisers: police livery + light bar (lights only when catching a speeder), not carjackable.
+  const hwLane = graph.lanes.find((l) => l.road?.highway && !l.road.ramp);
+  const ringLane = graph.lanes.find((l) => l.road?.street === 'Ring Rd North' && l.len > 40);
+  [hwLane, ringLane].forEach((lane, k) => {
+    if (!lane) return;
+    const i = count + k, t = new TrafficCar({ id: `patrol-${k}`, type: 'sedan', cfg: CAR_TYPES.sedan, paint: '#f1f1ec', lane, s: lane.len * 0.3, cruise: 50 / 3.6, physics, scene, wheels, wheelOffset: i * 4, terrain: world.terrain, rng: rng.fork(i + 70) });
+    t.isPolice = true; t.trafficCop = true;
+    addEmergencyKit(t, 'police');
+    cars.push(t);
+  });
   const honk = (car) => audio.honk?.(car.pos);
   /** Take a traffic car off the road (carjacked: replaced by a drivable copy). */
   function removeCar(c) {

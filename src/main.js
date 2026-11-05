@@ -45,6 +45,8 @@ import { createGunShopMenu } from './ui/gunShopMenu.js';
 import { createAmbience } from './audio/ambience.js';
 import { createSpeeding } from './police/speeding.js';
 import { createSpeedLimitHud } from './ui/speedLimitHud.js';
+import { createSpeedCameras } from './police/speedCameras.js';
+import { createTrafficCops } from './police/trafficCops.js';
 import { createSkyLife } from './world/skyLife.js';
 
 const params = new URLSearchParams(location.search);
@@ -170,6 +172,8 @@ const skyLife = createSkyLife(scene);
 // Speeding: fines only when a camera / traffic cop catches you (no heat). HUD: limit sign + street chip.
 const speeding = createSpeeding({ world, controls, wallet, hud: statusHud, audio });
 const limitHud = createSpeedLimitHud();
+const speedCams = createSpeedCameras({ scene, world, physics, controls, speeding, audio });
+const trafficCops = createTrafficCops({ scene, world, physics, traffic, speeding });
 world.speeding = speeding;
 const ambience = createAmbience(audio);
 const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
@@ -189,7 +193,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, speeding, limitHud, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, jitter, speeding, limitHud, speedCams, trafficCops, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -214,6 +218,7 @@ renderer.setAnimationLoop(() => {
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   speeding.update(dt);
+  if (!paused) { speedCams.update(dt); trafficCops.update(dt); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());
   skyLife.update(dt, { dusk: lighting.dusk });
   {

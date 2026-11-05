@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1323,6 +1323,62 @@ try {
     check('police can route onto the motorway', r.policeOk, { len: r.routeLen });
     check('limits: motorway 100, ramps 80', r.limits.every(([n, l]) => (/Ramp/.test(n) ? l === 80 : l === 100)), r.limits);
     check('no page errors (highway)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.5: speed cameras + traffic cops
+  if (run('enforce')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, S = g.speeding, C = g.speedCams, TC = g.trafficCops, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t); // (cruisers too: isolate cameras / radar posts)
+      g.wanted.clear(true); g.police.reset(); g.wallet.set(5000);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen && c.type === 'sedan')); await wait(1400);
+      const car = g.controls.car; car.health = 100; car.dead = false; car.body.dead = false;
+      const cam = C.cams.find((c) => c.id === 'cam-ring-n');
+      const pass = async (kmh, back = 26) => {
+        const right = { x: -cam.tz, z: cam.tx }, lat = (cam.road.halfW || 4.5) + 1.6 - 2.2;
+        const x = cam.x + right.x * lat - cam.tx * back, z = cam.z + right.z * lat - cam.tz * back;
+        car.body.teleport(x, g.world.terrain.getHeight(x, z), z, Math.atan2(cam.tx, cam.tz)); await wait(250);
+        const v = { x: cam.tx * kmh / 3.6, y: 0, z: cam.tz * kmh / 3.6 };
+        car.body.body.setLinvel(v, true); car.body.lastVel = { ...v };
+        const t0 = performance.now(); while (performance.now() - t0 < 1600) { const vv = car.body.body.linvel(); car.body.body.setLinvel({ x: v.x, y: vv.y, z: v.z }, true); await new Promise((q) => requestAnimationFrame(q)); }
+      };
+      const out = {}, h0 = g.wanted.heat, c0 = g.wallet.cash;
+      const f0 = S.st.fines; await pass(110); out.cam = { fines: S.st.fines - f0, cash: g.wallet.cash - c0, flashes: C.st.flashes, limit: cam.road.speedLimit };
+      const f1 = S.st.fines; await pass(110); out.camCooldown = S.st.fines - f1;
+      // At the limit (+10 allowed) on a fresh camera: Terrace Pde downtown camera would need its own pass; use cooldown-free id via a new camera check.
+      const camKing = C.cams.find((c) => c.id === 'cam-king');
+      const f2 = S.st.fines; Object.assign(cam, {}); // (cam-ring-n is cooling down) - drive past cam-king at its limit
+      { const c = camKing, right = { x: -c.tz, z: c.tx }, lat = (c.road.halfW || 4.5) + 1.6 - 2.2; const x = c.x + right.x * lat - c.tx * 26, z = c.z + right.z * lat - c.tz * 26;
+        car.body.body.setLinvel({ x: 0, y: 0, z: 0 }, true); car.body.lastVel = { x: 0, y: 0, z: 0 }; await wait(300); car.body.teleport(x, g.world.terrain.getHeight(x, z), z, Math.atan2(c.tx, c.tz)); car.body.body.setLinvel({ x: 0, y: 0, z: 0 }, true); await wait(250); const kmh = 49; const v = { x: c.tx * kmh / 3.6, y: 0, z: c.tz * kmh / 3.6 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v };
+        const t0 = performance.now(); while (performance.now() - t0 < 2400) { const vv = car.body.body.linvel(); car.body.body.setLinvel({ x: v.x, y: vv.y, z: v.z }, true); await new Promise((q) => requestAnimationFrame(q)); } }
+      out.atLimit = { fines: S.st.fines - f2, checks: C.st.checks };
+      // Radar cop: in front with LOS catches; behind a wall / out of arc doesn't (sees() geometry checks).
+      const post = TC.posts[0];
+      const fx = Math.sin(post.yaw), fz = Math.cos(post.yaw);
+      const radarAt = async (dist, side = 0) => { const x = post.x + fx * dist + fz * side, z = post.z + fz * dist - fx * side; car.body.teleport(x, g.world.terrain.driveHeight(x, z, post.y + 3), z, post.yaw + Math.PI); await wait(250); const v = { x: -fx * 35, y: 0, z: -fz * 35 }; car.body.body.setLinvel(v, true); car.body.lastVel = { ...v }; await wait(250); const ss = S.status(); window.__dbgRadar = { over: ss?.over, kmh: ss?.kmh ?? ss?.speed, limit: ss?.limit, sees: TC.sees(post.x, post.y, post.z, post.yaw, car.position, false), car: [car.position.x, car.position.y, car.position.z].map(Math.round), post: [post.x, post.y, post.z].map(Math.round) }; };
+      const f3 = S.st.fines; await radarAt(35, 8.5); out.radar = { fines: S.st.fines - f3, catches: TC.st.catches, post: post.id, dbg: window.__dbgRadar };
+      const P = { x: post.x - fx * 30, y: post.y, z: post.z - fz * 30 };
+      out.behind = TC.sees(post.x, post.y, post.z, post.yaw, P, false);
+      out.wall = TC.sees(540, -4.4, -81, Math.PI, { x: 540, y: -4.4, z: -110 }, false); // Terrace Central's facade in between
+      out.clear = TC.sees(520, -4.4, -81, Math.PI / 2, { x: 550, y: -4.4, z: -86 }, false);
+      // Wanted / siren: no fine anywhere.
+      g.wanted.add('test', 25); const f4 = S.st.fines; await radarAt(35, 8.5); out.wanted = S.st.fines - f4; g.wanted.clear(true); g.police.reset();
+      car.emergency = { on: true, update() {} }; const f5 = S.st.fines; await radarAt(35, 8.5); out.siren = S.st.fines - f5; car.emergency = null;
+      out.heat = g.wanted.heat - h0;
+      out.cruisers = TC.cruisers.length; out.cams = C.cams.length; out.posts = TC.posts.length;
+      out.onMap = g.world.places.filter((p) => p.kind === 'camera').length;
+      g.controls.respawnAt(car.position, 0);
+      return out;
+    });
+    check('speeding past a camera: one -$200 fine + flash', r.cam.fines === 1 && r.cam.cash === -200 && r.cam.flashes >= 1, r.cam);
+    check('same camera again within 20 s: no second fine', r.camCooldown === 0, r);
+    check('at the limit past a camera: nothing', r.atLimit.fines === 0, r.atLimit);
+    check('radar cop in front with line of sight catches you', r.radar.fines === 1, r.radar);
+    check('radar: behind the officer / behind a wall -> not seen; clear view -> seen', r.behind === false && r.wall === false && r.clear === true, { behind: r.behind, wall: r.wall, clear: r.clear });
+    check('no fines while wanted or with the siren on; never any heat from speeding', r.wanted === 0 && r.siren === 0 && r.heat === 0, r);
+    check('9 cameras + 5 radar posts + 2 cruisers, cameras on the full map', r.cams >= 8 && r.posts >= 5 && r.cruisers === 2 && r.onMap >= 8, { cams: r.cams, posts: r.posts, cruisers: r.cruisers, onMap: r.onMap });
+    check('no page errors (enforce)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
