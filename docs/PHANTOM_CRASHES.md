@@ -136,3 +136,5 @@ Candidate next steps:
 
 ## Observations logged after this note was written (no code changed)
 - 2026-11-05, Phase 6.1 wrap-up suite: `phase5test highway` westbound full-throttle run logged **1 damage event** (health 100 -> 93.8, max tilt 27.5) where earlier runs were clean. The test output doesn't print the event's tag/normal, so the cause is **unverified** - a candidate for `__gta.debug.damageEvents()` capture next time (bridge deck ends / barrier? see H1/H2).
+
+See also docs/BUMPS.md (Phase 6.2): the braking stoppie root cause - the hull scraping the terrain heightfield at speed - is a likely contributor to the 'bumps from nowhere' too.

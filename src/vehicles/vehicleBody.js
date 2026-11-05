@@ -5,6 +5,7 @@
 // Assists (all deliberately "forgiving"): speed-sensitive eased steering, lateral grip
 // assist, roll damping, upright torque, downforce, anti-launch clamp, handbrake drift.
 import { G_CAR, groups, GROUP } from '../physics/physicsWorld.js';
+import { BRAKE } from './brakeConfig.js';
 
 const WHEEL_GROUPS = groups(GROUP.CAR, GROUP.STATIC | GROUP.CAR);
 
@@ -45,15 +46,21 @@ export class VehicleBody {
         .setAngularDamping(0.9)
         .setCanSleep(false),
     );
-    // Lower body + cabin boxes (rounded-ish feel comes from the assists, not the shape).
-    const bodyH = (cfg.belt - cfg.clearance) / 2;
+    // Lower hull (rounded edges, bottom raised a little: lips and seams slide instead of catching -
+    // Phase 6.2, docs/BUMPS.md) + cabin box.
+    const rr = BRAKE.chassisRound, lift = BRAKE.chassisLift;
+    const bodyH = (cfg.belt - cfg.clearance - lift) / 2;
     const zMid = cfg.frontOverhang - cfg.L / 2 + cfg.wheelBase / 2;
-    const main = RAPIER.ColliderDesc.cuboid(cfg.W / 2 - 0.02, bodyH, cfg.L / 2 - 0.04)
-      .setTranslation(0, cfg.clearance + bodyH, zMid)
-      .setCollisionGroups(G_CAR).setFriction(0.4).setRestitution(0.15);
-    // Mass properties: low centre of mass + extra roll inertia = hard to flip (arcade).
+    const yHull = cfg.clearance + lift + bodyH;
+    const main = RAPIER.ColliderDesc.roundCuboid(cfg.W / 2 - 0.02 - rr, bodyH - rr, cfg.L / 2 - 0.04 - rr, rr)
+      .setTranslation(0, yHull, zMid)
+      .setCollisionGroups(G_CAR).setFriction(BRAKE.chassisFriction).setRestitution(0.15);
+    // Mass properties: extra roll inertia = hard to flip (arcade). NOTE the centre of mass is in the
+    // collider's frame: it sits 0.36 above the original hull centre (~0.9 m up). Phase 6.2 keeps that exact
+    // height (handling unchanged); braking no longer pitches the car because it acts at the COM.
     const m = cfg.mass, Lx = cfg.L, Wx = cfg.W, Hx = 1.2;
-    main.setMassProperties(m, { x: 0, y: 0.36, z: 0.05 },
+    const comBody = cfg.clearance + (cfg.belt - cfg.clearance) / 2 + 0.36;
+    main.setMassProperties(m, { x: 0, y: comBody - yHull, z: 0.05 },
       { x: (m / 12) * (Hx * Hx + Lx * Lx) * 1.2, y: (m / 12) * (Wx * Wx + Lx * Lx) * 1.1, z: (m / 12) * (Wx * Wx + Hx * Hx) * 1.8 },
       { x: 0, y: 0, z: 0, w: 1 });
     this.colliders = [world.createCollider(main, this.body)];
@@ -142,27 +149,36 @@ export class VehicleBody {
     ctrl.setWheelSteering(1, this.steer);
 
     // --- Engine / brakes ------------------------------------------------------------
-    let engine = 0, brake = 0;
+    // S = brake while moving forward (> BRAKE.reverseBelow), never reverse throttle; reverse engages only
+    // once (almost) stopped and S is still held for BRAKE.reverseDelay. Brake input ramps in; the braking
+    // force itself is applied at the centre of mass below (no pitch torque) - only a small residual goes
+    // through the wheels (front/rear bias) so the tyres scrub.
+    let engine = 0, brake = 0, brakeIn = 0;
     st.braking = false; st.reversing = false;
     if (parked) {
-      brake = cfg.brake * 2;
+      brake = cfg.brake * 2; this.revHold = 0;
     } else if (thr > 0 && speed > -1) {
       const top = cfg.top * (boost ? 1.15 : 1);
       const taper = Math.max(0, 1 - (Math.max(0, speed) / top) ** 2);
-      engine = cfg.engine * thr * (boost ? 1.55 : 1) * taper;
+      engine = cfg.engine * thr * (boost ? 1.55 : 1) * taper; this.revHold = 0;
     } else if (thr > 0) {
-      brake = cfg.brake; st.braking = true;
-    } else if (rev > 0 && speed > 1) {
-      brake = cfg.brake * rev; st.braking = true;
+      brakeIn = thr; st.braking = true; this.revHold = 0; // rolling backwards + W: brake first
+    } else if (rev > 0 && speed > BRAKE.reverseBelow) {
+      brakeIn = rev; st.braking = true; this.revHold = 0;
     } else if (rev > 0) {
-      engine = speed > -9 ? -cfg.engine * 0.7 * rev : 0;
-      st.reversing = true;
+      this.revHold = (this.revHold || 0) + dt;
+      if (this.revHold < BRAKE.reverseDelay && speed > -0.5) { brakeIn = rev; st.braking = true; }
+      else { engine = speed > -9 ? -cfg.engine * 0.7 * rev : 0; st.reversing = true; }
     } else {
-      brake = 1.2; // engine braking / rolling resistance
+      brake = 1.2; this.revHold = 0; // engine braking / rolling resistance
     }
+    const lvl0 = this.brakeLvl || 0, rampStep = dt / BRAKE.rampIn;
+    this.brakeLvl = brakeIn > lvl0 ? Math.min(brakeIn, lvl0 + rampStep) : Math.max(brakeIn, lvl0 - rampStep * 2);
+    const bl = this.brakeLvl;
     for (let i = 0; i < 4; i++) {
       ctrl.setWheelEngineForce(i, this.driven.includes(i) ? engine * (this.driven.length === 4 ? 0.6 : 1) : 0);
-      ctrl.setWheelBrake(i, brake);
+      const wb = bl > 0 ? BRAKE.wheelBrake * bl * 2 * (i < 2 ? BRAKE.bias : 1 - BRAKE.bias) : 0;
+      ctrl.setWheelBrake(i, brake + wb);
     }
     const hb = !parked && input.handbrake;
     st.handbrake = hb;
@@ -193,9 +209,33 @@ export class VehicleBody {
       const k = hb ? 0.6 : 2.4;
       const j = -latSpeed * m * Math.min(1, k * dt);
       body.applyImpulse({ x: left.x * j, y: left.y * j, z: left.z * j }, true);
-      // Downforce grows with speed: keeps it planted over crests.
-      const df = m * Math.min(9, 0.012 * fwdSpeed * fwdSpeed) * dt;
+      // Downforce grows with speed: keeps it planted over crests (Phase 6.2: much gentler - the old
+      // 9 m/s^2 squashed the suspension until the hull scraped the ground).
+      const df = m * Math.min(BRAKE.downforceMax, BRAKE.downforceK * fwdSpeed * fwdSpeed) * dt;
       body.applyImpulse({ x: -up.x * df, y: -up.y * df, z: -up.z * df }, true);
+    }
+    // Braking at the centre of mass: decel up to BRAKE.maxDecelG, clamped by a friction circle
+    // (tyre load x mu over the grounded wheels), never past a standstill.
+    if (bl > 0 && grounded) {
+      // Friction circle: tyres that are also steering have less grip left for braking.
+      const steerUse = Math.min(1, Math.abs(this.steer) / Math.max(0.05, cfg.steer * 0.5));
+      const aMax = Math.min(BRAKE.maxDecelG * (1 - BRAKE.steerShare * steerUse), BRAKE.mu * (grounded / 4)) * 9.81 * bl;
+      const dvB = Math.min(aMax * dt, Math.abs(fwdSpeed));
+      const jB = -Math.sign(fwdSpeed) * m * dvB;
+      body.applyImpulse({ x: f.x * jB, y: f.y * jB, z: f.z * jB }, true);
+    }
+    // Pitch: clamp the grounded pitch rate; while braking, push the nose back up beyond the limit.
+    {
+      const wv = body.angvel(), pr = dot(wv, left), lim = BRAKE.pitchRateLimit / 57.2958;
+      if (grounded >= 2 && Math.abs(pr) > lim) {
+        const cut = pr - Math.sign(pr) * lim;
+        body.setAngvel({ x: wv.x - left.x * cut, y: wv.y - left.y * cut, z: wv.z - left.z * cut }, true);
+      }
+      const pitchDeg = Math.asin(Math.max(-1, Math.min(1, f.y))) * 57.2958;
+      if (bl > 0 && grounded >= 2 && pitchDeg < -BRAKE.pitchLimit) {
+        const k = (-BRAKE.pitchLimit - pitchDeg) / 57.2958 * 8 * m * dt; // nose-down = +rotation about left
+        body.applyTorqueImpulse({ x: -left.x * k, y: -left.y * k, z: -left.z * k }, true);
+      }
     }
     // Roll damping + upright torque (stronger in the air so landings come out wheels-down).
     const w = body.angvel();
@@ -212,11 +252,13 @@ export class VehicleBody {
     }
     // Never launch into orbit off a crest or kerb.
     if (v.y > 4.5) body.setLinvel({ x: v.x, y: 4.5, z: v.z }, true);
-    // Hard speed cap.
+    // Speed cap: excess speed (e.g. boost released at the boosted top speed) bleeds off at BRAKE.capRate,
+    // never in one step (that was a ~4 m/s single-step jolt).
     const top = cfg.top * (boost ? 1.15 : 1) * 1.05;
-    if (Math.abs(fwdSpeed) > top) {
-      const s = top / Math.abs(fwdSpeed);
-      body.setLinvel({ x: v.x * s, y: v.y, z: v.z * s }, true);
+    if (Math.abs(fwdSpeed) > top && !(bl > 0.05)) { // (while braking, the brake does the slowing)
+      const vc = body.linvel(), fs = Math.abs(dot(vc, f));
+      const s = Math.max(top, fs - BRAKE.capRate * dt) / fs;
+      body.setLinvel({ x: vc.x * s, y: vc.y, z: vc.z * s }, true);
     }
     // Collision strength (sudden velocity change not explained by braking).
     const dv = Math.hypot(v.x - this.lastVel.x, v.y - this.lastVel.y, v.z - this.lastVel.z);
@@ -228,6 +270,28 @@ export class VehicleBody {
     this.lastVel = { x: vEnd.x, y: vEnd.y, z: vEnd.z };
     st.throttle = thr;
     st.boost = boost;
+    this.recordTrace(dt, input, engine, brake, hb, boost, vEnd, f, up, left);
+  }
+
+  /** Always-on ring buffer of the last ~3 s of physics steps (debug.carTrace()). Cheap: plain numbers. */
+  recordTrace(dt, input, engine, brake, hb, boost, v, f, up, left) {
+    const tr = this.trace || (this.trace = { buf: [], t: 0, lastAx: 0, lastPitch: 0 });
+    tr.t += dt;
+    const ctrl = this.ctrl, cfg = this.cfg, w = this.body.angvel();
+    const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) * 57.2958; // + = nose up
+    const fwd = dot(v, f), ax = (fwd - (tr.lastFwd ?? fwd)) / dt / 9.81;
+    const comp = [], lift = [];
+    for (let i = 0; i < 4; i++) {
+      const c = ctrl.wheelIsInContact(i);
+      const len = ctrl.wheelSuspensionLength(i) ?? cfg.rest;
+      comp.push(+(c ? (cfg.rest - len) / cfg.travel : -1).toFixed(2)); lift.push(c ? 0 : 1);
+    }
+    const mode = !input ? 'parked' : this.state.braking ? 'brake' : this.state.reversing ? 'reverse' : (input.throttle > 0 ? 'throttle' : 'coast');
+    tr.buf.push({ t: +tr.t.toFixed(3), kmh: +(fwd * 3.6).toFixed(1), pitch: +pitch.toFixed(2), pitchRate: +(dot(w, left) * 57.2958).toFixed(1), vy: +v.y.toFixed(2),
+      comp, lift, axG: +ax.toFixed(2), jerk: +((ax - tr.lastAx) / dt).toFixed(1), engine: +engine.toFixed(0), brake: +brake.toFixed(1), hb: !!hb, boost: !!boost,
+      inS: input ? +(input.reverse || 0).toFixed(2) : 0, inW: input ? +(input.throttle || 0).toFixed(2) : 0, mode });
+    if (tr.buf.length > 180) tr.buf.shift();
+    tr.lastAx = ax; tr.lastFwd = fwd;
   }
 
   /** Per-wheel data for rendering (chassis-space hard point + suspension). */

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 19:35)**
-- Done: Phase 6.1 complete (phantom notes, pull-over pursuit, airport, wrap-up)
-- Broken: highway autopilot runs (incl. 1 westbound damage event, see phantom notes); bus-stop + district traffic snapshot checks flaky in batch; shaketest third-person run marginal
-- Next: discuss docs/PHANTOM_CRASHES.md; boarding planes; curved motorway ramps
+**STATUS (2026-11-05 20:51)**
+- Done: Phase 6.2 step 1 (braking stoppie fixed, braketest 57/57)
+- Broken: drivetest Grand Terrace launch while passing traffic (2 of 3 runs); phantomtest top-speed damage event; phase2 night fps 49
+- Next: Phase 6.2 steps 2-7 (see 'What is left' in PROGRESS.md)
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -455,3 +455,20 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 **Next steps**
 - Discuss docs/PHANTOM_CRASHES.md, then fix the phantom crashes (re-enable a real highway/bridge route in phantomtest first).
 - Boarding / flying planes; curved slip roads for the motorway ramps; a visible pushback tug; pursuit cop wall avoidance.
+
+## Phase 6.2 (braking stoppie + bumps) - STOPPED EARLY at the user's request (2026-11-05 20:51)
+- Step 0: git clean, server up; full suite not rerun (it ran at 19:35 with no code changes since). The dev server died once mid-run (memory?) and was restarted (one instance).
+- **Step 1 DONE: braking stoppie** - root cause, fix and evidence in docs/BUMPS.md. New: `__gta.debug.carTrace()` (last 3 s of physics steps), src/vehicles/brakeConfig.js, scripts/brakebench.mjs (Node), scripts/braketest.mjs (in game, 57/57). Regression: vehicle-sim unchanged, phase5 damage/push/arrest/carhp 16/16.
+- **Regressions seen after Step 1 (not resolved):**
+  - drivetest Grand Terrace: launch/flip while passing traffic in 2 of 3 runs (tilt 27 / 102 deg). Passed in 3 probe runs. Check this first.
+  - phantomtest "flat straight + boost": 1 damage event, 172 km/h vs 166 expected.
+  - phase2test: night fps 49 vs >= 50 (borderline perf).
+
+### What is left (Phase 6.2)
+1. Investigate the drivetest Grand Terrace launch (catch it with carTrace + contact pairs; suspects: the roundCuboid hull vs kinematic traffic, the pitch-rate clamp's setAngvel), and the phantomtest top-speed damage event. Revert the hull change if it's the cause.
+2. Step 2: src/utils/bumpRecorder.js, `__gta.debug.bumps()`, F3 BUMP line, F5 copy + auto-download JSON.
+3. Step 3: offline investigation (ground continuity scan over full road widths, chassis sweep, crests/dips, CCD/sub-steps, human-like input with traffic), findings into docs/BUMPS.md.
+4. Step 4: fix the root causes found (seams/lips, chassis catch, bottoming, tunnelling).
+5. Step 5: src/physics/bumpLimiter.js safety net.
+6. Step 6: scripts/bumptest.mjs; replace phantomtest's hard-coded "highway + ramps: n/a" with a real motorway run.
+7. Step 7: full suite, README (carTrace, S = brake then reverse, bump tools), pointer from docs/PHANTOM_CRASHES.md to docs/BUMPS.md, npm run build, summary.

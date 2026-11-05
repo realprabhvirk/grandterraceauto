@@ -217,6 +217,8 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       return out;
     },
     /** Last 30 crash damage events / ignored velocity jumps (phantom-crash diagnostics). */
+    /** Last ~3 s of the driven car's physics steps (pitch, rates, suspension, inputs). */
+    carTrace() { return controls.car?.body.trace?.buf.slice() || []; },
     damageEvents() { return window.__gta.combat.damageLog.slice(); },
     ignoredImpacts() { return window.__gta.combat.ignoredLog.slice(); },
     /** Wanted timing state (phase none/solid/flashing + timers). */
