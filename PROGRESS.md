@@ -1,16 +1,17 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 20:51)**
-- Done: Phase 6.2 step 1 (braking stoppie fixed, braketest 57/57)
-- Broken: drivetest Grand Terrace launch while passing traffic (2 of 3 runs); phantomtest top-speed damage event; phase2 night fps 49
-- Next: Phase 6.2 steps 2-7 (see 'What is left' in PROGRESS.md)
+**STATUS (2026-11-06 05:14 IST)**
+- Done: Codex setup and task 000 read-only handoff triage. Claude's braking implementation retained; existing braketest 57/57.
+- Open: intermittent traffic launches; phantomtest wall damage 0 twice versus 11.16 in instrumented probe; incomplete brake/motorway/cul-de-sac coverage. Detailed evidence: docs/tasks/000-handoff.md.
+- Next: task 010 Phase A (read input/audio/HUD, measure rectangles, commit music plan), then M1-M8. Follow docs/MASTER_PLAN.md order; L1-L3 precede world fill.
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
 
 ## CODEX LOG
 
+- 2026-11-06 05:14 IST: Resumed and confirmed pending serial tests finished and browsers closed. Task 000 audit complete: braketest 57/57; phase5 highway 9/9, life 9/9, downtown 8/8, northgate 8/8, pullover 14/14, airport 11/11; shaketest 21/21. Read full results; recorded coverage limitations and unresolved wall regression, not claimed fixed. Added GTA_URL to brake/phase5/shake tests. MASTER_PLAN folds partial brake/bump/music/boost work into matching tasks and adds L1 test reliability, L2 pursuit movement/return, L3 airport support vehicles before 004. No game-source edits, screenshots, build or dependency changes. Next: 010 Phase A.
 - 2026-11-05 22:57 IST: Task 000 baseline: phase2test 16/16 (60 fps day/night), drivetest 4 physics checks pass but Hillcrest and Banksia stall before completion. phantomtest 18/19, wall crash = 0 instead of 8-12%; fresh `phantomtest regress` also fails 1/3. Test-only handoffCrashProbe at the same wall records 11.16 damage against door:tcDoor; timing/contact classification remains unproven, retained for task 003. No game-source changes, no weakened tests. See docs/tasks/000-handoff.md and ignored codex-*.log files. Next: finish leftover-specific brake/highway/life/district/shake evidence, classify queue, then task 010 Phase A.
 - 2026-11-05 22:31 IST: Created codex-work from e074296; untouched audio snapshot e1b9553, verbatim instruction files 1ba99c3, task 000 plan 7847396; all pushed. Unauthenticated GitHub API returned 404 after retry outside sandbox, so source audio was allowed in Git. No uncommitted game code existed.
 - Task 000 sub-task 1: isolated Vite server on 5180 with node_modules/.vite-codex cache (hidden launcher PID 24296); owner's ports untouched. Vite and Edge launches required sandbox escalation after spawn EPERM. Added GTA_URL override to walktest/phase2test/drivetest/phantomtest, preserving default 5173. With GTA_URL=http://127.0.0.1:5180/ and SHOTS unset, `.\dev.cmd node scripts/walktest.mjs` passed all 7 checks, exit 0 (codex-walktest.log). No screenshots or build. Next: remaining baseline tests singly and leftover evidence.

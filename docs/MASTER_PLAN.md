@@ -16,13 +16,16 @@
 
 ## STATUS (update after every task)
 | Task | Name | State | Notes |
-| 000 | Handoff triage | TODO | |
+| --- | --- | --- | --- |
+| 000 | Handoff triage | DONE | Audit and single-run evidence in docs/tasks/000-handoff.md. Phantom wall regression remains queued in 003; no game fixes claimed. |
 | 010 | Music player (T) | TODO | |
 | 002 | Braking stoppie | TODO | |
 | 003 | Phantom bumps at speed | TODO | |
 | 001 | Boost rockets + cabin boost | TODO | |
-| 004 | World fill (farms, industries, military base, busier world) | TODO | |
-| L* | Leftovers from Claude (added by task 000) | TODO | |
+| L1 | Test reliability and cul-de-sac completion | TODO | After 001, before 004: stalled routes and bus/district/shake timing evidence; see 000 report. |
+| L2 | Pull-over pursuit obstacle avoidance and return | TODO | After L1, before 004: breadcrumb corner cutting and visible return-to-post pop. |
+| L3 | Airport pushback tug and apron vehicle solidity | TODO | After L2, before 004: preserve existing operations, add missing support-vehicle polish. |
+| 004 | World fill (farms, industries, military base, busier world) | TODO | After L1-L3. Include deferred house/infill variety and assess laneways in WORLD_PLAN. |
 
 ---
 ## TASK 000: HANDOFF TRIAGE (read-only: no game code changes)
@@ -42,6 +45,9 @@ Claude Code was stopped mid-run and told to write wrap-up notes of what is unfin
 
 ---
 ## TASK 010: MUSIC PLAYER (T key) - do this BEFORE everything else below
+Leftover from Claude: no partial player/index/UI/test exists. The three MP3s were the only untracked handoff
+files, preserved untouched in e1b9553 after unauthenticated GitHub API returned 404 (private by owner's rule).
+Bexley .Road - Baggh-E SMG.mp3 needs canonical Bexley. Road / SMG metadata; Kaali filename omits feat. Bohemia.
 GOAL: a small in-game music player. T shows/hides a compact popup at the side of the screen. It stays visible
 while driving and never blocks the view; I can skip, rewind, pause/play, seek and change volume (keyboard
 shortcuts also work while the mouse is captured while driving). Songs in the folder "Car Music":
@@ -117,6 +123,11 @@ everywhere [ ] audio-in-git follows the visibility check [ ] musictest + regress
 
 ---
 ## TASK 002: BRAKING STOPPIE
+Leftover from Claude: e074296 already implements brakeConfig.js, COM braking, delayed reverse, raised rounded
+hull, capped downforce, smoothed speed cap and carTrace; brakebench/braketest exist. Triage braketest passes
+57/57 with bench within 5%, but caps requested 60/70 m/s to 45-52 m/s, omits noise at some speeds and reports
+Boolean lift, not centimetres. S+handbrake reaches 1.50-1.67 g. Trace allocates every step and omits COM brake
+force. Reuse and extend this work; see docs/tasks/000-handoff.md for measured numbers and test gaps.
 SYMPTOM: at speed, pressing S makes the car jolt, the nose dives and the rear flies up (a stoppie), sometimes
 flipping. The most reproducible bug. Arcade handling must stay: hard to flip, no launches. Leftover from Claude:
 check for partial work first.
@@ -152,6 +163,11 @@ ACCEPTANCE: [ ] no stoppie in any test, all car types [ ] bench numbers unchange
 
 ---
 ## TASK 003: PHANTOM BUMPS AT SPEED
+Leftover from Claude: docs/BUMPS.md exists, but bumpRecorder, bumpLimiter and bumptest do not. Keep the
+reported traffic launches open despite one clean triage run. phantomtest still hard-codes motorway n/a;
+phase5 highway filters breakable damage (triage ramp health <100 despite its PASS). Triage also found wall
+damage 0 in both phantomtest all and regress, while handoffCrashProbe recorded 11.16 against door:tcDoor.
+Investigate the intermittent real-crash failure without changing damage rules; preserve the probe and logs.
 CONTEXT: read docs/PHANTOM_CRASHES.md. Since the contact-verified damage filter (5.2) fast driving no longer
 causes damage, but the car still gets a huge physical bump with nothing in front. The filter only hides the
 symptom: the physics delivers a bad impulse that gets classified 'ground'/'upward normal' (see
@@ -201,6 +217,8 @@ ACCEPTANCE: [ ] every bump found is categorised with evidence [ ] root causes fi
 
 ---
 ## TASK 001: BOOST ROCKETS + CABIN BOOST
+Leftover from Claude: no partial rocket effects or boosttest exist. Shift mechanics and plain HUD BOOST
+text exist; reuse them. Triage bench numbers are recorded in docs/tasks/000-handoff.md.
 GOAL: boosting (Shift, current mechanics) looks and feels like a rocket boost. Do NOT change boost power,
 duration, cooldown, top speed or handling; this is a visual/audio/feel task. If physics must change, stop and
 report instead. Leftover from Claude: check first.
@@ -238,6 +256,37 @@ ACCEPTANCE: [ ] mechanics/bench unchanged [ ] nozzles on every car type, no clip
 eased, hidden at 0 [ ] pooled effects, no extra lights [ ] visible in chase/cinematic/mirrors [ ] audio [ ]
 cabin FOV/rumble/speed lines/lamp/gauge, road visible [ ] HUD [ ] perf within budget [ ] boosttest + regressions
 [ ] pushed.
+
+---
+## TASK L1: TEST RELIABILITY AND CUL-DE-SAC COMPLETION (after 001, before 004)
+Read docs/tasks/000-handoff.md and the affected tests/modules; plan and commit docs/tasks/L1-tests.md first.
+1. Reproduce bus dwell, downtown/Northgate population snapshots and third-person run jitter singly before
+   changing anything. Identify fixture timing/state leakage versus actual gameplay bugs. Preserve assertions;
+   prefer deterministic setup and simulation-time evidence to single wall-clock population snapshots.
+2. Make Hillcrest Ct and Banksia Cl route fixtures/autopilot complete their turning circles and return legs
+   with traffic/parked cars present where intended. Assert route completion as well as existing physics limits;
+   do not hide stalls behind the current simple-route physics-only PASS. Report real obstacles separately.
+3. Run affected sections singly, plus walktest/phase2test/drivetest/shaketest and relevant driving regressions.
+ACCEPTANCE: [ ] flaky sources explained with evidence [ ] route completion verified [ ] no weakened tests
+[ ] affected regressions pass [ ] report, status, commit and push. No screenshots.
+
+## TASK L2: PULL-OVER PURSUIT OBSTACLES AND RETURN (after L1, before 004)
+Plan docs/tasks/L2-pursuit.md after reading pullOver, trafficCops, police movement and tests.
+1. Reproduce tight breadcrumb turns near walls; implement obstacle-aware following that retains the configured
+   speed/gap cap, no ramming, fines and escape rules. Add a targeted solid-obstacle test.
+2. Replace the visible return-to-post pop with a verified return route or an out-of-view handoff; retain the
+   catcher's availability and cooldown. Test both radar posts and cruising patrols.
+ACCEPTANCE: [ ] no wall crossing on tested routes [ ] no visible pop on return [ ] pullover/police regressions
+pass [ ] no changed fine/star rules [ ] report, status, commit and push. No screenshots.
+
+## TASK L3: AIRPORT SUPPORT VEHICLES (after L2, before 004)
+Plan docs/tasks/L3-airport.md after reading the airport models, operations, pooling and tests.
+1. Reuse the existing tug geometry style for a visible pushback tug that attaches, tows, disengages and clears
+   the taxi path in sync with existing departure states. Preserve gate/runway scheduling.
+2. Give apron vehicles safe solid collision/avoidance behavior instead of walk-through visuals; keep them
+   from launching cars or blocking aircraft indefinitely. Test player/vehicle encounters and aircraft cycles.
+ACCEPTANCE: [ ] pushback has a synchronized tug [ ] apron contacts are safe and solid [ ] airport + bump/
+phantom regressions pass [ ] budgets preserved [ ] report, status, commit and push. No screenshots.
 
 ---
 ## TASK 004: WORLD FILL (farms, industries, a working military base, fill the empty land, busier world)

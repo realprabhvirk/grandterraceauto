@@ -18,7 +18,7 @@ const wait = (ms) => page.waitForTimeout(ms);
 let loaded = false;
 const load = async (force = false) => {
   if (loaded && !force) return;
-  await page.goto('http://127.0.0.1:5173/?cam=player', { waitUntil: 'load' });
+  await page.goto(new URL('?cam=player', process.env.GTA_URL || 'http://127.0.0.1:5173/').href, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__gta?.ready, null, { timeout: 90000 });
   await wait(600);
   loaded = true;
