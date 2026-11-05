@@ -18,6 +18,10 @@ export const T = {
 };
 T.front = T.hw + T.kerb + T.path; // street centre -> building line
 
+/** Northgate (Phase 5 district 3): a small street grid north of the ring road, joined by
+ *  Northgate Rd (Market St's line, x 420). Its nodes/edges/roads/blocks join the town plan. */
+export const NORTH = { X: [340, 420, 520, 620], Z: [-470, -380, -290], join: 1, names: { x: ['WARATAH ST', 'NORTHGATE RD', 'BANKSIA AVE', 'JACARANDA ST'], z: ['GUM TREE RD', 'SCHOOL RD', 'PLAZA RD'] } };
+
 const NAMES = { x: ['RING RD', 'MARKET ST', 'STATION ST', 'BRIDGE ST', 'KING ST', 'QUEEN ST', 'HARBOUR ST', 'RING RD'], z: ['RING RD', 'TERRACE PDE', 'RING RD'] };
 
 function straight(name, ax, az, bx, bz) {
@@ -59,6 +63,18 @@ export function buildTownPlan(network) {
   const blocks = [];
   for (let j = 0; j + 1 < Z.length; j++) for (let i = 0; i + 1 < X.length; i++) {
     blocks.push({ i, j, x0: X[i] + hw, x1: X[i + 1] - hw, z0: Z[j] + hw, z1: Z[j + 1] - hw });
+  }
+  // Northgate grid + Northgate Rd joining it to the ring road at Market St.
+  const NX = NORTH.X, NZ = NORTH.Z, nIdx = (i, j) => nodes.length - NX.length * NZ.length + j * NX.length + i;
+  for (let j = 0; j < NZ.length; j++) for (let i = 0; i < NX.length; i++) nodes.push({ id: nodes.length, i, j, x: NX[i], z: NZ[j], links: [], north: true });
+  const nn = (i, j) => nodes[nIdx(i, j)];
+  for (let j = 0; j < NZ.length; j++) for (let i = 0; i + 1 < NX.length; i++) connect(nn(i, j), nn(i + 1, j));
+  for (let i = 0; i < NX.length; i++) for (let j = 0; j + 1 < NZ.length; j++) connect(nn(i, j), nn(i, j + 1));
+  connect(nn(NORTH.join, NZ.length - 1), node(NORTH.join, 0));
+  for (let i = 0; i < NX.length; i++) roads.push({ ...straight(NORTH.names.x[i], NX[i], NZ[0], NX[i], i === NORTH.join ? Z[0] : NZ[NZ.length - 1]), extra: true, north: true });
+  for (let j = 0; j < NZ.length; j++) roads.push({ ...straight(NORTH.names.z[j], NX[0], NZ[j], NX[NX.length - 1], NZ[j]), extra: true, north: true });
+  for (let j = 0; j + 1 < NZ.length; j++) for (let i = 0; i + 1 < NX.length; i++) {
+    blocks.push({ i, j, north: true, x0: NX[i] + hw, x1: NX[i + 1] - hw, z0: NZ[j] + hw, z1: NZ[j + 1] - hw });
   }
   return { roads, link, nodes, node, edges, blocks, entry: node(0, 1), bounds: { x0: TOWN.x0, x1: TOWN.x1, z0: TOWN.z0, z1: TOWN.z1 } };
 }

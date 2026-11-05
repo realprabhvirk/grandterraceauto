@@ -21,6 +21,12 @@ export function buildTownRoads(plan) {
   // Asphalt: every street, extended over its end intersections.
   for (const x of X) asphalt.push(slab(x - hw, x + hw, za - hw, zb + hw, h + 0.06, 0.2, PALETTE.road.asphalt, 0.035));
   for (const z of Z) asphalt.push(slab(xa - hw, xb + hw, z - hw, z + hw, h + 0.061, 0.2, PALETTE.road.asphalt, 0.035));
+  // Extra streets outside the main grid (Northgate).
+  for (const r of plan.roads.filter((q) => q.extra)) {
+    const a = r.samples[0], b = r.samples[r.samples.length - 1];
+    asphalt.push(slab(Math.min(a.x, b.x) - hw, Math.max(a.x, b.x) + hw, Math.min(a.z, b.z) - hw, Math.max(a.z, b.z) + hw, h + 0.06, 0.2, PALETTE.road.asphalt, 0.035));
+  }
+  const exits = plan.roads.filter((q) => q.extra && q.samples[q.samples.length - 1].z === za).map((q) => q.samples[0].x);
 
   // Dashed centre lines between intersections + stop lines on give-way approaches.
   const dash = (ax, az, bx, bz) => {
@@ -89,7 +95,7 @@ export function buildTownRoads(plan) {
   };
   for (const b of plan.blocks) ring(b.x0, b.x1, b.z0, b.z1, true);
   const linkGap = ROAD.curbOut + 0.2;
-  ring(xa - hw, xb + hw, za - hw, zb + hw, false, (x, z) => x < xa && Math.abs(z - Z[1]) < linkGap);
+  ring(xa - hw, xb + hw, za - hw, zb + hw, false, (x, z) => (x < xa && Math.abs(z - Z[1]) < linkGap) || (z < za && exits.some((ex) => Math.abs(x - ex) < hw + 0.3)));
 
   const road = new THREE.Mesh(merge([...asphalt, ...marks]), MAT.decal);
   road.receiveShadow = true;

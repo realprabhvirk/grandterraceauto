@@ -115,7 +115,7 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
     async driveTownLoop(opts = {}) {
       const car = controls.car;
       if (!car) throw new Error('not driving');
-      const { X, Z } = { X: world.town.plan.nodes.map((n) => n.x), Z: world.town.plan.nodes.map((n) => n.z) };
+      const { X, Z } = { X: world.town.plan.nodes.filter((n) => !n.north).map((n) => n.x), Z: world.town.plan.nodes.filter((n) => !n.north).map((n) => n.z) };
       const x0 = Math.min(...X), x1 = Math.max(...X), z0 = Math.min(...Z), z1 = Math.max(...Z), L = 2.2;
       const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
       const pts = [];
@@ -174,7 +174,7 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       const g = window.__gta, car = controls.car;
       if (!car) throw new Error('not driving');
       // The town ring road: a 280 m straight then the corner.
-      const X = world.town.plan.nodes.map((n) => n.x), Z = world.town.plan.nodes.map((n) => n.z);
+      const X = world.town.plan.nodes.filter((n) => !n.north).map((n) => n.x), Z = world.town.plan.nodes.filter((n) => !n.north).map((n) => n.z);
       const x0 = Math.min(...X), x1 = Math.max(...X), z0 = Math.min(...Z), z1 = Math.max(...Z);
       const pts = [];
       for (let x = x0 + 6; x <= x1 - 12; x += 4) pts.push({ x, z: z0 - 2.2 });

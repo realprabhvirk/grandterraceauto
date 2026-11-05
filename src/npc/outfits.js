@@ -36,6 +36,7 @@ const ROLE = {
   shopkeeper: { shirt: '#f4f1e8', shirtTrim: '#8a6446', longPants: true },
   jogger: { shirt: ['#e2553e', '#3fb0c0', '#d8e04a', '#f08ab0'], shorts: '#26282c', longPants: false, shoes: '#f4f4f4' },
   office: { shirt: ['#f4f1e8', '#cfdbe8', '#e8e0d0', '#d8e4ec'], shirtTrim: '#2b3a55', shorts: ['#3a3d44', '#2b3a55', '#5c5f66'], longPants: true, shoes: '#1d1d1f' },
+  teacher: { shirt: ['#7a8a5a', '#8a5a6a', '#5a6a8a', '#b98a4a'], shirtTrim: '#f4f1e8', longPants: true, shoes: '#3a2a20' },
   vendor: { shirt: '#c8322a', shirtTrim: '#f4f1e8', longPants: true, cap: '#f4f1e8', hairStyle: 'cap' },
   lifeguard: { shirt: '#e2332a', shirtTrim: '#f2d23a', shorts: '#f2d23a', longPants: false, shoes: '#e8e0d0' },
   beach: { shirt: ['#3fb0c0', '#f08ab0', '#e2c25a', '#f4f1e8'], shorts: ['#2f6fc0', '#e2553e', '#4f9a55'], longPants: false, shoes: '#d9a47e' },

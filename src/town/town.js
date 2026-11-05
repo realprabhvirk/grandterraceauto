@@ -15,6 +15,7 @@ import { buildSpawns } from '../vehicles/spawns.js';
 import { SHOP_X, ROW_Z } from './townBuildings.js';
 import { buildDowntown } from '../districts/downtown.js';
 import { buildBeach } from '../districts/beach.js';
+import { buildNorthgate } from '../districts/northgate.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
@@ -129,6 +130,14 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   out.updaters.push(...bch.updaters);
   out.pedLines.push(...bch.pedLines);
   for (const ch of bch.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
+  // Northgate (second suburb, school, shopping centre) north of the ring road.
+  const ng = buildNorthgate({ parent: group, atlas, rng: rng.fork(11) });
+  out.northgate = ng;
+  out.chunks.push(...ng.chunks);
+  out.colliders.push(...ng.colliders);
+  out.places.push(...ng.places);
+  out.npcSpots.push(...ng.npcSpots);
+  for (const ch of ng.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

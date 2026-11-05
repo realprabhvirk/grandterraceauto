@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -762,6 +762,46 @@ try {
     check('pier: drivable to the end, stays on the deck', !drv.pier.nan && drv.pier.maxTilt < 15 && drv.end[2] > 180 && drv.end[1] > -4.9, { pier: drv.pier, end: drv.end });
     check('beach: traffic nearby and beach NPCs present', drv.tr >= 1 && drv.npc >= 8, { traffic: drv.tr, npc: drv.npc });
     check('no page errors (beach)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 5.3: Northgate (suburb 2 + school + shopping centre)
+  if (run('northgate')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, N = g.world.town.northgate, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(470, -300, 0); await wait(2500);
+      const info = g.renderer.info.render, P = g.controls.player.position, inN = (x, z) => z < -250 && z > -485 && x > 325 && x < 640;
+      const roles = g.peds.peds.filter((p) => inN(p.pos.x, p.pos.z)).map((p) => p.role);
+      return {
+        y: +P.y.toFixed(2), lots: N.lots.length, carpark: N.carparkCars, landmarks: N.landmarks.map((l) => l.name),
+        lanes: g.traffic.graph.lanes.filter((l) => l.pts.some((p) => inN(p.x, p.z))).length,
+        pedLines: g.peds.graph.lines.filter((L) => inN(L[0].x, L[0].z)).length, roles,
+        places: g.world.places.filter((p) => inN(p.x, p.z)).map((p) => p.kind),
+        props: g.world.town.propCars.filter((p) => inN(p.x, p.z)).length,
+        calls: info.calls, fps: g.stats().fps,
+        houseOverlap: N.lots.some((a, i) => N.lots.some((b, k) => k > i && Math.hypot(a.x - b.x, a.z - b.z) < 9)),
+      };
+    });
+    check('northgate: houses (reused variants), school, shopping centre, water tower', r.lots >= 24 && !r.houseOverlap && r.landmarks.length >= 3, { lots: r.lots, landmarks: r.landmarks });
+    check('northgate: school has staff only (adults, no child NPCs)', r.roles.includes('teacher') && !r.roles.some((x) => /child|kid|student/.test(x)), r.roles);
+    check('northgate: lanes + footpaths + minimap markers', r.lanes >= 20 && r.pedLines >= 4 && r.places.includes('school') && r.places.includes('shop'), r);
+    check('northgate: big car park of stealable cars', r.carpark >= 10 && r.props >= 10, { carpark: r.carpark, props: r.props });
+    check('northgate: flat ground, draw calls < 500, fps >= 45', Math.abs(r.y + 4.4) < 0.3 && r.calls < 500 && r.fps >= 45, { y: r.y, calls: r.calls, fps: r.fps });
+    const drv = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      for (const t of [...g.traffic.cars]) if (Math.abs(t.pos.x - 420) < 8 && t.pos.z < -200) g.traffic.removeCar(t);
+      // From the ring road up Northgate Rd to the top of the estate.
+      const res = await d.drivePoints(d.lanePoints(420, -222, 420, -462), { speed: 16, timeout: 45 });
+      await wait(1500);
+      const inN = (x, z) => z < -250 && z > -485 && x > 325 && x < 640;
+      return { res, traffic: g.traffic.cars.filter((t) => inN(t.pos.x, t.pos.z)).length, peds: g.peds.peds.filter((p) => inN(p.pos.x, p.pos.z) && p.ch.root.visible).length };
+    });
+    check('northgate drive: Northgate Rd end to end, no NaN, no flips', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 200, drv.res);
+    check('northgate: traffic and NPCs present', drv.traffic >= 1 && drv.peds >= 6, { traffic: drv.traffic, peds: drv.peds });
+    check('no page errors (northgate)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

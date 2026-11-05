@@ -17,7 +17,7 @@ const DEAD_FADE = 5, DEAD_RESPAWN = 30; // shot: lie ~5 s, fade 1.2 s, back ~30 
 const RADIUS = 0.28, HALF = 0.55;
 // Roles: walker, jogger, dogWalker, shopper (bags) walk lines; sitter, picnic, cop, worker,
 // paramedic, shopkeeper stay at a spot (and walk back to it after being knocked down).
-const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach']);
+const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach', 'teacher']);
 const BAG_COLORS = ['#f4f1e8', '#c8553e', '#3d5f8a', '#e2c25a', '#4f9a55'];
 
 export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 9, downtownCount = 10 }) {
@@ -41,6 +41,10 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   // Promenade walkers (the beach line runs along z ~60, x > 620).
   const beachLines = [];
   for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z > 55 && graph.lines[k][0].x > 620) beachLines.push(k);
+  // Northgate residents (block loops north of the ring road).
+  const ngLines = [];
+  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z < -250) ngLines.push(k);
+  if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' }, { role: 'walker', area: 'north' });
   if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'walker', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);
@@ -49,7 +53,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     const r = spec.area === 'suburb' ? rng : townRng;
     let li = -1, idx = 0, p = spec.spot;
     if (!p) {
-      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : spec.area === 'downtown' ? dtLines[townRng.int(0, dtLines.length - 1)] : spec.area === 'beach' ? beachLines[townRng.int(0, beachLines.length - 1)] : townRng.int(parkStart, graph.lines.length - 1);
+      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : spec.area === 'downtown' ? dtLines[townRng.int(0, dtLines.length - 1)] : spec.area === 'beach' ? beachLines[townRng.int(0, beachLines.length - 1)] : spec.area === 'north' ? ngLines[townRng.int(0, ngLines.length - 1)] : townRng.int(parkStart, graph.lines.length - 1);
       const line = graph.lines[li];
       idx = r.int(1, line.length - 2);
       p = line[idx];

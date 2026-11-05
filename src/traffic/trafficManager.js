@@ -22,8 +22,9 @@ export function createTraffic({ scene, physics, world, vehicles, audio, count = 
   // Spread the cars out along both Grand Terrace lanes, away from the hero house.
   const starts = [[graph.fwd, 0.08], [graph.bwd, 0.2], [graph.fwd, 0.55], [graph.bwd, 0.62], [graph.fwd, 0.85], [graph.bwd, 0.9]];
   const townLanes = graph.lanes.filter((l) => l.town && l.from && l.len > 40);
+  const northLanes = townLanes.filter((l) => l.pts[0].z < -250); // Northgate gets two of its own
   for (let i = 0; i < count; i++) {
-    const [lane, f] = i < starts.length || !townLanes.length ? starts[i % starts.length] : [townLanes[((i - starts.length) * 7) % townLanes.length], 0.4];
+    const [lane, f] = i < starts.length || !townLanes.length ? starts[i % starts.length] : i < starts.length + 2 && northLanes.length ? [northLanes[(i * 5) % northLanes.length], 0.4] : [townLanes[((i - starts.length) * 7) % townLanes.length], 0.4];
     const type = types[i % types.length];
     cars.push(new TrafficCar({
       id: `traffic-${i}`, type, cfg: CAR_TYPES[type], paint: TRAFFIC_PAINTS[i % TRAFFIC_PAINTS.length] || PALETTE.cars.paints[i],

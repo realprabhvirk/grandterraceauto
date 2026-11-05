@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 06:33)**
-- Done: Phase 5 steps 1-4 + step 5 districts 1-2 (Downtown, Beach)
+**STATUS (2026-11-05 06:42)**
+- Done: Phase 5 steps 1-4 + step 5 districts 1-3 (Downtown, Beach, Northgate suburb/school/shopping centre)
 - Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
-- Next: Phase 5 step 5: second suburb + school + shopping centre
+- Next: Phase 5 step 5: industrial + highway (if time), then step 6 vibe pass
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -243,3 +243,4 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 - 06:17 Step 4 done: Barrel & Bolt gun shop on Terrace Pde (enterable, counter, racks, glass cabinet, shopkeeper) + HTML buy menu (src/ui/gunShopMenu.js). phase5test shop 12/12.
 - 06:28 Step 5.1 Downtown done: src/districts/downtown.js on an extended town grid (13 towers 5-18 floors, Terrace Tower landmark with spire, City Plaza fountain + food truck, rooftop/street billboards, neon, 3 bus shelters, City Parking with 8 stealable cars, office-worker crowds, more traffic). phase5test downtown 8/8 (drive 460 m end to end, 73 draw calls / 60 fps at the plaza); phase4 town/npcs/minimap pass.
 - 06:33 Step 5.2 Beach done: src/districts/beach.js (promenade + sea wall + railings, sand slope, animated water + foam, drivable pier, Surf Shack kiosk, lifeguard tower, volleyball, towels/umbrellas, 12+ palms, beach car park, sunbathers / volleyball / lifeguard / vendor + promenade walkers, 12 boid seagulls). phase5test beach 10/10 (85 draw calls, 60 fps).
+- 06:42 Step 5.3 Northgate done: src/districts/northgate.js + NORTH grid in townPlan (36 houses, Northgate State School with oval - staff only, Northgate Plaza + 20-car car park, water tower, residents, 2 traffic cars start there). phase5test northgate 8/8 (163 draw calls, 60 fps); phase4 town 11/11, walktest pass.
