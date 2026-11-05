@@ -14,6 +14,15 @@ MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
 // Terrace Town Centre: a flat graded district east of the end of Grand Terrace.
 export const TOWN = { h: -4.4, x0: 300, x1: 1000, z0: -245, z1: 75, margin: 34 };
 const LINK = { x0: 200, x1: 320, z0: -125, z1: -45 }; // valley between the suburb and town
+/** Terrace Beach (south of downtown): promenade at town level, a 1.2 m sea wall, sand at 1:20
+ *  down to the water (WATER_Y) and on under it. Blends into the hills over 30 m at x0 / x1. */
+export const BEACH = { x0: 625, x1: 1000, prom: 66, wall: 68.5, slope: 1 / 20, floor: -11.5, blend: 30 };
+export const WATER_Y = -8.0;
+export function beachHeight(z) {
+  if (z <= BEACH.prom) return TOWN.h;
+  if (z <= BEACH.wall) return TOWN.h - 1.2 * smoothstep(BEACH.prom, BEACH.wall, z);
+  return Math.max(BEACH.floor, TOWN.h - 1.2 - (z - BEACH.wall) * BEACH.slope);
+}
 
 // Corridor flat half-width measured from a road centreline (asphalt + curb + verge +
 // footpath + a little). Beyond it the terrain eases back to natural over BLEND metres.
@@ -32,12 +41,18 @@ export function naturalHeight(x, z) {
   // Rise at the edge of the playable area (suburb, link valley, town) so the world reads
   // as a valley, not a cliff. Inside the suburb this is exactly the original +-220 rule.
   const out = (b, m) => Math.max(b.x0 - m - x, x - b.x1 - m, b.z0 - m - z, z - b.z1 - m);
-  const d = Math.min(Math.max(Math.abs(x), Math.abs(z)) - 220, out(LINK, 0), out(TOWN, 20));
+  const d = Math.min(Math.max(Math.abs(x), Math.abs(z)) - 220, out(LINK, 0), out(TOWN, 20), out({ x0: BEACH.x0 - 10, x1: BEACH.x1 + 10, z0: 40, z1: 400 }, 0));
   if (d > 0) h += (d / 80) ** 2 * 28;
   // The town itself is graded flat.
   const dx = Math.max(TOWN.x0 - x, 0, x - TOWN.x1), dz = Math.max(TOWN.z0 - z, 0, z - TOWN.z1);
   const w = 1 - smoothstep(0, TOWN.margin, Math.hypot(dx, dz));
   if (w > 0) h = h * (1 - w) + TOWN.h * w;
+  // The beach wins south of the ring road.
+  if (z > 50) {
+    const ox = Math.max(BEACH.x0 - x, 0, x - BEACH.x1);
+    const wb = 1 - smoothstep(0, BEACH.blend, ox);
+    if (wb > 0) h = h * (1 - wb) + beachHeight(z) * wb;
+  }
   return h;
 }
 

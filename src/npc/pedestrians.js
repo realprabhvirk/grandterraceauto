@@ -38,6 +38,10 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   const dtLines = [];
   for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].x > 612 && graph.lines[k][0].x < 1000) dtLines.push(k);
   if (dtLines.length) for (let i = 0; i < downtownCount; i++) specs.push({ role: i % 4 === 3 ? 'walker' : 'office', area: 'downtown' });
+  // Promenade walkers (the beach line runs along z ~60, x > 620).
+  const beachLines = [];
+  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z > 55 && graph.lines[k][0].x > 620) beachLines.push(k);
+  if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'walker', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);
 
@@ -45,7 +49,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     const r = spec.area === 'suburb' ? rng : townRng;
     let li = -1, idx = 0, p = spec.spot;
     if (!p) {
-      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : spec.area === 'downtown' ? dtLines[townRng.int(0, dtLines.length - 1)] : townRng.int(parkStart, graph.lines.length - 1);
+      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : spec.area === 'downtown' ? dtLines[townRng.int(0, dtLines.length - 1)] : spec.area === 'beach' ? beachLines[townRng.int(0, beachLines.length - 1)] : townRng.int(parkStart, graph.lines.length - 1);
       const line = graph.lines[li];
       idx = r.int(1, line.length - 2);
       p = line[idx];

@@ -14,6 +14,7 @@ import { buildRoadworks } from './roadworks.js';
 import { buildSpawns } from '../vehicles/spawns.js';
 import { SHOP_X, ROW_Z } from './townBuildings.js';
 import { buildDowntown } from '../districts/downtown.js';
+import { buildBeach } from '../districts/beach.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
@@ -118,6 +119,16 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   out.benches.push(...dt.benches);
   out.updaters.push(...dt.updaters);
   for (const ch of dt.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
+  // Terrace Beach (south of downtown).
+  const bch = buildBeach({ parent: group, atlas, rng: rng.fork(10) });
+  out.beach = bch;
+  out.chunks.push(...bch.chunks);
+  out.colliders.push(...bch.colliders);
+  out.places.push(...bch.places);
+  out.npcSpots.push(...bch.npcSpots);
+  out.updaters.push(...bch.updaters);
+  out.pedLines.push(...bch.pedLines);
+  for (const ch of bch.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

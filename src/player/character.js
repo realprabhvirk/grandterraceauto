@@ -236,6 +236,21 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
         p.lsz = 1.2; p.rsz = -0.4; p.lex = -0.4; p.rex = -0.2; p.lkx = 0.4; p.rkx = 0.1; p.lhx = -0.2;
         return p;
       }
+      case 'sunbathe': {
+        // Lying on a towel, hands behind the head.
+        p.rootY = -0.84; p.hipsX = -1.52; p.headX = -0.15;
+        p.lsx = p.rsx = -2.7; p.lsz = 0.5; p.rsz = -0.5; p.lex = p.rex = -1.9;
+        p.lkx = 0.25 + 0.05 * Math.sin(t * 0.4); p.lhx = -0.25;
+        return p;
+      }
+      case 'volley': {
+        // Beach volleyball: ready stance, arms together, a hop every couple of seconds.
+        const hop = Math.max(0, Math.sin(t * 2.6)) ** 6;
+        p.rootY = -0.12 + hop * 0.35; p.torsoX = 0.25 - hop * 0.2;
+        p.lhx = p.rhx = -0.45; p.lkx = p.rkx = 0.7 - hop * 0.5;
+        p.lsx = p.rsx = -0.9 - hop * 1.8; p.lsz = -0.22; p.rsz = 0.22; p.lex = p.rex = -0.05;
+        return p;
+      }
       case 'cuffed': {
         // Busted: hands cuffed behind the back, head down.
         p.lsx = p.rsx = 0.42; p.lsz = -0.12; p.rsz = 0.12; p.lex = p.rex = -1.0;

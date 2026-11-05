@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -717,6 +717,51 @@ try {
     check('downtown drive: end to end, no NaN, no flips, stays on the road', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 300, drv.res);
     check('downtown: traffic and NPCs present', r.traffic >= 2 && r.peds >= 8, { traffic: r.traffic, peds: r.peds });
     check('no page errors (downtown)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 5.2: Beach / waterfront
+  if (run('beach')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, B = g.world.town.beach, T = g.world.terrain, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(800, 60, Math.PI); await wait(2500);
+      const info = g.renderer.info.render, P = g.controls.player.position;
+      const hs = [60, 70, 90, 116, 150].map((z) => T.getHeight(800, z));
+      const near = (p) => p.pos.x > 600 && p.pos.z > 50;
+      const deck = g.physics.world.castRay(new g.physics.RAPIER.Ray({ x: B.pier.x, y: 5, z: 170 }, { x: 0, y: -1, z: 0 }), 30, true);
+      return {
+        y: +P.y.toFixed(2), slope: hs.every((h, i) => i === 0 || h < hs[i - 1] + 0.01), shore: +B.water.zShore.toFixed(1), waterY: B.water.y,
+        underwater: T.getHeight(800, 150) < B.water.y, deckY: deck ? +(5 - deck.timeOfImpact).toFixed(2) : null,
+        landmarks: B.landmarks.map((l) => l.name), gulls: B.gulls.birds.length, gullsMoving: B.gulls.mesh.visible,
+        spots: g.peds.peds.filter((p) => p.home && near(p)).map((p) => p.home.action), walkers: g.peds.peds.filter((p) => !p.home && near(p)).length,
+        places: g.world.places.filter((p) => p.x > 600 && p.z > 50).map((p) => p.kind), props: g.world.town.propCars.filter((p) => p.z > 55).length,
+        calls: info.calls, fps: g.stats().fps,
+      };
+    });
+    check('beach: sand slopes from the promenade into the water', r.slope && r.underwater && r.shore > 100 && r.shore < 130 && Math.abs(r.y + 4.4) < 0.3, r);
+    check('beach: pier deck has collision at promenade level', r.deckY !== null && Math.abs(r.deckY + 4.4) < 0.1, { deckY: r.deckY });
+    check('beach: landmarks (pier, lifeguard tower) + seagulls', r.landmarks.length >= 2 && r.gulls >= 8 && r.gullsMoving, { landmarks: r.landmarks, gulls: r.gulls });
+    check('beach: sunbathers, volleyball, lifeguard, kiosk vendor', r.spots.filter((a) => a === 'sunbathe').length >= 3 && r.spots.filter((a) => a === 'volley').length >= 2 && r.spots.includes('look'), r.spots);
+    check('beach: minimap marker, stealable cars', r.places.includes('beach') && r.places.includes('landmark') && r.props >= 3, { places: r.places, props: r.props });
+    check('beach: draw calls < 500, fps >= 45', r.calls < 500 && r.fps >= 45, { calls: r.calls, fps: r.fps });
+    // Drive the beach road (south ring road) end to end, then out along the pier.
+    const drv = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      for (const t of [...g.traffic.cars]) if (Math.abs(t.pos.z - 45) < 8 && t.pos.x > 600) g.traffic.removeCar(t);
+      const road = await d.drivePoints(d.lanePoints(615, 45, 958, 45), { speed: 16, timeout: 50 });
+      const pier = await d.drivePoints(d.lanePoints(800, 57, 800, 196, 0), { speed: 8, timeout: 40 });
+      const p = c.position;
+      const tr = g.traffic.cars.filter((t) => t.pos.x > 600 && t.pos.z > -90).length;
+      const npc = g.peds.peds.filter((q) => q.pos.x > 600 && q.pos.z > 50 && q.ch.root.visible).length;
+      return { road, pier, end: [p.x, p.y, p.z].map((v) => +v.toFixed(1)), tr, npc };
+    });
+    check('beach road: end to end, no NaN, no flips', !drv.road.nan && drv.road.maxTilt < 20 && drv.road.minAbove > -0.4 && drv.road.dist > 300, drv.road);
+    check('pier: drivable to the end, stays on the deck', !drv.pier.nan && drv.pier.maxTilt < 15 && drv.end[2] > 180 && drv.end[1] > -4.9, { pier: drv.pier, end: drv.end });
+    check('beach: traffic nearby and beach NPCs present', drv.tr >= 1 && drv.npc >= 8, { traffic: drv.tr, npc: drv.npc });
+    check('no page errors (beach)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
