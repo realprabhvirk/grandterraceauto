@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -672,6 +672,51 @@ try {
     check('shopkeeper is there and never in the fight (not a target)', r.keeper && !r.shootable);
     check('minimap / places list the gun shop', r.place);
     check('no page errors (shop)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ Step 5.1: Downtown
+  if (run('downtown')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, T = g.world.town, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      d.teleport(745, -92, 0); await wait(2500);
+      const P = g.controls.player.position, info = g.renderer.info.render;
+      const inDT = (x, z) => x > 612 && x < 975 && z > -220 && z < 50;
+      return {
+        towers: T.downtown.towers, landmarks: T.downtown.landmarks.length, flat: Math.abs(g.world.terrain.getHeight(900, -150) - T.plan.nodes[0].x * 0 - (-4.4)) < 0.05,
+        y: +P.y.toFixed(2), calls: info.calls, fps: g.stats().fps,
+        lanes: g.traffic.graph.lanes.filter((l) => l.town && l.pts.some((p) => p.x > 700)).length,
+        pedLines: g.peds.graph.lines.filter((L) => L[0].x > 612 && L[0].x < 1000).length,
+        office: g.peds.peds.filter((p) => p.role === 'office').length,
+        places: g.world.places.filter((p) => inDT(p.x, p.z)).map((p) => p.kind),
+        stops: T.stops.filter((s) => inDT(s.x, s.z)).length,
+        props: T.propCars.filter((p) => inDT(p.x, p.z)).length,
+        neon: !!T.downtown.neon,
+        traffic: g.traffic.cars.filter((t) => inDT(t.pos.x, t.pos.z)).length,
+        peds: g.peds.peds.filter((p) => inDT(p.pos.x, p.pos.z) && p.ch.root.visible).length,
+      };
+    });
+    check('downtown: 12-16 towers + 2 landmarks', r.towers >= 12 && r.towers <= 16 && r.landmarks >= 2, r);
+    check('downtown: teleport lands on flat ground', r.flat && Math.abs(r.y + 4.4) < 0.3, r);
+    check('downtown: lanes + footpaths generated for the new streets', r.lanes >= 20 && r.pedLines >= 7, r);
+    check('downtown: minimap markers, bus stops, stealable cars, neon', r.places.includes('landmark') && r.places.includes('park') && r.stops >= 3 && r.props >= 4 && r.neon, r);
+    check('downtown: draw calls < 500, fps >= 45', r.calls < 500 && r.fps >= 45, { calls: r.calls, fps: r.fps });
+    // Drive it end to end (Terrace Pde east, then down the east ring road): physics only.
+    const drv = await ev(async () => {
+      const g = window.__gta, d = g.debug, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      if (g.controls.mode === 'drive') g.controls.respawnAt(g.controls.car.position, 0);
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && !c.stolen)); await wait(1400);
+      const c = g.controls.car; c.health = 100; c.dead = false; c.body.dead = false;
+      for (const t of [...g.traffic.cars]) if (Math.abs(t.pos.z + 85) < 8 && t.pos.x > 600) g.traffic.removeCar(t);
+      const pts = [...d.lanePoints(615, -85, 958, -85), ...d.lanePoints(970, -73, 970, 33)];
+      const res = await d.drivePoints(pts, { speed: 16, timeout: 70 });
+      await wait(3000);
+      const inDT = (x, z) => x > 612 && x < 975 && z > -220 && z < 50;
+      return { res, traffic: g.traffic.cars.filter((t) => inDT(t.pos.x, t.pos.z)).length, peds: g.peds.peds.filter((p) => inDT(p.pos.x, p.pos.z) && p.ch.root.visible).length };
+    });
+    check('downtown drive: end to end, no NaN, no flips, stays on the road', !drv.res.nan && drv.res.maxTilt < 20 && drv.res.minAbove > -0.4 && drv.res.dist > 300, drv.res);
+    check('downtown: traffic and NPCs present', r.traffic >= 2 && r.peds >= 8, { traffic: r.traffic, peds: r.peds });
+    check('no page errors (downtown)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

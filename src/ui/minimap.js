@@ -6,7 +6,7 @@ import { UI, injectStyles } from './uiStyle.js';
 import { ROAD } from '../world/roadNetwork.js';
 
 const SIZE = 190, METRES = 230; // metres across the minimap
-const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'] };
+const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'], landmark: ['^', '#e2c25a'], beach: ['~', '#5ab0d8'], school: ['S', '#e0a040'], industry: ['I', '#b0a090'] };
 
 export function createMinimap(world) {
   injectStyles();

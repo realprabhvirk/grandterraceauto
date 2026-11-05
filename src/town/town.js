@@ -13,6 +13,7 @@ import { makeRng } from '../utils/rng.js';
 import { buildRoadworks } from './roadworks.js';
 import { buildSpawns } from '../vehicles/spawns.js';
 import { SHOP_X, ROW_Z } from './townBuildings.js';
+import { buildDowntown } from '../districts/downtown.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
@@ -40,6 +41,7 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
     { x0: 590, x1: 606, z0: -82, z1: -48 },   // ambulance bay
     { x0: 334, x1: 384, z0: -82, z1: -44 },   // petrol forecourt
     { x0: 386, x1: 398, z0: -82, z1: -74 },   // Quick Stop door
+    { x0: 648, x1: 662, z0: -96, z1: -88 }, { x0: 828, x1: 842, z0: -82, z1: -74 }, { x0: 918, x1: 932, z0: -96, z1: -88 }, // downtown bus stops
     { x0: 365, x1: 380, z0: -96, z1: -88 }, { x0: 455, x1: 469, z0: -96, z1: -88 }, { x0: 471, x1: 485, z0: -82, z1: -74 }, // bus stops
   ];
   const props = buildTownProps({ plan, rng: rng.fork(3), chunk, atlas, avoid });
@@ -105,6 +107,17 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
     { role: 'shopkeeper', x: SHOP_X[0] + 3, y: gy, z: ROW_Z.north + 0.9, yaw: 0, action: 'look' },
     { role: 'shopkeeper', x: SHOP_X[3] - 3, y: gy, z: ROW_Z.north + 0.9, yaw: 0.3, action: 'phone' },
   ];
+  // Downtown (east of Station St).
+  const dt = buildDowntown({ parent: group, plan, rng: rng.fork(9), atlas });
+  out.downtown = dt;
+  out.chunks.push(...dt.chunks);
+  out.colliders.push(...dt.colliders);
+  out.places.push(...dt.places);
+  out.npcSpots.push(...dt.npcSpots);
+  out.stops.push(...dt.stops);
+  out.benches.push(...dt.benches);
+  out.updaters.push(...dt.updaters);
+  for (const ch of dt.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

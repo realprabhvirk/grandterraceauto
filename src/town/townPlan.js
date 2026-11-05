@@ -8,7 +8,7 @@ import { ROAD, sampleCurve } from '../world/roadNetwork.js';
 import { TOWN } from '../world/terrain.js';
 
 export const T = {
-  X: [330, 420, 520, 610],
+  X: [330, 420, 520, 610, 700, 790, 880, 970], // Phase 5: x 610-970 = Downtown (districts/downtown.js)
   Z: [-215, -85, 45],
   hw: 4.5,      // asphalt half width (two 4.5 m lanes)
   kerb: 0.3,
@@ -18,7 +18,7 @@ export const T = {
 };
 T.front = T.hw + T.kerb + T.path; // street centre -> building line
 
-const NAMES = { x: ['RING RD', 'MARKET ST', 'STATION ST', 'RING RD'], z: ['RING RD', 'TERRACE PDE', 'RING RD'] };
+const NAMES = { x: ['RING RD', 'MARKET ST', 'STATION ST', 'BRIDGE ST', 'KING ST', 'QUEEN ST', 'HARBOUR ST', 'RING RD'], z: ['RING RD', 'TERRACE PDE', 'RING RD'] };
 
 function straight(name, ax, az, bx, bz) {
   const len = Math.hypot(bx - ax, bz - az), n = Math.ceil(len / ROAD.step);

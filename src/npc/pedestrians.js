@@ -17,10 +17,10 @@ const DEAD_FADE = 5, DEAD_RESPAWN = 30; // shot: lie ~5 s, fade 1.2 s, back ~30 
 const RADIUS = 0.28, HALF = 0.55;
 // Roles: walker, jogger, dogWalker, shopper (bags) walk lines; sitter, picnic, cop, worker,
 // paramedic, shopkeeper stay at a spot (and walk back to it after being knocked down).
-const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger']);
+const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach']);
 const BAG_COLORS = ['#f4f1e8', '#c8553e', '#3d5f8a', '#e2c25a', '#4f9a55'];
 
-export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 9 }) {
+export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 9, downtownCount = 10 }) {
   const rng = makeRng(3131);
   const parkLines = world.town?.parkLines || [];
   const graph = buildFootpaths(world.network, world.layout, world.terrain, [...(world.town?.pedLines || []), ...parkLines]);
@@ -34,6 +34,10 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   const townRoles = ['shopper', 'shopper', 'walker', 'shopper', 'shopper', 'walker', 'shopper', 'walker', 'jogger'];
   if (parkStart > graph.suburbLines) for (let i = 0; i < townCount; i++) specs.push({ role: townRoles[i % townRoles.length], area: 'town' });
   if (parkLines.length) specs.push({ role: 'jogger', area: 'park' }, { role: 'dogWalker', area: 'park' });
+  // Downtown crowds: office workers with briefcases (lines whose start is east of Station St).
+  const dtLines = [];
+  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].x > 612 && graph.lines[k][0].x < 1000) dtLines.push(k);
+  if (dtLines.length) for (let i = 0; i < downtownCount; i++) specs.push({ role: i % 4 === 3 ? 'walker' : 'office', area: 'downtown' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);
 
@@ -41,7 +45,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     const r = spec.area === 'suburb' ? rng : townRng;
     let li = -1, idx = 0, p = spec.spot;
     if (!p) {
-      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : townRng.int(parkStart, graph.lines.length - 1);
+      li = spec.area === 'suburb' ? rng.int(0, graph.suburbLines - 1) : spec.area === 'town' ? townRng.int(graph.suburbLines, parkStart - 1) : spec.area === 'downtown' ? dtLines[townRng.int(0, dtLines.length - 1)] : townRng.int(parkStart, graph.lines.length - 1);
       const line = graph.lines[li];
       idx = r.int(1, line.length - 2);
       p = line[idx];
@@ -68,6 +72,10 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
         const bag = new THREE.Mesh(paint(bagGeo.clone(), r.pick(BAG_COLORS), 0.04), MAT.solid);
         ch.bones[bone].add(bag);
       }
+    }
+    if (spec.role === 'office') {
+      const bc = new THREE.Mesh(paint(new THREE.BoxGeometry(0.36, 0.26, 0.09).translate(0, -0.42, 0.02), r.pick(['#3a2a20', '#1f1f22', '#5a3a28']), 0.04), MAT.solid);
+      ch.bones.rElbow.add(bc);
     }
     if (spec.role === 'dogWalker') { ped.dog = buildDog(r); scene.add(ped.dog.group, ped.dog.leash); ped.speed *= 0.9; }
     peds.push(ped);

@@ -180,7 +180,7 @@ renderer.setAnimationLoop(() => {
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
   audio.setListener(controls.focus());
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
-  world.town?.update(dt, { focus: controls.focus() });
+  world.town?.update(dt, { focus: controls.focus(), dusk: lighting.dusk });
   combat.update(dt);
   breakables.update(dt, controls.focus());
   particles.update(dt);

@@ -200,6 +200,22 @@ export function createDebugApi({ world, vehicles, controls, camera }) {
       const p = car.position, d = g.police.cars.map((c) => +Math.hypot(c.pos.x - p.x, c.pos.z - p.z).toFixed(1));
       return { reason: res.reason, time: res.time, wp: res.waypoints, stalls: res.stalls, nearest: Math.min(...d), d, contactTime: +g.police.st.contactTime.toFixed(2), contacts: g.police.st.contacts, maxKmh: res.maxSpeed, dist: res.dist, cops: g.police.cars.length };
     },
+    /** Teleport the driven car to pts[0] and autopilot through the points (physics checks). */
+    async drivePoints(pts, opts = {}) {
+      const car = controls.car;
+      if (!car) throw new Error('not driving');
+      const [a, b] = pts;
+      car.body.teleport(a.x, world.terrain.getHeight(a.x, a.z), a.z, Math.atan2(b.x - a.x, b.z - a.z));
+      controls.chase.reset(car);
+      await new Promise((r) => setTimeout(r, 400));
+      return runAutopilot({ car, input: controls.input, terrain: world.terrain, points: pts, obstacles: opts.obstacles || [], speed: opts.speed || 15, timeout: opts.timeout || 90 });
+    },
+    /** Straight lane points from (ax, az) to (bx, bz), keep-left offset, every 4 m. */
+    lanePoints(ax, az, bx, bz, lane = 2.2) {
+      const len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len, out = [];
+      for (let s = 0; s <= len; s += 4) out.push({ x: ax + dx * s + dz * lane, z: az + dz * s - dx * lane });
+      return out;
+    },
     /** Put a patrol car (chase mode, stopped) at a world point facing yaw. */
     placeCop(x, z, yaw = 0) {
       const g = window.__gta;

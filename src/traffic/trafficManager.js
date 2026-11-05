@@ -1,4 +1,4 @@
-// Ambient traffic: 6 seeded AI cars on the lane graph. They see each other, the player's
+﻿// Ambient traffic: 6 seeded AI cars on the lane graph. They see each other, the player's
 // car, the parked cars (which they swing out around) and the walking player on the road.
 import * as THREE from 'three';
 import { CAR_TYPES } from '../vehicles/carTypes.js';
@@ -8,7 +8,7 @@ import { buildLaneGraph } from './laneGraph.js';
 import { TrafficCar } from './trafficCar.js';
 import { makeRng } from '../utils/rng.js';
 
-const COUNT = 10; // 6 start on Grand Terrace, the rest in Terrace Town Centre
+const COUNT = 14; // 6 start on Grand Terrace, the rest spread over the town + downtown grid
 const TRAFFIC_PAINTS = ['#8a4f3a', '#d8d2c4', '#46566b', '#9aa37a', '#5c5f66', '#b98a4a', '#2f4f6b', '#7c2f2f', '#e9e6dc', '#4f6b3a'];
 
 export function createTraffic({ scene, physics, world, vehicles, audio, count = COUNT }) {

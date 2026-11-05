@@ -40,7 +40,8 @@ export function buildTownProps({ plan, rng, chunk, atlas, avoid }) {
       edge(b.x0, b.z0, b.x1, b.z0, 0, 1); edge(b.x0, b.z1, b.x1, b.z1, 0, -1);
       edge(b.x0, b.z0, b.x0, b.z1, 1, 0); edge(b.x1, b.z0, b.x1, b.z1, -1, 0);
     }
-    const o = { x0: X[0] - hw, x1: X[3] + hw, z0: Z[0] - hw, z1: Z[2] + hw };
+    const XL = X[X.length - 1];
+    const o = { x0: X[0] - hw, x1: XL + hw, z0: Z[0] - hw, z1: Z[2] + hw };
     edge(o.x0, o.z0, o.x1, o.z0, 0, -1); edge(o.x0, o.z1, o.x1, o.z1, 0, 1);
     edge(o.x0, o.z0, o.x0, o.z1, -1, 0); edge(o.x1, o.z0, o.x1, o.z1, 1, 0);
     return out;
@@ -79,7 +80,7 @@ export function buildTownProps({ plan, rng, chunk, atlas, avoid }) {
   for (const n of plan.nodes) {
     if (n.links.length < 3) continue;
     for (const m of n.links) {
-      const isMain = (n.z === m.z && (n.z === Z[1] || n.z === Z[0] || n.z === Z[2])) || (n.x === m.x && (n.x === X[0] || n.x === X[3]));
+      const isMain = (n.z === m.z && (n.z === Z[1] || n.z === Z[0] || n.z === Z[2])) || (n.x === m.x && (n.x === X[0] || n.x === X[X.length - 1]));
       if (isMain) continue;
       const dx = Math.sign(m.x - n.x), dz = Math.sign(m.z - n.z);
       // Left side of the inbound lane (keep left), just behind the kerb.
@@ -128,7 +129,7 @@ export function buildTownProps({ plan, rng, chunk, atlas, avoid }) {
   };
   const mid = kerb + path / 2;
   for (const b of plan.blocks) loop(b.x0, b.x1, b.z0, b.z1, mid, -1); // ox/oz: away from the road
-  loop(X[0] - hw, X[3] + hw, Z[0] - hw, Z[2] + hw, -mid, 1);
+  loop(X[0] - hw, X[X.length - 1] + hw, Z[0] - hw, Z[2] + hw, -mid, 1);
 
   return { group, defs, lines, stops };
 }

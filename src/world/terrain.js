@@ -7,12 +7,12 @@ import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
 
 // Rectangular grid: the suburb (+-300) plus Terrace Town Centre to the east.
-export const MAP = { x0: -300, z0: -300, cell: 2.5, nx: 400, nz: 240 };
+export const MAP = { x0: -300, z0: -300, cell: 2.5, nx: 544, nz: 240 }; // Phase 5: x to 1060 (downtown)
 MAP.x1 = MAP.x0 + MAP.nx * MAP.cell; MAP.z1 = MAP.z0 + MAP.nz * MAP.cell;
 MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
 
 // Terrace Town Centre: a flat graded district east of the end of Grand Terrace.
-export const TOWN = { h: -4.4, x0: 300, x1: 640, z0: -245, z1: 75, margin: 34 };
+export const TOWN = { h: -4.4, x0: 300, x1: 1000, z0: -245, z1: 75, margin: 34 };
 const LINK = { x0: 200, x1: 320, z0: -125, z1: -45 }; // valley between the suburb and town
 
 // Corridor flat half-width measured from a road centreline (asphalt + curb + verge +

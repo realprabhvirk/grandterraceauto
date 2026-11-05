@@ -29,7 +29,9 @@ export function createCyclists({ scene, traffic, terrain, count = 3 }) {
   const roadLanes = lanes.filter((l) => !l.slow && l.len > 60);
   const riders = [];
   for (let i = 0; i < count; i++) {
-    const lane = roadLanes[(i * 11 + 3) % roadLanes.length];
+    // Phase 5: the grid grew (downtown), so two riders start in the old town centre on purpose.
+    const oldTown = roadLanes.filter((l) => l.town && l.pts[0].x > 330 && l.pts[0].x < 600);
+    const lane = i > 0 && oldTown.length ? oldTown[(i * 7) % oldTown.length] : roadLanes[(i * 11 + 3) % roadLanes.length];
     const group = new THREE.Group();
     group.name = `cyclist-${i}`;
     const bike = new THREE.Mesh(bikeGeometry(rng.pick(['#c8322a', '#2f6fc0', '#3a8a4a', '#e2c25a'])), MAT.solid);

@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 06:17)**
-- Done: Phase 5 steps 1-4: fixes a-k, guns, cops with guns, Barrel & Bolt gun shop
+**STATUS (2026-11-05 06:28)**
+- Done: Phase 5 steps 1-4 + step 5 district 1 (Downtown)
 - Broken: none known (drivetest autopilot still wedges in the Hillcrest Ct circle - pre-existing, physics OK)
-- Next: Phase 5 step 5: map expansion (downtown first)
+- Next: Phase 5 step 5: Beach / waterfront
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -241,3 +241,4 @@ next to a parked car; after making the test pick a clear stretch the garage sect
 - 06:09 Step 2 done (guns). New src/weapons/ (weaponStats, arsenal, gunModels, ik, hitscan, gunFx, viewmodel, playerWeapons) + ui/weaponHud. scripts/weaponsUnit.mjs 26/26 (damage, zones, falloff, ammo/reload, auto/semi, pump, spread, holster, caps, save). phase5test guns 28/28 (IK: grip/foregrip within 5 mm for all 4 guns, muzzle 0.4-0.75 m ahead; kill+fade timing; heat events; FP ADS). phase2 16/16, walk pass.
 - 06:14 Step 3 done (cops with guns): src/police/copGuns.js; officers get pistol / SMG / one rifle by stars, IK hold, bursts with LOS <=40 m, accuracy 35% at 20 m; cars shoot from the window. phase5test copguns 7/7; push/arrest/ko 12/12 and phase4 police 6/6 still pass.
 - 06:17 Step 4 done: Barrel & Bolt gun shop on Terrace Pde (enterable, counter, racks, glass cabinet, shopkeeper) + HTML buy menu (src/ui/gunShopMenu.js). phase5test shop 12/12.
+- 06:28 Step 5.1 Downtown done: src/districts/downtown.js on an extended town grid (13 towers 5-18 floors, Terrace Tower landmark with spire, City Plaza fountain + food truck, rooftop/street billboards, neon, 3 bus shelters, City Parking with 8 stealable cars, office-worker crowds, more traffic). phase5test downtown 8/8 (drive 460 m end to end, 73 draw calls / 60 fps at the plaza); phase4 town/npcs/minimap pass.
