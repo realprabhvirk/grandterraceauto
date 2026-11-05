@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 18:46)**
-- Done: Phase 6.1 steps 0-2 (baseline, phantom notes, pull-over pursuit)
-- Broken: highway autopilot spin (logged); phantom crashes deferred (doc); life bus-stop check flaky
-- Next: 6.1 step 3: airport
+**STATUS (2026-11-05 19:06)**
+- Done: Phase 6.1 steps 0-3 (baseline, phantom notes, pull-over pursuit, airport)
+- Broken: highway autopilot spin (logged); phantom crashes deferred (doc); life bus-stop check flaky in batch
+- Next: 6.1 step 4 wrap-up
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -418,3 +418,11 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 - SPEEDING.CAMERAS_ENABLED=false (src/police/speedingConfig.js): no cameras spawned, no CAMERA AHEAD signs, no camera map icons/legend (code kept). Radar cops now have their own full-map icon ("R").
 - src/police/pullOver.js: a radar post's patrol car (or a cruiser) hands over to one pursuit PoliceCar: lights + siren, follows the player's breadcrumb trail 9 m behind (6.5 m when stopped), <= 0.95x player speed (outrunnable), catches up at 19 m/s when you're slow, backs off inside 5 m (cars can't touch: police collision group). Stop < 2 m/s with it within 8 m for 1 s → officer walks to your window, 3 s "Issuing fine..." bar → -$200 → it drives off and the post / cruiser resets. Drive off while issuing → pursuit resumes. No LOS 8 s / > 150 m → "You lost the police"; 90 s → gives up; becoming wanted cancels; 20 s per-cop cooldown; EVADE_STARS=0. HUD: flashing red/blue PULL OVER + hint.
 - Test `pullover` (replaces `enforce`) 14/14 (2 fix attempts on the stop approach: trail points behind the cop, braking profile). Regression: signs/pois/map/speeding/copstars pass; `life` "buses pull up at stops" failed once in a batch (0 stops in 35 s), passed on rerun - flaky, logged.
+
+### 2026-11-05 19:06 — Step 3: Terrace Airport + autonomous aircraft
+- Site north of Northgate (MAP extended to z -800, graded flat). Roads: **Airport Rd** (from Waratah St's north corner), **Terminal Dr** (drop-off), **Airport Link** (back to Jacaranda St) - limit 60, in the lane graph (AI traffic + police route there; BFS from the motorway passes). Motorway gantry now reads "AIRPORT  NORTHGATE  WARATAH ST >". "Airport" icon + label on both maps; runway / taxiway / apron drawn on the map backgrounds.
+- Static (src/airport/airport.js): 1000 m runway 09/27 (centre line, piano keys, threshold bars, aiming points, numbers, blast pads), parallel taxiway + 4 connectors with hold bars, apron with lead-in lines + 4 jet bridges, terminal (exterior, sign, drop-off canopy), car park with stealable cars, control tower, 2 hangars, 3 fuel tanks, perimeter fence (instanced posts) + service gate + guard hut, waving windsock, 128 instanced lights (edge / threshold / taxiway / sequenced approach strobe, brighter at dusk). Ground crew, passengers, a gate guard (92 people total). No colliders on runway/taxiway/apron.
+- Aircraft (aircraftModels.js): prop plane, regional jet, airliner - fuselage, swept wings, tail, engines/prop, windows, liveries, retractable gear, nav/strobe/beacon lights, spinning prop, engine glow.
+- Ops (airportOps.js): seeded continuous state machine - parked → pushback → taxiOut → hold → lineup → takeoff → airborne → gone; final (3° glide slope from the east) → flare/touchdown chirp → rollout → taxiIn → parked; go-around if the runway is blocked at 300 m final; departures hold while the runway is busy and get priority over new arrivals; taxiway one-way eastbound; gates booked at arrival spawn; ≤ 4 moving; first pushback at 6 s, first arrival on final at 8 s. Kinematic colliders on the ground only. 2 cruise flyovers, 2 tugs with carts, a fuel truck, an apron shuttle bus. Synth audio: jet roar + prop buzz with spool and distance attenuation, touchdown chirp, via master volume.
+- Test `airport` 11/11 (420 s sim: 4 departures airborne + 3 arrivals parked, 0 NaN, 0 stuck, 0 double-booked; player on runway → hold + go-arounds, cleared → departures resume; taxiing plane brakes for a walker; drive Airport Rd → Terminal Dr → Airport Link with 0 damage events; 109 draw calls / 60 fps at the terminal). Ghost scan 0 (7737 samples). Screenshots: shots/phase6_1/1-airport-aerial.png, shots/phase6_1/2-takeoff.png (one fix round: airport chunks kept visible to ~600 m; tower chunk bounds fixed, verified numerically).
+- Logged after 2 attempts: `life` "buses pull up at stops" fails in batch runs (one bus dwelling 35 s, or queued behind traffic at the x 520 light); passes alone.

@@ -51,6 +51,7 @@ import { createPullOver } from './police/pullOver.js';
 import { SPEEDING } from './police/speedingConfig.js';
 import { createTrafficCops } from './police/trafficCops.js';
 import { buildLandmarks } from './city/landmarks.js';
+import { createAirportOps } from './airport/airportOps.js';
 import { activitySpots } from './npc/activitySpots.js';
 import { createSkyLife } from './world/skyLife.js';
 
@@ -183,6 +184,7 @@ const trafficCops = createTrafficCops({ scene, world, physics, traffic, speeding
 const pullOver = createPullOver({ scene, world, physics, controls, speeding, hud: statusHud, wanted, traffic });
 trafficCops.hooks.spot = (catcher) => pullOver.start(catcher);
 const landmarks = buildLandmarks({ scene, physics, terrain: world.terrain });
+const airport = createAirportOps({ scene, physics, world, controls, traffic, police, audio, cars: vehicles });
 world.places.push(...landmarks.places);
 world.speeding = speeding;
 const ambience = createAmbience(audio);
@@ -205,7 +207,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, airport, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -230,7 +232,7 @@ renderer.setAnimationLoop(() => {
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   speeding.update(dt);
-  if (!paused) { speedCams.update(dt); trafficCops.update(dt); pullOver.update(dt); landmarks.update(dt, lighting.dusk); }
+  if (!paused) { speedCams.update(dt); trafficCops.update(dt); pullOver.update(dt); landmarks.update(dt, lighting.dusk); airport.update(dt); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());
   skyLife.update(dt, { dusk: lighting.dusk });
   {

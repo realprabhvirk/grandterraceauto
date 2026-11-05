@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe vibe6 life city shops enforce highway signs mapnav speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe airport vibe6 life city shops enforce highway signs mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1570,6 +1570,91 @@ try {
     check('crowd murmur on busy streets (plaza / Pde / stadium gate), silent in the suburb', r.plaza > 0.9 && r.pde > 0.5 && r.gate > 0.5 && r.suburb === 0 && r.live > 0.5, r);
     check('shop signs + billboards glow at dusk', r.glow.night[1] > r.glow.day[1] + 0.8 && (r.glow.night[0] === undefined || r.glow.night[0] > r.glow.day[0] + 0.8), r.glow);
     check('no page errors (vibe6)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.1 step 3: airport + autonomous aircraft
+  if (run('airport')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, A = g.airport, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const out = {};
+      // Sim-time fast-forward (0.1 s steps) with the player far away in town.
+      d.teleport(470, -60, 0); await wait(300);
+      const visited = {}, moved = {};
+      let stuck = 0, nan = 0, multiBook = 0;
+      const ff = (secs, onStep) => {
+        for (let t = 0; t < secs; t += 0.1) {
+          A.update(0.1);
+          for (const p of A.planes) {
+            (visited[p.id] ||= new Set()).add(p.state);
+            if (!Number.isFinite(p.pos.x + p.pos.z + p.alt)) nan++;
+            const m = moved[p.id] ||= { s: -1, st: '', t: 0 };
+            if (p.s !== m.s || p.state !== m.st) { m.s = p.s; m.st = p.state; m.t = 0; } else if (!['parked', 'hold'].includes(p.state)) { m.t += 0.1; if (m.t > 60) stuck++; }
+          }
+          const ids = A.gates.map((x) => x.by).filter(Boolean); if (new Set(ids).size !== ids.length) multiBook++;
+          onStep?.(t);
+        }
+      };
+      const t0 = A.st.t;
+      ff(420);
+      const states = Object.values(visited);
+      out.ops = { simT: +(A.st.t - t0).toFixed(0), departures: A.st.departures, airborne: A.st.airborne, arrivals: A.st.arrivals, parkedIn: A.st.parkedIn, chirps: A.st.chirps, nan: nan + A.st.nan, stuck, doubleBook: A.st.doubleBook + multiBook, fullDeparture: states.some((s) => ['pushback', 'taxiOut', 'hold', 'lineup', 'takeoff'].every((k) => s.has(k))), fullArrival: states.some((s) => ['final', 'rollout', 'taxiIn', 'parked'].every((k) => s.has(k))), active: A.planes.length };
+      // Runway blocked by the player (on foot on the centre line): departures hold, arrivals go around.
+      d.teleport(500, -705, 0); await wait(300);
+      const ga0 = A.st.goArounds; let lined = 0, held = 0; const already = new Set(A.planes.filter((p) => p.state === 'lineup' || p.state === 'takeoff').map((p) => p.id));
+      if (!A.planes.some((p) => p.state === 'final')) A.spawnArrival(2000);
+      ff(160, () => { for (const p of A.planes) { if (already.has(p.id)) continue; if (p.state === 'lineup' || (p.state === 'takeoff' && p.alt < 3)) lined++; if (p.state === 'hold') held++; } });
+      out.blocked = { busy: A.runwayBusy(true), lined, held: held > 0, goArounds: A.st.goArounds - ga0 };
+      d.teleport(470, -60, 0); await wait(300);
+      const tk0 = A.st.airborne; ff(150);
+      out.cleared = { airborne: A.st.airborne - tk0 };
+      // Taxiing aircraft brake for the player: stand on the taxiway in front of a taxiing plane.
+      let braked = 0, hit = 0, target = null;
+      for (let t = 0; t < 300 && !target; t += 0.1) { A.update(0.1); target = A.planes.find((q) => q.state === 'taxiOut' && Math.abs(q.pos.z + 645) < 1 && q.v > 4 && q.pos.x < 800); }
+      if (target) {
+        out.brakeSetup = true; const tr = { x: Math.sin(target.yaw), z: Math.cos(target.yaw) };
+        d.teleport(target.pos.x + tr.x * (target.cfg.L / 2 + 22), target.pos.z + tr.z * (target.cfg.L / 2 + 22), 0);
+        for (let k = 0; k < 480; k++) { await new Promise((q) => requestAnimationFrame(q)); const f = g.controls.player.position, dd = Math.hypot(target.pos.x - f.x, target.pos.z - f.z); if (target.v < 0.2 && dd < target.cfg.L / 2 + 25) braked++; if (dd < target.cfg.L / 2 - 1) hit++; }
+      }
+      out.brake = { setup: !!out.brakeSetup, braked: braked > 0, hit };
+      d.teleport(470, -60, 0); await wait(300);
+      // Colliders: ground aircraft solid, airborne none; no boarding prompt.
+      out.colliders = A.planes.map((p) => ({ ground: p.alt < 3, on: p.m.rb.isEnabled() })).every((c) => c.ground === c.on);
+      const parked = A.planes.find((p) => p.state === 'parked');
+      if (parked) { d.teleport(parked.pos.x + 4, parked.pos.z + 3, 0); await wait(500); out.prompt = d.state().prompt || ''; }
+      // Road links: a motorway lane reaches Terminal Dr through the lane graph (AI traffic + police routing).
+      const lanes = g.traffic.graph.lanes, start = lanes.find((l) => l.road?.highway && !l.road.ramp), goal = (l) => l.pts.some((p) => Math.abs(p.z + 540) < 3 && p.x > 380 && p.x < 580);
+      const seen = new Set([start.id]), q = [start]; let found = false;
+      while (q.length) { const l = q.shift(); if (goal(l)) { found = true; break; } for (const e of [...(l.exits || []), ...(l.branches || [])]) { const n = lanes[e.lane]; if (n && !seen.has(n.id)) { seen.add(n.id); q.push(n); } } }
+      out.route = found;
+      // Drive in and out (Airport Rd -> Terminal Dr -> Airport Link) with zero damage events.
+      d.enter(g.vehicles.cars.findIndex((c) => !c.dead && !c.impounded && c.type === 'sedan')); await wait(1200);
+      const car = g.controls.car; car.health = 100;
+      for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
+      car.body.teleport(332.2, -4.3, -478, Math.PI); await wait(600);
+      const dmg0 = g.combat.damageLog.length;
+      const pts = [...d.lanePoints(330, -478, 330, -540), ...d.lanePoints(330, -540, 620, -540), ...d.lanePoints(620, -540, 620, -478)];
+      const res = await d.drivePoints(pts, { speed: 15, timeout: 80 });
+      out.drive = { ok: res.ok, reason: res.reason, dist: res.dist, damage: g.combat.damageLog.slice(dmg0).map((e) => e.tag) };
+      out.limit = g.speeding.status()?.limit;
+      g.controls.respawnAt(car.position, 0);
+      // Perf: walker at the terminal, then the airport from the apron.
+      d.teleport(520, -545, Math.PI); await wait(1500);
+      const f0 = g.renderer.info.render.frame, tt = performance.now(); await wait(2000);
+      out.perf = { fps: Math.round((g.renderer.info.render.frame - f0) / ((performance.now() - tt) / 1000)), calls: g.renderer.info.render.calls, lights: g.world.town.airport.lights.count, places: g.world.places.filter((p) => p.kind === 'airport').length, streets: g.world.network.allRoads.filter((x) => x.airport).map((x) => `${x.street}:${x.speedLimit}`) };
+      return out;
+    });
+    check('aircraft loop: a full departure (pushback -> taxi -> hold -> lineup -> takeoff -> airborne) and a full arrival (final -> rollout -> taxi -> parked), no NaN, nothing stuck', r.ops.fullDeparture && r.ops.fullArrival && r.ops.airborne >= 1 && r.ops.parkedIn >= 1 && r.ops.nan === 0 && r.ops.stuck === 0, r.ops);
+    check('gates never double-booked', r.ops.doubleBook === 0, { doubleBook: r.ops.doubleBook });
+    check('runway blocked by the player: departures hold, arrivals go around', r.blocked.busy === 'player' && r.blocked.lined === 0 && (r.blocked.held || r.blocked.goArounds >= 1) && r.blocked.goArounds >= 1, r.blocked);
+    check('runway clear again: departures resume', r.cleared.airborne >= 1, r.cleared);
+    check('taxiing aircraft brake for the player (never run them over)', r.brake.setup && r.brake.braked && r.brake.hit === 0, r.brake);
+    check('ground aircraft solid, airborne ones have no collider; no boarding prompt', r.colliders && !/board/i.test(r.prompt || ''), { colliders: r.colliders, prompt: r.prompt });
+    check('airport roads connect to the motorway in the lane graph (AI traffic + police)', r.route);
+    check('drive in and out of the airport roads: zero damage events, limit 60', r.drive.ok && r.drive.damage.length === 0 && r.limit === 60, { ...r.drive, limit: r.limit });
+    check('Airport on the map, airport street names, limits 60', r.perf.places === 1 && r.perf.streets.length === 3 && r.perf.streets.every((s) => s.endsWith(':60')), r.perf);
+    check('airport: draw calls < 600, fps >= 45', r.perf.calls < 600 && r.perf.fps >= 45, { calls: r.perf.calls, fps: r.perf.fps });
+    check('no page errors (airport)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();

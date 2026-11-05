@@ -79,7 +79,7 @@ export function buildAirport({ parent, rng }) {
       // Jet bridge: a boxy tunnel from the terminal face to beside the nose, on a support.
       ch.box(F, 3.0, 2.8, 12, gx - 5.5, 3.2, Tm.z0 - 6, '#c9c4b8');
       ch.box(F, 3.2, 0.2, 12.2, gx - 5.5, 6.0, Tm.z0 - 6, '#8d9196');
-      ch.block(F, 0.6, 3.2, 0.6, gx - 5.5, 0, Tm.z0 - 9, '#5c5f66');
+      ch.block(F, 0.6, 3.2, 0.6, gx - 5.5, 0, Tm.z0 - 11.5, '#5c5f66'); // support beside the nose, clear of the tug lane
     }
     // Terminal: long low hall, glass front (landside) + airside glazing, roof, sign.
     const tx = (Tm.x0 + Tm.x1) / 2, tz = (Tm.z0 + Tm.z1) / 2, tw = Tm.x1 - Tm.x0, td = Tm.z1 - Tm.z0;
@@ -110,6 +110,7 @@ export function buildAirport({ parent, rng }) {
   // ---- Control tower, hangars, fuel tanks --------------------------------------------------------
   {
     const ch = chunk('ap-landside'), Tw = AP.tower;
+    ch.box(F, 9, 0.6, 9, Tw.x, 0, Tw.z, '#cfc3ab'); // plinth (also gives the chunk its bounds for culling)
     ch.solid.push(paint(new THREE.CylinderGeometry(2.6, 3.4, 30, 12).translate(Tw.x, y + 15, Tw.z), '#d9d4c8', 0.02));
     ch.solid.push(paint(new THREE.CylinderGeometry(6.2, 4.8, 1.2, 12).translate(Tw.x, y + 30.6, Tw.z), '#efe9dd', 0.02));
     ch.glass.push(paint(new THREE.CylinderGeometry(6.4, 5.6, 4, 12).translate(Tw.x, y + 33.2, Tw.z), '#4d6577', 0.02));
@@ -189,6 +190,7 @@ export function buildAirport({ parent, rng }) {
   parent.add(group);
   for (const ch of chunks.values()) {
     const c = ch.finish(group);
+    c.r += 340; // town chunks hide beyond ~260 m + r: keep the airport drawn out to ~600 m
     for (const m of ch.extra || []) c.group.add(m);
     out.chunks.push(c);
     out.colliders.push(...ch.colliders);
