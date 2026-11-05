@@ -131,7 +131,7 @@ export function buildBeach({ parent, atlas, rng: seed }) {
       const up = Tw.toW(1.2, -0.6);
       ch2.solid.push(cylinder(0.035, 0.035, 2.3, 5, up.x, gy, up.z, '#e8e4d8'));
       ch2.solid.push(paint(new THREE.ConeGeometry(1.4, 0.55, 8).translate(up.x, gy + 2.3, up.z), towel[(n + 2) % towel.length], 0.05));
-      if (n < 5) out.npcSpots.push({ role: 'beach', x: Tw.toW(0, 0.75).x, y: gy + 0.03, z: Tw.toW(0, 0.75).z, yaw: Math.PI, action: 'sunbathe' });
+      if (n < 3) out.npcSpots.push({ role: 'beach', x: Tw.toW(0, 0.75).x, y: gy + 0.03, z: Tw.toW(0, 0.75).z, yaw: Math.PI, action: 'sunbathe' });
     }
     for (let n = 0; n < 14; n++) {
       const x = BEACH.x0 + 10 + n * 26 + rng.next() * 8;

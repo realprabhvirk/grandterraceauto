@@ -38,6 +38,8 @@ import { hideProp } from './town/townKit.js';
 import { createPlayerWeapons } from './weapons/playerWeapons.js';
 import { createCopGuns } from './police/copGuns.js';
 import { createGunShopMenu } from './ui/gunShopMenu.js';
+import { createAmbience } from './audio/ambience.js';
+import { createSkyLife } from './world/skyLife.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -146,6 +148,15 @@ controls.hooks.onPropSteal = (p) => {
 const viewmodel = createViewmodel();
 const weapons = createPlayerWeapons({ scene, camera, controls, physics, world, peds, police, vehicles, traffic, breakables, particles, audio, wanted, combat, viewmodel, theft });
 const copGuns = createCopGuns({ scene, police, controls, combat, world, physics, audio, fx: weapons.fx });
+// Vibe: clouds + birds, zone ambience, one warm pooled light inside whichever Phase 4 shop is near,
+// optional slow automatic day/night cycle (Shift+N or ?cycle; N still toggles by hand).
+const skyLife = createSkyLife(scene);
+const ambience = createAmbience(audio);
+const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
+shopLight.castShadow = false;
+scene.add(shopLight);
+const shopCentres = [world.town?.interiors.storeCentre && { ...world.town.interiors.storeCentre, h: 4.2, r: 30 }, world.town?.interiors.quickStopCentre && { ...world.town.interiors.quickStopCentre, h: 3.2, r: 14 }].filter(Boolean);
+const dayCycle = { on: params.has('cycle'), t: 0, period: 480 };
 // Barrel & Bolt: E at the counter opens the buy menu.
 const gunShop = createGunShopMenu({ arsenal: weapons.arsenal, wallet, input: controls.input, audio, hud: statusHud });
 if (world.town) world.town.hooks.openGunShop = () => gunShop.openMenu();
@@ -158,7 +169,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, gunShop,
+  ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, gunShop, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
 const timer = new THREE.Timer();
@@ -179,6 +190,22 @@ renderer.setAnimationLoop(() => {
   theft.update(dt, world.terrain);
   { const f = controls.focus(); minimap.update(dt, { player: f, heading: controls.mode === 'drive' && controls.car ? controls.car.body.yaw() : controls.player.state.facing, police: police.cars.map((c) => c.pos), stars: wanted.stars, lastSeen: police.st.lastSeen }); }
   audio.setListener(controls.focus());
+  ambience.update(rdt, controls.focus(), lighting.dusk);
+  skyLife.update(dt, { dusk: lighting.dusk });
+  {
+    // Warm light inside the nearest enterable shop (Terrace Central / Quick Stop) when close.
+    const f = controls.focus(); let best = null, bd = 1e9;
+    for (const c of shopCentres) { const d = Math.hypot(f.x - c.x, f.z - c.z); if (d < c.r && d < bd) { bd = d; best = c; } }
+    shopLight.intensity = best ? 2.2 : 0;
+    if (best) shopLight.position.set(best.x, world.terrain.getHeight(best.x, best.z) + best.h, best.z);
+  }
+  if (controls.input.pressed('KeyN') && (controls.input.down('ShiftLeft') || controls.input.down('ShiftRight'))) { dayCycle.on = !dayCycle.on; statusHud.message(dayCycle.on ? 'Day/night cycle ON' : 'Day/night cycle off', 2); }
+  else if (controls.input.pressed('KeyN')) dayCycle.on = false;
+  if (dayCycle.on) {
+    dayCycle.t += dt;
+    const want = 0.5 - 0.5 * Math.cos((dayCycle.t / dayCycle.period) * Math.PI * 2);
+    if (Math.abs(want - lighting.dusk) > 0.002) lighting.setDusk(want);
+  }
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   world.town?.update(dt, { focus: controls.focus(), dusk: lighting.dusk });
   combat.update(dt);
