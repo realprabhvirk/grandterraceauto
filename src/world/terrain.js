@@ -5,9 +5,10 @@ import * as THREE from 'three';
 import { fbm } from '../utils/noise.js';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
+import { AP } from '../airport/airportPlan.js';
 
 // Rectangular grid: the suburb (+-300) plus Terrace Town Centre to the east.
-export const MAP = { x0: -300, z0: -560, cell: 2.5, nx: 544, nz: 344 }; // Phase 5: x to 1060 (downtown), z from -560 (Northgate)
+export const MAP = { x0: -300, z0: -800, cell: 2.5, nx: 544, nz: 440 }; // Phase 5: x to 1060 (downtown); Phase 6.1: z from -800 (airport)
 MAP.x1 = MAP.x0 + MAP.nx * MAP.cell; MAP.z1 = MAP.z0 + MAP.nz * MAP.cell;
 MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
 
@@ -42,7 +43,7 @@ export function naturalHeight(x, z) {
   // Rise at the edge of the playable area (suburb, link valley, town) so the world reads
   // as a valley, not a cliff. Inside the suburb this is exactly the original +-220 rule.
   const out = (b, m) => Math.max(b.x0 - m - x, x - b.x1 - m, b.z0 - m - z, z - b.z1 - m);
-  const d = Math.min(Math.max(Math.abs(x), Math.abs(z)) - 220, out(LINK, 0), out(TOWN, 20), out({ x0: BEACH.x0 - 10, x1: BEACH.x1 + 10, z0: 40, z1: 400 }, 0), out(NORTHGATE, 20));
+  const d = Math.min(Math.max(Math.abs(x), Math.abs(z)) - 220, out(LINK, 0), out(TOWN, 20), out({ x0: BEACH.x0 - 10, x1: BEACH.x1 + 10, z0: 40, z1: 400 }, 0), out(NORTHGATE, 20), out(AP.site, 20));
   if (d > 0) h += (d / 80) ** 2 * 28;
   // The town itself is graded flat.
   const dx = Math.max(TOWN.x0 - x, 0, x - TOWN.x1), dz = Math.max(TOWN.z0 - z, 0, z - TOWN.z1);
@@ -52,6 +53,11 @@ export function naturalHeight(x, z) {
     const nx = Math.max(NORTHGATE.x0 - x, 0, x - NORTHGATE.x1), nz = Math.max(NORTHGATE.z0 - z, 0, z - NORTHGATE.z1);
     const wn = 1 - smoothstep(0, TOWN.margin, Math.hypot(nx, nz));
     if (wn > 0) h = h * (1 - wn) + TOWN.h * wn;
+  }
+  { // Terrace Airport: graded flat (Phase 6.1)
+    const S = AP.site, ax = Math.max(S.x0 - x, 0, x - S.x1), az = Math.max(S.z0 - z, 0, z - S.z1);
+    const wa = 1 - smoothstep(0, TOWN.margin, Math.hypot(ax, az));
+    if (wa > 0) h = h * (1 - wa) + AP.h * wa;
   }
   // The beach wins south of the ring road.
   if (z > 50) {

@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { ROAD, sampleCurve } from '../world/roadNetwork.js';
 import { TOWN } from '../world/terrain.js';
 import { HWY, highwayY } from '../city/highwayPlan.js';
+import { AP } from '../airport/airportPlan.js';
 
 export const T = {
   X: [330, 420, 520, 610, 700, 790, 880, 970], // Phase 5: x 610-970 = Downtown (districts/downtown.js)
@@ -98,5 +99,13 @@ export function buildTownPlan(network) {
   roads.push(mway);
   roads.push({ ...straight('Motorway West Ramp', HWY.x0, NORTH.Z[NORTH.Z.length - 1], HWY.x0, Z[0]), extra: true, north: true, highway: true, ramp: true });
   roads.push({ ...straight('Motorway East Ramp', HWY.x1, INDUSTRY.Z[INDUSTRY.Z.length - 1], HWY.x1, Z[0]), extra: true, north: true, highway: true, ramp: true });
+  // Terrace Airport access (Phase 6.1): Airport Rd north from Waratah St's top corner, Terminal Dr
+  // past the terminal, Airport Link back down to Jacaranda St (a loop, both ends on Northgate).
+  const A1 = { id: nodes.length, i: -2, j: -2, x: AP.roadX0, z: AP.roadZ, links: [], north: true, airport: true }; nodes.push(A1);
+  const A2 = { id: nodes.length, i: -2, j: -2, x: AP.roadX1, z: AP.roadZ, links: [], north: true, airport: true }; nodes.push(A2);
+  connect(gridNode(NORTH, 0, 0), A1); connect(A1, A2); connect(A2, gridNode(NORTH, NORTH.X.length - 1, 0));
+  roads.push({ ...straight('Airport Rd', AP.roadX0, NORTH.Z[0], AP.roadX0, AP.roadZ), extra: true, north: true, airport: true });
+  roads.push({ ...straight('Terminal Dr', AP.roadX0, AP.roadZ, AP.roadX1, AP.roadZ), extra: true, north: true, airport: true });
+  roads.push({ ...straight('Airport Link', AP.roadX1, AP.roadZ, AP.roadX1, NORTH.Z[0]), extra: true, north: true, airport: true });
   return { roads, link, nodes, node, edges, blocks, entry: node(0, 1), bounds: { x0: TOWN.x0, x1: TOWN.x1, z0: TOWN.z0, z1: TOWN.z1 } };
 }

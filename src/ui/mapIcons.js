@@ -20,6 +20,7 @@ export const ICON = {
   industry: { t: 'I', c: '#9a8a78', label: 'Industrial', pri: 6 },
   camera: { t: 'C', c: '#e2c22a', label: 'Speed camera', pri: 3, fullOnly: true, noLabel: true },
   radar: { t: 'R', c: '#4f7bd8', label: 'Radar cop', pri: 3, fullOnly: true, noLabel: true },
+  airport: { t: 'A', c: '#2f6fc0', label: 'Airport', pri: 9 },
   ramp: { t: 'M', c: '#3a8a4a', label: 'Highway on/off ramp', pri: 5 },
 };
 /** Draw order: low priority first, the gun shop last (on top). */

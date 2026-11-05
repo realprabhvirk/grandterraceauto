@@ -20,6 +20,7 @@ import { buildStreetSigns } from '../city/streetSigns.js';
 import { HWY, BRIDGES } from '../city/highwayPlan.js';
 import { buildHighway } from '../city/highway.js';
 import { landmarkLots } from '../city/landmarks.js';
+import { airportAreas } from '../airport/airportPlan.js';
 import { cameraAheadSigns } from '../city/cameraPlan.js';
 import { SPEEDING } from '../police/speedingConfig.js';
 import { fbm } from '../utils/noise.js';
@@ -73,7 +74,7 @@ export function buildWorld(scene) {
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders, ...highway.colliders];
   const trunks = [...trees.trunks, ...town.trunks];
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway };
+  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway, areas: airportAreas() };
 }
 
 /**

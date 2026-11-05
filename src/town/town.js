@@ -20,6 +20,7 @@ import { buildDowntown } from '../districts/downtown.js';
 import { buildBeach } from '../districts/beach.js';
 import { buildNorthgate } from '../districts/northgate.js';
 import { buildIndustrial } from '../districts/industrial.js';
+import { buildAirport } from '../airport/airport.js';
 
 const HIDE = 260;
 const CAR_TYPES_PARKED = ['hatch', 'sedan', 'suv', 'hatch', 'ute', 'sedan'];
@@ -152,6 +153,15 @@ export function buildTown(scene, { network, layout, plan, terrain, wattleSite })
   out.npcSpots.push(...ind.npcSpots);
   out.updaters.push(...ind.updaters);
   for (const ch of ind.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
+  // Terrace Airport (Phase 6.1) north of Northgate.
+  const apt = buildAirport({ parent: group, rng: rng.fork(14) });
+  out.airport = apt;
+  out.chunks.push(...apt.chunks);
+  out.colliders.push(...apt.colliders);
+  out.places.push(...apt.places);
+  out.npcSpots.push(...apt.npcSpots);
+  out.updaters.push(...apt.updaters);
+  for (const ch of apt.propChunks) for (const p of ch.props) { out.propCars.push(p); out.toggles.push(p.toggle); }
   group.add(atlas.mesh());
   // Quick Stop counter: E buys a snack ($20, +25 health). main.js wires hooks.buySnack.
   const q = inner.counters.quickStop;

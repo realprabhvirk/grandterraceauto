@@ -81,7 +81,7 @@ export function buildHighway({ scene, terrain }) {
   // Green gantry signs over each carriageway near the ends.
   const atlas = document.createElement('canvas'); atlas.width = 1024; atlas.height = 512;
   const gc = atlas.getContext('2d');
-  const texts = ['NORTHGATE  WARATAH ST  >', 'TOWN CENTRE  RING RD W  >', 'INDUSTRIAL  CRANE ST  >', 'DOWNTOWN  RING RD E  >'];
+  const texts = ['AIRPORT  NORTHGATE  WARATAH ST  >', 'TOWN CENTRE  RING RD W  >', 'INDUSTRIAL  CRANE ST  >', 'DOWNTOWN  RING RD E  >'];
   texts.forEach((t, i) => {
     const y = i * 128;
     gc.fillStyle = '#1f6a3a'; gc.fillRect(0, y, 1024, 128); gc.strokeStyle = '#f4f4ee'; gc.lineWidth = 6; gc.strokeRect(8, y + 8, 1008, 112);

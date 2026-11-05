@@ -23,6 +23,7 @@ export function createMinimap(world) {
     let maxR = 300;
     const roads = world.network.allRoads || world.network.roads;
     for (const r of roads) for (const s of r.samples) maxR = Math.max(maxR, Math.abs(s.x) + 40, Math.abs(s.z) + 40);
+    for (const a of world.areas || []) maxR = Math.max(maxR, Math.abs(a.x0) + 40, Math.abs(a.x1) + 40, Math.abs(a.z0) + 40, Math.abs(a.z1) + 40);
     half = Math.ceil(maxR);
     bg = document.createElement('canvas');
     bg.width = bg.height = half * 2;
