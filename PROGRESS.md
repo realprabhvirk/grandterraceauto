@@ -1,10 +1,10 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-05 12:46)**
-- Done: Phase 6 step 1 (no heat for property damage; speed limits, fines config + HUD)
+**STATUS (2026-11-05 12:52)**
+- Done: Phase 6 steps 1-2 (crime/speeding rules, map-only route with fade, labels, street names)
 - Broken: phase4 'police officer on foot knocked down' (known)
-- Next: P6 step 2: map routing fade + labels + street names
+- Next: P6 step 3: street signs
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
@@ -363,3 +363,4 @@ Phase 4 scenes were 57-177 draw calls and 52-60 fps (the cabin cam with live mir
 
 ## PHASE 6 LOG
 - 12:46 Step 1: property damage never gives heat (street furniture, destroyed cars - user override); src/world/speedLimits.js (limits per road + downtown override, road.speedLimit/road.street), src/police/speedingConfig.js + speeding.js (fine $200 only when a catcher calls tryFine; cooldown 20 s per catcher; no fine when wanted / siren / on foot; cash floor 0), HUD limit sign + street chip. phase5test speeding 8/8.
+- 12:52 Step 2: navigation is map-only (beacon + chip removed), route progress + 60 m fade + trim, arrival clears; icon registry with priorities, collision-culled labels on every marker, legend from the types in use, petrol/store icons; street names along roads on both maps (minimap majors only). phase5test mapnav 8/8, map 11/11, pois 7/7.

@@ -165,7 +165,7 @@ export function buildTownBuildings({ chunk, atlas, plan, rng }) {
     ch.block(pyl, 2.2, 6, 0.5, 0, 0, 0, C.fuelRed);
     atlas.sign(pyl, atlas.row('FUEL  1.89', '#c4473a', '#ffffff'), 2.0, 0.9, 0, 4.7, 0.26, { u0: 0.3, u1: 0.7 });
     atlas.sign(pyl, atlas.row('FUEL  1.89', '#c4473a', '#ffffff'), 2.0, 0.9, 0, 4.7, -0.26, { u0: 0.3, u1: 0.7, back: true });
-    out.places.push({ kind: 'shop', x: 358, z: -62, label: 'Petrol' });
+    out.places.push({ kind: 'petrol', x: 358, z: -62, label: 'Petrol station' });
     staticCar(ch, 350.4, -62, 0, 'hatch', '#b98a4a');           // filling up at the pumps
     staticCar(ch, 365.6, -61.5, Math.PI, 'ute', '#46566b');
     building(ch, frame(375, T.Z[2] - T.front, 0, 1, T.h), { w: 60, d: 16, floors: 3, wall: C.shopWalls[4] });

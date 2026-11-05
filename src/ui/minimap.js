@@ -1,13 +1,12 @@
-// Tab-toggled minimap: north-up, centred on the player. Roads are pre-rendered once into an
+﻿// Tab-toggled minimap: north-up, centred on the player. Roads are pre-rendered once into an
 // offscreen canvas (1 px = 1 m); each redraw (~10 fps) blits a window of it and adds the
 // player arrow, police cars (blue), the wanted radius and place markers (62, police, hospital,
 // shops). Call refresh() after the road network / places change (e.g. the town is added).
 import { UI, injectStyles } from './uiStyle.js';
 import { ROAD } from '../world/roadNetwork.js';
-import { drawIcon, sortPlaces } from './mapIcons.js';
+import { drawIcon, sortPlaces, drawRoute, drawStreetNames, ICON } from './mapIcons.js';
 
 const SIZE = 190, METRES = 230; // metres across the minimap
-const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'], landmark: ['^', '#e2c25a'], beach: ['~', '#5ab0d8'], school: ['S', '#e0a040'], industry: ['I', '#b0a090'] };
 
 export function createMinimap(world) {
   injectStyles();
@@ -54,7 +53,7 @@ export function createMinimap(world) {
     get bg() { return bg; },
     get markers() { return markers; },
     get half() { return half; },
-    update(dt, { player, heading, police = [], stars = 0, lastSeen = null, route = [], waypoint = null }) {
+    update(dt, { player, heading, police = [], stars = 0, lastSeen = null, route = [], waypoint = null, nav = null }) {
       if (!visible) return;
       acc += dt;
       if (acc < 0.1) return;
@@ -72,11 +71,12 @@ export function createMinimap(world) {
         g.strokeStyle = 'rgba(79,123,216,.85)'; g.fillStyle = 'rgba(79,123,216,.12)'; g.lineWidth = 2;
         g.beginPath(); g.arc(cx, cz, (40 + stars * 25) * k, 0, Math.PI * 2); g.fill(); g.stroke();
       }
-      if (route.length > 1) { g.strokeStyle = '#ffcf4a'; g.lineWidth = 3; g.lineJoin = g.lineCap = 'round'; g.beginPath(); route.forEach((p, i) => { const [x, z] = P(p.x, p.z); i ? g.lineTo(x, z) : g.moveTo(x, z); }); g.stroke(); }
+      if (route.length > 1) drawRoute(g, route, nav, (x, z) => P(x, z), 3);
       if (waypoint) { const [x, z] = P(waypoint.x, waypoint.z), r = Math.hypot(x - SIZE / 2, z - SIZE / 2), lim = SIZE / 2 - 6; const fx = r > lim ? SIZE / 2 + ((x - SIZE / 2) / r) * lim : x, fz = r > lim ? SIZE / 2 + ((z - SIZE / 2) / r) * lim : z; g.fillStyle = '#ffcf4a'; g.strokeStyle = '#241e1a'; g.lineWidth = 1.5; g.beginPath(); g.arc(fx, fz, 5, 0, Math.PI * 2); g.fill(); g.stroke(); }
       g.font = 'bold 11px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      drawStreetNames(g, world.network.allRoads, (x, z) => P(x, z), { major: true, w: SIZE, h: SIZE, scale: 1 });
       markers.length = 0;
-      for (const pl of sortPlaces(world.places || [])) {
+      for (const pl of sortPlaces((world.places || []).filter((q) => !ICON[q.kind]?.fullOnly))) {
         const [x, z] = P(pl.x, pl.z);
         const r = Math.hypot(x - SIZE / 2, z - SIZE / 2), lim = SIZE / 2 - 9;
         const fx = r > lim ? SIZE / 2 + ((x - SIZE / 2) / r) * lim : x, fz = r > lim ? SIZE / 2 + ((z - SIZE / 2) / r) * lim : z;

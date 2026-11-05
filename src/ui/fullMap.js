@@ -1,13 +1,12 @@
-// Map UI. Tab cycles: hidden -> minimap -> FULL MAP -> hidden (Esc also closes the full map).
+﻿// Map UI. Tab cycles: hidden -> minimap -> FULL MAP -> hidden (Esc also closes the full map).
 // The full map is an ~85% overlay: the pointer lock is released, the game is paused (main.js
 // reads `open`), drag pans, wheel / pinch zooms (never the page). It shows roads, district
 // labels, every place marker, the player arrow, police cars, the wanted radius, the waypoint
 // and its route. Click = set a waypoint (clicking near a marker snaps to it), right-click clears.
 // Closing resumes and re-captures the mouse; if the browser refuses, "Click to resume" shows.
 import { injectStyles, UI } from './uiStyle.js';
-import { drawIcon, sortPlaces, legendHTML } from './mapIcons.js';
+import { drawIcon, sortPlaces, legendHTML, drawRoute, drawLabels, drawStreetNames, ICON } from './mapIcons.js';
 
-const ICON = { home: ['62', '#d86c3d'], police: ['P', '#4f7bd8'], hospital: ['H', '#3d8fd1'], shop: ['$', '#9fd18b'], park: ['*', '#7fbf6a'], landmark: ['^', '#e2c25a'], beach: ['~', '#5ab0d8'], school: ['S', '#e0a040'], industry: ['I', '#b0a090'] };
 export const DISTRICTS = [
   { name: 'GRAND TERRACE', x: 0, z: 30 }, { name: 'TERRACE TOWN CENTRE', x: 470, z: -150 }, { name: 'DOWNTOWN', x: 790, z: -150 },
   { name: 'TERRACE BEACH', x: 810, z: 105 }, { name: 'NORTHGATE', x: 480, z: -430 }, { name: 'INDUSTRIAL ESTATE', x: 835, z: -430 },
@@ -52,15 +51,18 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
     g.font = `800 ${Math.round(Math.max(11, Math.min(18, 14 * st.scale / 0.6)))}px system-ui,sans-serif`;
     for (const d of DISTRICTS) { const [x, y] = toScreen(d.x, d.z); g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(d.name, x + 1, y + 1); g.fillStyle = 'rgba(246,238,223,.9)'; g.fillText(d.name, x, y); }
     if (s.stars > 0) { const c = s.lastSeen || s.player, [cx, cy] = toScreen(c.x, c.z); g.strokeStyle = 'rgba(79,123,216,.9)'; g.fillStyle = 'rgba(79,123,216,.14)'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, (40 + s.stars * 25) * st.scale, 0, Math.PI * 2); g.fill(); g.stroke(); }
-    if (nav.route.length > 1) { g.strokeStyle = '#ffcf4a'; g.lineWidth = 4; g.lineJoin = g.lineCap = 'round'; g.beginPath(); nav.route.forEach((p, i) => { const [x, y] = toScreen(p.x, p.z); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
+    if (nav.route.length > 1) drawRoute(g, nav.route, nav, toScreen, 4);
     g.font = 'bold 12px system-ui,sans-serif';
     st.markers = [];
     for (const pl of sortPlaces(world.places || [])) {
       const [x, y] = toScreen(pl.x, pl.z);
       drawIcon(g, pl.kind, x, y, 9);
-      if (pl.kind === 'guns') { g.font = '800 13px system-ui,sans-serif'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(pl.label, x + 1, y - 18 + 1); g.fillStyle = '#e6d2ff'; g.fillText(pl.label, x, y - 18); g.font = 'bold 12px system-ui,sans-serif'; }
       st.markers.push({ kind: pl.kind, label: pl.label, x, y, inView: x >= 0 && y >= 0 && x <= cv.width && y <= cv.height });
     }
+    // Street names (major roads always, minor ones once zoomed in), then marker labels (collision-culled).
+    st.streetNames = drawStreetNames(g, world.network.allRoads, toScreen, { w, h, scale: st.scale });
+    st.labels = drawLabels(g, st.markers.filter((m) => m.inView));
+    if (nav.waypoint && nav.distance != null) { const [x, y] = toScreen(nav.waypoint.x, nav.waypoint.z); g.font = 'bold 12px system-ui,sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = '#241e1a'; const t = nav.distance >= 1000 ? (nav.distance / 1000).toFixed(1) + ' km' : Math.round(nav.distance) + ' m'; g.strokeText(t, x, y - 32); g.fillStyle = '#ffcf4a'; g.fillText(t, x, y - 32); }
     for (const c of s.police) { const [x, y] = toScreen(c.x, c.z); g.fillStyle = Math.floor(performance.now() / 250) % 2 ? '#2a6bff' : '#ff3b2f'; g.fillRect(x - 4, y - 4, 8, 8); }
     if (nav.waypoint) { const [x, y] = toScreen(nav.waypoint.x, nav.waypoint.z); g.fillStyle = '#ffcf4a'; g.strokeStyle = '#241e1a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 7, y - 16); g.arc(x, y - 18, 7, Math.PI * 0.85, Math.PI * 0.15); g.closePath(); g.fill(); g.stroke(); }
     const [px, py] = toScreen(s.player.x, s.player.z);
@@ -76,6 +78,9 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
     wrap.style.display = st.open ? 'block' : 'none';
     if (st.open && !was) {
       const s = getState(); st.cx = s.player.x; st.cz = s.player.z; st.scale = 0.6; // default zoom every time it opens
+      // Legend = the icon types actually on the map.
+      st.legendKinds = Object.keys(ICON).filter((k) => (world.places || []).some((p) => p.kind === k));
+      legend.innerHTML = '<div style="font-weight:800;margin-bottom:4px">LEGEND</div>' + legendHTML(st.legendKinds);
       input.setLocked(true);
       document.exitPointerLock?.();
       draw();

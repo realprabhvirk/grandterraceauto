@@ -209,7 +209,7 @@ renderer.setAnimationLoop(() => {
   police.update(dt);
   copGuns.update(dt);
   theft.update(dt, world.terrain);
-  { const f = controls.focus(); minimap.update(rdt, { ...mapState(), route: nav.route, waypoint: nav.waypoint }); nav.update(rdt, f, paused); mapUI.update(); }
+  { const f = controls.focus(); nav.update(rdt, f); minimap.update(rdt, { ...mapState(), route: nav.route, waypoint: nav.waypoint, nav }); mapUI.update(); }
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   speeding.update(dt);

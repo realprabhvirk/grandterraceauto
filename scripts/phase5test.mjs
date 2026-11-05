@@ -1,6 +1,6 @@
 // Phase 5 test suite (numeric/state asserts only - no screenshots).
 // Usage (dev server running): .\dev.cmd node scripts/phase5test.mjs [section ...]
-//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe speeding copstars pois map witness damage
+//   sections: pov cabin zoom carhp burn stars push arrest ko steal parked guns copguns shop downtown beach northgate industrial vibe mapnav speeding copstars pois map witness damage
 import { chromium } from 'playwright';
 
 const want = new Set(process.argv.slice(2));
@@ -1000,7 +1000,7 @@ try {
     await wait(200);
     const wp = await ev(() => ({ wp: window.__gta.nav.waypoint, route: window.__gta.nav.route.length, beacon: window.__gta.scene.getObjectByName('waypoint-beacon')?.visible }));
     const off = wp.wp ? Math.hypot(wp.wp.x - target.x, wp.wp.z - target.z) : 999;
-    check('click sets a waypoint at the matching world spot (<10 m) with a route + beacon', off < 10 && wp.route > 2 && wp.beacon, { off: +off.toFixed(1), ...wp });
+    check('click sets a waypoint at the matching world spot (<10 m) with a route (map only, no beacon)', off < 10 && wp.route > 2 && !wp.beacon, { off: +off.toFixed(1), ...wp });
     // Wheel + pinch zoom the map, never the page.
     const z = await ev(() => {
       const M = window.__gta.mapUI, box = document.querySelector('canvas[style*="100%"]').parentElement, s0 = M.st.scale;
@@ -1193,6 +1193,44 @@ try {
     check('HUD shows the limit sign + street chip while driving', r.hud.visible && r.hud.limit === 60 && r.hud.street === 'Ring Rd North', r.hud);
     check('breaking street furniture or destroying a car (even witnessed): no heat', r.property.heat === 0 && r.property.stars === 0 && r.property.victimDead, r.property);
     check('no page errors (speeding)', errors.length === 0, errors.slice(0, 3));
+  }
+  // ------------------------------------------------------------ 6.2: map-only route, fade, labels, street names
+  if (run('mapnav')) {
+    await load();
+    await fresh();
+    const r = await ev(async () => {
+      const g = window.__gta, d = g.debug, N = g.nav, W = g.world, wait = (ms) => new Promise((q) => setTimeout(q, ms));
+      const { ICON } = await import('/src/ui/mapIcons.js');
+      // Streets: unique, non-empty names on every road.
+      const names = W.network.allRoads.map((r) => r.street);
+      const streets = { count: names.length, empty: names.filter((n) => !n).length, dupes: names.filter((n, i) => names.indexOf(n) !== i) };
+      // POIs + legend.
+      const kinds = [...new Set(W.places.map((p) => p.kind))];
+      const unlabelled = W.places.filter((p) => !p.label).length, unknown = kinds.filter((k) => !ICON[k]);
+      g.mapUI.setMode(1); d.teleport(470, -92, 0); await wait(300);
+      g.mapUI.setMode(2); await wait(300);
+      const legendKinds = [...document.querySelectorAll('[data-kind]')].map((e) => e.dataset.kind);
+      const labels = g.mapUI.st.labels.length, inView = g.mapUI.st.markers.filter((m) => m.inView).length, streetNames = g.mapUI.st.streetNames.length;
+      g.mapUI.setMode(1);
+      // Route: map-only, fades/trims the driven part, clears on arrival.
+      const beacon = !!g.scene.getObjectByName('waypoint-beacon');
+      d.teleport(340, -92, Math.PI / 2); await wait(200);
+      N.set(600, -60, null, g.controls.player.position);
+      const len0 = N.route.length, route = N.route.slice();
+      let i = 0; for (; i < route.length && N.progress < 150; i += 3) { d.teleport(route[i].x, route[i].z, 0); await wait(60); }
+      const after = { progress: Math.round(N.progress), trimmed: N.st.trimmed || 0, len: N.route.length, cum0: Math.round(N.cum[0] || 0) };
+      d.teleport(600, -62, 0); await wait(300);
+      const arrived = N.waypoint === null && N.route.length === 0;
+      return { streets, kinds, unlabelled, unknown, legendKinds, labels, inView, streetNames, beacon, len0, after, arrived, chip: [...document.querySelectorAll('div')].some((e) => /\d+ m$/.test(e.textContent || '') && e.style.border?.includes('ffcf4a')) };
+    });
+    check('every road has a unique, non-empty street name', r.streets.empty === 0 && r.streets.dupes.length === 0, r.streets);
+    check('every POI type is in the icon registry and has a label', r.unknown.length === 0 && r.unlabelled === 0, { unknown: r.unknown, unlabelled: r.unlabelled });
+    check('legend lists exactly the icon types in use', r.legendKinds.length === r.kinds.length && r.kinds.every((k) => r.legendKinds.includes(k)), { legend: r.legendKinds, kinds: r.kinds });
+    check('full map: labels + street names drawn at the default zoom', r.labels >= Math.min(5, r.inView) && r.streetNames >= 3, { labels: r.labels, inView: r.inView, streetNames: r.streetNames });
+    check('no world beacon / on-screen distance chip', !r.beacon && !r.chip, { beacon: r.beacon, chip: r.chip });
+    check('route behind me fades and is removed', r.after.progress >= 100 && r.after.trimmed > 0 && r.after.len < r.len0, { len0: r.len0, ...r.after });
+    check('route + pin clear on arrival', r.arrived);
+    check('no page errors (mapnav)', errors.length === 0, errors.slice(0, 3));
   }
 } finally {
   await context.close();
