@@ -18,7 +18,7 @@
 | Task | Name | State | Notes |
 | --- | --- | --- | --- |
 | 000 | Handoff triage | DONE | Audit and single-run evidence in docs/tasks/000-handoff.md. Phantom wall regression remains queued in 003; no game fixes claimed. |
-| 010 | Music player (T) | IN PROGRESS | Phase A and M1-M3 complete; next M4 keyboard bindings/Y siren and tests, then M5 live integration. UI/engine currently unconnected. See docs/tasks/010-music.md. |
+| 010 | Music player (T) | IN PROGRESS | PLAYABLE: M4/M5 wired, minimal real-game wiring test 6/6. Next M6 full musictest and serial regressions, M7 screenshots (0/3 used), M8 report. |
 | 002 | Braking stoppie | TODO | |
 | 003 | Phantom bumps at speed | TODO | |
 | 001 | Boost rockets + cabin boost | TODO | |

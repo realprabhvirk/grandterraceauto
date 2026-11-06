@@ -1,5 +1,5 @@
 // Emergency vehicles the player can steal (patrol cars from the station bay, the hospital's
-// ambulance): a roof light bar + livery on a normal drivable Car. T toggles lights + siren.
+// ambulance): a roof light bar + livery on a normal drivable Car. Y toggles lights + siren.
 import * as THREE from 'three';
 import { MAT } from '../art/materials.js';
 import { box, merge } from '../utils/geom.js';

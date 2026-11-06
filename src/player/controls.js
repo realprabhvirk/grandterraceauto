@@ -197,7 +197,7 @@ export function createControls({ camera, dom, physics, scene, world, spawn, ligh
           if (flyReturn === 'drive') vehicles.setActive(null);
         }
       }
-      if (input.pressed('KeyT') && mode === 'drive' && car?.emergency) flash(car.emergency.toggle() ? 'Lights + siren ON' : 'Lights + siren off');
+      if (input.pressed('KeyY') && mode === 'drive' && car?.emergency) flash(car.emergency.toggle() ? 'Lights + siren ON' : 'Lights + siren off');
       if (input.pressed('KeyN')) {
         lighting.toggleDusk();
         const night = lighting.target > 0.5;

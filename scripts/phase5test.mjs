@@ -396,7 +396,7 @@ try {
         await new Promise((q) => setTimeout(q, 1300));
         const car = g.controls.car;
         const row = { kind, prompt, mode: g.controls.mode, emergency: car?.emergency?.kind || null, hidden: !!p.hidden, collider: g.physics.toggles[p.id]?.isEnabled(), heat: g.wanted.heat - h0, witnessed };
-        if (car?.emergency) { await d.tap('KeyT'); row.siren = car.emergency.on && g.world.playerSiren; await d.tap('KeyT'); }
+        if (car?.emergency) { await d.tap('KeyY'); row.siren = car.emergency.on && g.world.playerSiren; await d.tap('KeyY'); }
         out.steals.push(row);
       }
       return out;
@@ -406,7 +406,7 @@ try {
     for (const s of r.steals) {
       check(`steal ${s.kind}: hold F -> driving it, prop hidden, collider off`, /break in/i.test(s.prompt || '') && s.mode === 'drive' && s.hidden && s.collider === false, s);
       check(`steal ${s.kind}: witnessed heat`, s.heat === (s.witnessed ? H[s.kind] : 0), s);
-      if (s.kind !== 'civ') check(`steal ${s.kind}: emergency kit, T = lights + siren`, s.emergency === s.kind && s.siren === true, s);
+      if (s.kind !== 'civ') check(`steal ${s.kind}: emergency kit, Y = lights + siren`, s.emergency === s.kind && s.siren === true, s);
     }
     const cj = await ev(() => { const g = window.__gta; return g.police.cars.every((c) => c.isPolice); });
     check('cop cars are never carjackable (isPolice)', cj);

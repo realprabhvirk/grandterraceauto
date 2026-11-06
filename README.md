@@ -15,7 +15,7 @@ inspired by Woodlands Estate, Waterford QLD, built around the hero house
   Arcade rules: no guns, no blood, no explosions; people hit by cars fall over and get back up.
 - **Phase 5:** first-person viewmodel, clearer cabin view, wheel/pinch zoom (never page zoom), no player damage
   inside cars, burning wrecks, fairer police (soft contact, flanking, officers on foot who pull you out),
-  KNOCKED OUT / BUSTED cutscenes, every parked car stealable (incl. police cars + the ambulance, T = siren),
+  KNOCKED OUT / BUSTED cutscenes, every parked car stealable (incl. police cars + the ambulance, Y = siren),
   **guns** (pistol, SMG, pump shotgun, rifle - hitscan, IK-held, viewmodel, effects, synth sounds, crime heat),
   armed police at 3+ stars, the **Barrel & Bolt** gun shop, four new districts - **Downtown**, **Terrace Beach**,
   **Northgate** (second suburb, school, shopping centre) and an **industrial estate** (the highway was skipped) -
@@ -100,7 +100,7 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | B | look behind |
 | **C** | camera: chase -> cabin (dash, gauges, mirrors) -> cinematic |
 | Wheel / pinch | zoom: chase distance, cabin FOV 65-85 (cinematic ignores it) |
-| **T** | lights + siren (stolen police car / ambulance) |
+| **Y** | lights + siren (stolen police car / ambulance) |
 | E | open/close 62's garage door from the car |
 | R | flip upright / reset |
 | Mouse | orbit the chase camera (it swings back behind when you drive) |
@@ -116,6 +116,12 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 | **Shift + N** | slow automatic day/night cycle on/off (or start with `?cycle`) |
 | ? (or H on foot) | show / hide the controls panel |
 | M | mute |
+| **T** | show/hide the music player (playback continues) |
+| **/** | music play/pause (plain slash; Shift+/ still opens help) |
+| **, / .** | previous / next music track (previous restarts after 3 seconds) |
+| **[ / ]** | rewind / forward 10 seconds |
+| **- / =** | lower / raise music volume |
+| **\\ / ;** | shuffle / cycle repeat off, all, one |
 | F2 | debug free-fly camera (WASD, Space/E up, Ctrl/Q down, Shift fast, 1-7 camera presets) |
 | F3 | FPS / draw calls / triangles overlay, plus the last car-damage cause (e.g. `DMG 2.1% building: n=(0,0,1)`) |
 | F4 | show physics colliders |
@@ -123,6 +129,20 @@ Click the game once: that captures the mouse (Esc releases it) and unlocks the a
 URL options: `?cam=hero-photo` (or `hero-front`, `hero-34`, `hero-porch`, `hero-car`, `street`,
 `overview`, `top`, `culdesac`, `junction`, `sign`, `cars`) starts the debug camera at that view;
 add `-dusk` (e.g. `?cam=hero-photo-dusk`) for night; `?hud` shows the F3 overlay; `?shot` hides the panel.
+
+### Music
+
+Get into a car with F, click the game to capture the mouse, press T to show the player, then plain / to play.
+Music shortcuts work with the mouse captured and no menu open. Release the mouse with Esc to click the
+card's transport controls, seek/volume sliders, Car toggle or List. Close Settings if it opens.
+The Car toggle defaults on: leaving a car fades out over 0.5 s and pauses; re-entry resumes if you had
+requested playback. Turn Car off to listen on foot. M and the Settings master volume affect music too.
+Cinematic camera hides the card; full map pauses the game while music continues. Cutscenes duck music.
+Reload restores track/settings but starts paused until you request playback with a user gesture.
+
+To add songs, drop audio files into `Car Music/` and run `.\dev.cmd npm run music`.
+Generated `public/music/` is ignored. Source songs are committed under the verified private-repository
+decision (unauthenticated GitHub API returned 404); recheck visibility before adding more audio.
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
 

@@ -35,6 +35,8 @@ export async function testMusicWiring(browser) {
     console.log('PASS wiring: T hides card without stopping music');
     await page.evaluate(()=>{
       const g=__gta,p=g.world.town.propCars.find(p=>p.kind==='police' && !p.hidden);
+      // Normal entry begins on foot. Detach from the hero car before entering another.
+      g.controls.respawnAt(g.controls.car.position,0);
       const car=g.controls.hooks.onPropSteal(p);g.controls.enterCar(car);
     });
     await page.waitForFunction(()=>__gta.controls.mode==='drive' && !!__gta.controls.car?.emergency);
@@ -48,6 +50,9 @@ export async function testMusicWiring(browser) {
     console.log('PASS wiring: Y toggles real emergency siren, T never changes it');
     assert.deepEqual(errors,[]);console.log('PASS wiring: no browser script errors');
     return 6;
+  } catch(e) {
+    console.error('Wiring diagnostic',await page.evaluate(()=>({mode:__gta.controls.mode,car:__gta.controls.car?.type,emergency:__gta.controls.car?.emergency?.kind})),errors);
+    throw e;
   } finally {await page.close();}
 }
 

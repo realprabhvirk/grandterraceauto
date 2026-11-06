@@ -3,20 +3,22 @@
 import { injectStyles } from './uiStyle.js';
 
 const k = (key) => `<span class="gta-key">${key}</span>`;
+const music = `${k('T')}music ${k('/')}play/pause ${k(', .')}tracks ${k('[ ]')}seek<br>
+    ${k('- =')}music volume ${k('\\')}shuffle ${k(';')}repeat`;
 const PAGES = {
   walk: `<b>On foot</b><br>
     ${k('WASD')}move ${k('Shift')}run ${k('Space')}jump ${k('Ctrl')}crouch<br>
     ${k('1')}wave ${k('2')}dance ${k('3')}sit ${k('4')}point<br>
     ${k('F')}get in car ${k('E')}doors ${k('C')}camera ${k('N')}day / night ${k('M')}mute<br>
-    ${k('F2')}debug fly cam ${k('F3')}stats ${k('F4')}colliders ${k('?')}hide`,
+    ${k('F2')}debug fly cam ${k('F3')}stats ${k('F4')}colliders ${k('?')}hide<br>${music}`,
   drive: `<b>Driving</b><br>
     ${k('W')}accelerate ${k('S')}brake / reverse ${k('A D')}steer<br>
     ${k('Space')}handbrake ${k('Shift')}boost ${k('H')}horn ${k('L')}lights<br>
     ${k('B')}look behind ${k('R')}flip upright ${k('F')}get out ${k('C')}camera<br>
-    ${k('N')}day / night ${k('M')}mute ${k('?')}hide`,
+    ${k('Y')}siren ${k('N')}day / night ${k('M')}mute ${k('?')}hide<br>${music}`,
   fly: `<b>Debug fly</b><br>
     ${k('WASD')}fly ${k('Space/E')}up ${k('Ctrl/Q')}down ${k('Shift')}fast<br>
-    ${k('1-7')}camera presets ${k('F2')}back ${k('F4')}colliders`,
+    ${k('1-7')}camera presets ${k('F2')}back ${k('F4')}colliders<br>${music}`,
 };
 
 export function createControlsPanel() {

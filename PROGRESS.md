@@ -1,16 +1,17 @@
 # Progress
 
 <!-- STATUS -->
-**STATUS (2026-11-06 05:40 IST)**
+**STATUS (2026-11-06 05:53 IST)**
 - Done: Codex setup and task 000 read-only handoff triage. Claude's braking implementation retained; existing braketest 57/57.
 - Open: intermittent traffic launches; phantomtest wall damage 0 twice versus 11.16 in instrumented probe; incomplete brake/motorway/cul-de-sac coverage. Detailed evidence: docs/tasks/000-handoff.md.
-- Next: task 010 M4 keyboard bindings/Y siren and tests, then M5 live integration. Phase A/M1-M3 complete (index 8/8; engine 23/23; UI 11/11 in Edge). Engine/UI are not wired into main yet; keys remain unchanged until M4. Follow docs/MASTER_PLAN.md order; L1-L3 precede world fill.
+- Next: task 010 M6 full musictest and serial regressions, then M7 screenshots (0/3 used) and M8. M4/M5 now wired in main: minimal real-game wiring test 6/6. Full lifecycle/performance acceptance pending. Follow docs/MASTER_PLAN.md order; L1-L3 precede world fill.
 <!-- /STATUS -->
 
 Timestamped log of the autonomous Phase 1 build.
 
 ## CODEX LOG
 
+- 2026-11-06 05:53 IST: Owner reprioritized playable milestone. Wrote musicWiringtest first; initial run failed because main had no music. Plan/test committed as af35e02. Added musicKeys, real main player/UI/master/menu/lifecycle wiring, Y siren, controls/README and phase5 siren test changes. Minimal test against 5180 now 6/6: captured-pointer T, actual / playback, . next, hidden-card playback, real emergency Y and no siren effect from T, no page errors. Fixed test setup to detach the seated character before entering another car (entry expects on-foot, as existing phase5 fixture does); assertions retained. Current 404 visibility check permits three tracked source MP3s; generated manifest has all correct titles/artists. public/music, *.log and .tools are ignored, no logs/scratch tracked. Full acceptance/regressions next, no screenshots yet.
 - 2026-11-06 05:40 IST: Task 010 M3: musicPlayerUi.js adds palette SVG road cover, all mouse controls/list, safe left-side width, captured-pointer exclusion, idle fade, hidden-mode toasts and 4 Hz changed-value DOM updates. `GTA_URL=http://127.0.0.1:5180/ .\dev.cmd node scripts/musicUitest.mjs` 11/11, injected into live game solely by test; expanded bounds (12,80), widths168/232/280, height253.28 at all three sizes, no protected HUD/central overlap. Armed UI clicks did not fire; canvas positive control did. Engine regression 23/23. Fixed test timing by waiting for exact CSS opacity endpoint after an early 0.849 sample; assertion retained. No main import, screenshots or build. Next M4.
 - 2026-11-06 05:27 IST: Task 010 M2: added musicConfig.js and musicPlayer.js (one HTMLAudioElement, real-time fade/duck, intent versus temporary suspension, seeded shuffle/history, repeat, safe storage, bounded error skip/retry). `GTA_URL=http://127.0.0.1:5180/ .\dev.cmd node scripts/musicEnginetest.mjs` passed 23 real Edge checks. Initial all-broken retry exposed reuse of cached media failure; explicit Play now reloads failed resource, and test proves recovery after corrupt response becomes valid. No game imports yet, so no gameplay behavior changed; integration regressions remain pending. Browser closed, zero screenshots/build/dependency changes. Next M3.
 - 2026-11-06 05:23 IST: Task 010 Phase A committed/pushed as 36f81f9: read integration modules, measured all HUD rectangles at three resolutions, decoded three source MP3s in Edge; unauthenticated GitHub returned 404 again. M1: added musicIndex.mjs, npm music, generated-directory ignore, musicIndextest.mjs. `.\dev.cmd npm run music` generated canonical three-track playlist; `.\dev.cmd node scripts/musicIndextest.mjs` 8/8. Edge played all three generated /music URLs with correct metadata and no decode errors. Source hashes match; generated audio untracked/ignored. No game code, dependencies, screenshots or build changed. Next M2.

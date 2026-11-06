@@ -15,6 +15,9 @@ import { cameraPreset } from './player/presets.js';
 import { createVehicles } from './vehicles/vehicleManager.js';
 import { createHeadlightRig } from './vehicles/headlightRig.js';
 import { createCarAudio } from './audio/carAudio.js';
+import { createMusicPlayer } from './audio/musicPlayer.js';
+import { createMusicKeys } from './audio/musicKeys.js';
+import { createMusicPlayerUi } from './ui/musicPlayerUi.js';
 import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
 import { createTraffic } from './traffic/trafficManager.js';
@@ -198,6 +201,10 @@ const gunShop = createGunShopMenu({ arsenal: weapons.arsenal, wallet, input: con
 if (world.town) world.town.hooks.openGunShop = () => gunShop.openMenu();
 const shopMenu = createShopMenu({ wallet, input: controls.input, audio, hud: statusHud, combat, character: controls.player.character });
 if (world.town) world.town.hooks.openShop = (s) => shopMenu.openMenu(s);
+const music = createMusicPlayer({ master: audio });
+const musicUi = createMusicPlayerUi(music);
+const musicMenuOpen = () => mapUI.open || gunShop.open || shopMenu.open || controls.settings.open;
+createMusicKeys({ music, ui: musicUi, input: controls.input, menuOpen: musicMenuOpen });
 renderer.info.autoReset = false; // main pass + viewmodel pass both count (mirrors render before the reset)
 const overlay = createOverlay(renderer, { visible: params.has('hud') });
 window.addEventListener('resize', () => {
@@ -207,6 +214,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
+  music, musicUi,
   ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, airport, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
@@ -264,6 +272,10 @@ renderer.setAnimationLoop(() => {
   debugDraw.update(controls.focus());
   if (cutscene.active) { controls.player.character.mesh.visible = true; controls.player.character.setHeadVisible(true); }
   weapons.update(dt); // guns: input, IK hold pose, hitscan, effects, viewmodel
+  // Music follows real time even when the map pauses the world or a cutscene slows it.
+  const musicDriving = controls.mode === 'drive' && !!controls.car && !controls.car.dead;
+  music.update(rdt, musicDriving, cutscene.active);
+  musicUi.update(rdt, musicDriving, controls.input.pointerLocked, controls.cameraMode === 'cinematic', cutscene.active, musicMenuOpen());
   controls.input.endFrame();
   renderer.info.reset();
   renderer.render(scene, camera);
