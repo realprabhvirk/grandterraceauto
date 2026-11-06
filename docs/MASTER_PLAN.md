@@ -28,7 +28,7 @@ Map expansion is explicitly requested after measuring existing land. New roads m
 | L1 | Test reliability and cul-de-sac completion | TODO | After 001, before 004: stalled routes and bus/district/shake timing evidence; see 000 report. |
 | L2 | Pull-over pursuit obstacle avoidance and return | TODO | After L1, before 004: breadcrumb corner cutting and visible return-to-post pop. |
 | L3 | Airport pushback tug and apron vehicle solidity | TODO | After L2, before 004: preserve existing operations, add missing support-vehicle polish. |
-| 004 | World fill (farms, industries, military base, busier world) | IN PROGRESS | Pre-check failures deferred R1/R2. A baseline63.980116% unused land, coverage10/10 + repeat verified; WORLD_PLAN proposes west extension. Next B1 terrain/chunking/bounds and continuity/perf tests, then B2 rural roads. World screenshots0/8. |
+| 004 | World fill (farms, industries, military base, busier world) | IN PROGRESS | A baseline63.980116%; B1 west extension/chunking/maps verified8/8, old heights exact,19scenes49-60fps/max366calls. Bare expanded land81.372345% unused. Next B2 site/road grading + lane/footpath graph, signs/limits, connectivity/full-throttle tests. World screenshots0/8; content/population pending. R1/R2 deferred. |
 | R1 | Deferred bump pre-check failures and coverage | TODO | At end of queue, per owner: wall11.16% but speed1.262m/s after impact; motorway/ramp check remains n/a; see004 Pre-check and task003. |
 | R2 | Deferred shake regression / music completion | TODO | At end of queue, per owner: chase .196/.288m spikes; retain thresholds and finish010 M6-M8 after investigation. |
 

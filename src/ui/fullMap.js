@@ -45,8 +45,8 @@ export function createMapUI({ world, minimap, nav, input, canvas: gameCanvas, ge
     st.draws++;
     const { w, h } = size(), s = getState();
     g.fillStyle = '#4d6838'; g.fillRect(0, 0, w, h);
-    const bg = minimap.bg, half = minimap.half;
-    if (bg) { const [x0, y0] = toScreen(-half, -half); g.imageSmoothingEnabled = true; g.drawImage(bg, x0, y0, half * 2 * st.scale, half * 2 * st.scale); }
+    const bg = minimap.bg, bounds = minimap.bounds;
+    if (bg) { const [x0, y0] = toScreen(bounds.x0, bounds.z0); g.imageSmoothingEnabled = true; g.drawImage(bg, x0, y0, (bounds.x1 - bounds.x0) * st.scale, (bounds.z1 - bounds.z0) * st.scale); }
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = `800 ${Math.round(Math.max(11, Math.min(18, 14 * st.scale / 0.6)))}px system-ui,sans-serif`;
     for (const d of DISTRICTS) { const [x, y] = toScreen(d.x, d.z); g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(d.name, x + 1, y + 1); g.fillStyle = 'rgba(246,238,223,.9)'; g.fillText(d.name, x, y); }

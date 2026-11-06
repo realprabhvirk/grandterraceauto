@@ -68,3 +68,24 @@ Metric limitations:25m cells with3x3 sub-samples approximate narrow features; cl
 WORLD_PLAN.md assigns existing empty areas to civilian infill/farms/reserves/industry and the contiguous west extension to Stoneleaf Garrison. Proposed x0=-1500 with z bounds preserved gives2560x1100m,901120terrain triangles/452025height samples; calculated geometry increment43.51MiB, actual perf pending. These are proposals, not measured expansion results.
 
 Before terrain edits capture a SHA-256 digest of every old-grid height and baseline perfscenes. B1 adds a rural config, extends MAP west only, blends the old edge rise only outside the old map, and splits render geometry into128-cell(320m) chunks, preserving each triangle and heightfield indexing. terrain.mesh becomes a group; the coverage tool will sum chunk geometry. main updates conservative chunk visibility. Maps include terrain extents with a capped raster size. One new regression script verifies full old-grid digest equality, new boundary extents, chunk triangle total and <=1cm Rapier/visual ray differences across old/new terrain and chunk edges; check the one-shadow-light rule. Then run existing walk/phase2, terrain/ghost scans and perfscenes serially; log measured extension cost before committing. Pads/rural road graph and driving tests follow separately in B2. No new content is claimed at B1.
+
+### B1 results (2026-11-06 17:48 IST)
+
+Changed src/rural/ruralConfig.js, terrain.js, main.js, minimap.js/fullMap.js; updated mapcoverage for chunk totals and perfscenes GTA_URL override (default5173 preserved). Added docs/terrain-baseline.json and scripts/terrainExpansiontest.mjs. Bounds now x[-1500,1060],z[-800,300];32 terrain chunks of up to320m replace the single terrain mesh. One continuous Rapier heightfield; boundary derives from MAP. Outer edge-rise blend acts strictly outside original x=-300. Sky already follows camera/fog local distances, so no sky/fog range increase needed. Maps use actual rectangular bounds and <=2048px raster.
+
+Tests with GTA_URL5180, `.\dev.cmd node`, all serial, browser closed each time:
+
+| Command | Result |
+| --- | --- |
+| scripts/terrainExpansiontest.mjs |8/8 exit0: exact full old-height digest, all2703360visual vertices match heights,901120triangles/32chunks, distance culling,6180physics rays/seams <=.01m, expanded boundary/one shadow light, map bounds/raster and walker on new ground. |
+| scripts/walktest.mjs |7/7 exit0. |
+| scripts/phase2test.mjs |16/16 exit0; night51fps/242calls. |
+| scripts/phase5test.mjs map pois signs |23/23 exit0; signs58fps/190calls. |
+| scripts/phantomtest.mjs scan |1/1 exit0;7737samples,0flagged. |
+| scripts/perfscenes.mjs (before, after) |Both exit0/no page errors; before40-60fps,max359calls; after49-60fps,max366calls. Town busiest foot60fps/196calls, cabin60fps/366calls; airport airside and firing SMG third-person minimum49fps. Logs codex-004-perf-before/after.log. |
+
+Cost: map area1.496->2.816km²; terrain triangles478720->901120 (+422400), heights240345->452025 (+211680); non-indexed vertex data +43.51MiB calculated, actual process peak RAM not separately measured. Map raster2048x880 (~6.88MiB RGBA) replaces origin-square growth. Rendered triangles fall through chunk culling (spawn834030->496622 in the two perf passes). No new lights/per-frame allocations introduced by this change. No build or screenshots.
+
+Investigation: initial terrain test failed116exact vertical rays on grid boundaries. Independent ignored one-off probe rebuilt the ORIGINAL heightfield from the saved old-grid heights: old/current both miss z=-195 at x=-200,-100,0,400,800; 1mm offsets hit (other old exact x boundaries also have misses). This is a query degeneracy, not evidence that extension removed ground. The permanent test now reproduces/logs an old/current reference and requires ALL four1mm neighbours when an exact cast misses; it does not discard a point or increase the1cm threshold. All6180casts including neighbours agree within0.000123m, and every visual vertex exactly matches heightfield input. Exact boundary misses remain separately reported, and potential vehicle-ray implications remain with R1; new roads must still drive clean. Initial red before implementation was missing updateVisibility; no assertions were weakened to hide missing expansion.
+
+Line-ending check: minimap/fullMap already use CRLF in tracked blobs. Preserve their style; `git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check` checks real whitespace without treating existing CRLF as trailing spaces. Next B2: rural road/site definitions, grading, lane/footpath links, signs/limits and full-throttle tests. No base/farm/industry objects exist yet.

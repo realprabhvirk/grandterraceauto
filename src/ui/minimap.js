@@ -4,6 +4,8 @@
 // shops). Call refresh() after the road network / places change (e.g. the town is added).
 import { UI, injectStyles } from './uiStyle.js';
 import { ROAD } from '../world/roadNetwork.js';
+import { MAP } from '../world/terrain.js';
+import { RURAL } from '../rural/ruralConfig.js';
 import { drawIcon, sortPlaces, drawRoute, drawStreetNames, ICON } from './mapIcons.js';
 
 const SIZE = 190, METRES = 230; // metres across the minimap
@@ -17,6 +19,8 @@ export function createMinimap(world) {
   document.body.appendChild(canvas);
   const g = canvas.getContext('2d');
   let bg = null, half = 0, visible = true, acc = 0;
+  let bgScale = 1;
+  const bounds = { x0: MAP.x0, x1: MAP.x1, z0: MAP.z0, z1: MAP.z1 };
   const markers = []; // last drawn markers (tests)
 
   function refresh() {
@@ -26,9 +30,12 @@ export function createMinimap(world) {
     for (const a of world.areas || []) maxR = Math.max(maxR, Math.abs(a.x0) + 40, Math.abs(a.x1) + 40, Math.abs(a.z0) + 40, Math.abs(a.z1) + 40);
     half = Math.ceil(maxR);
     bg = document.createElement('canvas');
-    bg.width = bg.height = half * 2;
+    bgScale = Math.min(1, RURAL.mapRasterMax / Math.max(bounds.x1 - bounds.x0, bounds.z1 - bounds.z0));
+    bg.width = Math.ceil((bounds.x1 - bounds.x0) * bgScale);
+    bg.height = Math.ceil((bounds.z1 - bounds.z0) * bgScale);
     const b = bg.getContext('2d');
-    b.fillStyle = '#5d7a43'; b.fillRect(0, 0, half * 2, half * 2);
+    b.fillStyle = '#5d7a43'; b.fillRect(0, 0, bg.width, bg.height);
+    b.setTransform(bgScale, 0, 0, bgScale, -(bounds.x0 + half) * bgScale, -(bounds.z0 + half) * bgScale);
     b.lineCap = b.lineJoin = 'round';
     for (const [w, col] of [[ROAD.pathOut * 2, '#b9ad95'], [ROAD.halfW * 2 + 1, '#3e3c42']]) {
       b.strokeStyle = col; b.lineWidth = w;
@@ -54,6 +61,7 @@ export function createMinimap(world) {
     get bg() { return bg; },
     get markers() { return markers; },
     get half() { return half; },
+    get bounds() { return bounds; },
     update(dt, { player, heading, police = [], stars = 0, lastSeen = null, route = [], waypoint = null, nav = null }) {
       if (!visible) return;
       acc += dt;
@@ -64,8 +72,8 @@ export function createMinimap(world) {
       g.clearRect(0, 0, SIZE, SIZE);
       g.beginPath(); g.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2); g.clip();
       g.fillStyle = '#4d6838'; g.fillRect(0, 0, SIZE, SIZE);
-      const ox = player.x + half - METRES / 2, oz = player.z + half - METRES / 2;
-      g.drawImage(bg, ox, oz, METRES, METRES, 0, 0, SIZE, SIZE);
+      const ox = (player.x - bounds.x0 - METRES / 2) * bgScale, oz = (player.z - bounds.z0 - METRES / 2) * bgScale;
+      g.drawImage(bg, ox, oz, METRES * bgScale, METRES * bgScale, 0, 0, SIZE, SIZE);
       const P = (x, z) => [(x - player.x) * k + SIZE / 2, (z - player.z) * k + SIZE / 2];
       if (stars > 0) {
         const c = lastSeen || player, [cx, cz] = P(c.x, c.z);

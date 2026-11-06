@@ -34,7 +34,7 @@ try {
       trees:w.trunks,water:[{x0:box.min.x,x1:box.max.x,z0:box.min.z,z1:box.max.z,y:WATER_Y}]
     });
     await new Promise(resolve=>setTimeout(resolve,1200));
-    r.baseline={terrainTriangles:w.terrain.mesh.geometry.attributes.position.count/3,heightSamples:w.terrain.heights.length,
+    r.baseline={terrainTriangles:w.terrain.triangleCount ?? w.terrain.mesh.geometry.attributes.position.count/3,heightSamples:w.terrain.heights.length,
       roads:w.network.allRoads.length,colliders:w.colliders.length,trees:w.trunks.length,pedestrians:g.peds.peds.length,traffic:g.traffic.cars.length,stats:g.stats()};
     return r;
   });

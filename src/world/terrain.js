@@ -6,9 +6,10 @@ import { fbm } from '../utils/noise.js';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
 import { AP } from '../airport/airportPlan.js';
+import { RURAL } from '../rural/ruralConfig.js';
 
 // Rectangular grid: the suburb (+-300) plus Terrace Town Centre to the east.
-export const MAP = { x0: -300, z0: -800, cell: 2.5, nx: 544, nz: 440 }; // Phase 5: x to 1060 (downtown); Phase 6.1: z from -800 (airport)
+export const MAP = { x0: RURAL.west, z0: -800, cell: 2.5, nx: 1024, nz: 440 }; // Western outer zone; old east/north/south bounds preserved.
 MAP.x1 = MAP.x0 + MAP.nx * MAP.cell; MAP.z1 = MAP.z0 + MAP.nz * MAP.cell;
 MAP.cx = (MAP.x0 + MAP.x1) / 2; MAP.cz = (MAP.z0 + MAP.z1) / 2;
 
@@ -40,6 +41,7 @@ export function naturalHeight(x, z) {
   let h = 13 * fbm(x / 240 + 3.1, z / 240 - 1.7, 4, 3);
   h += 2.2 * fbm(x / 60, z / 60, 3, 11);
   h += 0.018 * (z - x); // slight fall toward the north-west: views over the valley
+  const outerHeight = h;
   // Rise at the edge of the playable area (suburb, link valley, town) so the world reads
   // as a valley, not a cliff. Inside the suburb this is exactly the original +-220 rule.
   const out = (b, m) => Math.max(b.x0 - m - x, x - b.x1 - m, b.z0 - m - z, z - b.z1 - m);
@@ -65,6 +67,9 @@ export function naturalHeight(x, z) {
     const wb = 1 - smoothstep(0, BEACH.blend, ox);
     if (wb > 0) h = h * (1 - wb) + beachHeight(z) * wb;
   }
+  // The former west edge must not grow quadratically into mountains across the extension.
+  // Keep every old-map height unchanged; blend to gentle natural hills only outside it.
+  if (x < RURAL.oldWest) h += (outerHeight - h) * smoothstep(0, RURAL.edgeBlend, RURAL.oldWest - x);
   return h;
 }
 
@@ -186,11 +191,29 @@ export class Terrain {
   }
 
   _buildMesh() {
+    const group = new THREE.Group(); group.name = 'terrain';
+    this.chunks = [];
+    const size = RURAL.terrainChunkCells;
+    for (let iz = 0; iz < MAP.nz; iz += size) for (let ix = 0; ix < MAP.nx; ix += size) {
+      const x1 = Math.min(MAP.nx, ix + size), z1 = Math.min(MAP.nz, iz + size);
+      const mesh = this._buildPart(ix, iz, x1, z1);
+      group.add(mesh);
+      this.chunks.push({ mesh, x: MAP.x0 + (ix + x1) * MAP.cell / 2, z: MAP.z0 + (iz + z1) * MAP.cell / 2, r: Math.hypot(x1 - ix, z1 - iz) * MAP.cell / 2 });
+    }
+    this.triangleCount = MAP.nx * MAP.nz * 2;
+    return group;
+  }
+
+  updateVisibility(focus, distance) {
+    for (const c of this.chunks) c.mesh.visible = Math.hypot(focus.x - c.x, focus.z - c.z) <= distance + c.r;
+  }
+
+  _buildPart(ix0, iz0, ix1, iz1) {
     const { nx, nz, cell, x0, z0 } = MAP;
     const vn = this.vn;
     const H = this.heights;
-    const pos = new Float32Array(nx * nz * 18);
-    const col = new Float32Array(nx * nz * 18);
+    const pos = new Float32Array((ix1 - ix0) * (iz1 - iz0) * 18);
+    const col = new Float32Array(pos.length);
     const P = PALETTE.ground;
     const cGrass = new THREE.Color(P.grass), cDry = new THREE.Color(P.grassDry);
     const cDark = new THREE.Color(P.grassDark), cLawn = new THREE.Color(P.lawn);
@@ -229,8 +252,8 @@ export class Terrain {
         col[c++] = tmp.b * j;
       }
     };
-    for (let iz = 0; iz < nz; iz++) {
-      for (let ix = 0; ix < nx; ix++) {
+    for (let iz = iz0; iz < iz1; iz++) {
+      for (let ix = ix0; ix < ix1; ix++) {
         const a = iz * vn + ix, b = a + 1, cc = a + vn + 1, d = a + vn;
         const x = x0 + (ix + 0.5) * cell, z = z0 + (iz + 0.5) * cell;
         const slope1 = Math.max(Math.abs(H[b] - H[a]), Math.abs(H[d] - H[a])) / cell;

@@ -268,6 +268,7 @@ renderer.setAnimationLoop(() => {
   headlights.update(dt, lit, lighting.dusk);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);
   if (preset.noFog && controls.mode === 'fly') scene.fog.far = 1e5;
+  world.terrain.updateVisibility(controls.focus(), scene.fog.far);
   if (controls.cameraMode === 'cabin') mirrors.update(renderer, scene, controls.car, dt); else mirrors.resetGuard();
   debugDraw.update(controls.focus());
   if (cutscene.active) { controls.player.character.mesh.visible = true; controls.player.character.setHeadVisible(true); }
