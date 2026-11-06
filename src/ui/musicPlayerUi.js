@@ -63,15 +63,16 @@ export function createMusicPlayerUi(music) {
   toast.innerHTML = '<div data-m="toastLabel"></div><div data-m="toastText"></div>'; document.body.appendChild(toast);
   const fields = Object.fromEntries([...card.querySelectorAll('[data-m]'), ...toast.querySelectorAll('[data-m]')].map(e => [e.dataset.m, e]));
   const buttons = Object.fromEntries([...card.querySelectorAll('[data-action]')].map(e => [e.dataset.action, e]));
-  let expanded = false, idle = 0, toastTime = 0, note = '', dirty = true, acc = 0, dragging = false;
+  let expanded = false, idle = 0, toastTime = 0, note = '', notice = '', dirty = true, acc = 0, dragging = false;
   let wasPlaying = false, lastTracks = null, lastContext = -1, disposed = false;
   const st = { visible:false, expanded:false, renders:0 };
   const touch = () => {idle=0;dirty=true;};
   const unsubscribe = music.subscribe((kind, message) => {
     dirty = true;
-    if (kind === 'notice') { note=message;toastTime=MUSIC.toastDuration; }
+    if (kind === 'notice') { notice=note=message;toastTime=MUSIC.toastDuration; }
     else if (kind === 'track' || (!wasPlaying && music.state.playing)) {
-      note = music.track ? `${music.track.title} · ${music.track.artist}` : '';
+      const next = music.track ? `${music.track.title} · ${music.track.artist}` : '';
+      note = notice && toastTime>0 ? `${notice} · ${next}` : next;
       toastTime = MUSIC.toastDuration;
     }
     wasPlaying = music.state.playing;
@@ -131,6 +132,7 @@ export function createMusicPlayerUi(music) {
     for(const key of ['previous','back','play','forward','next']) if(buttons[key].disabled !== !t) buttons[key].disabled=!t;
     if(fields.seek.disabled !== !t) fields.seek.disabled=!t;
     text(fields.note,toastTime>0 ? note : s.requested && s.carOnly && !driving ? 'Resumes in a car' : 'T hide · / play');
+    attr(fields.note,'title',toastTime>0 ? note : '');
     if(lastTracks!==s.tracks) {
       lastTracks=s.tracks;fields.list.replaceChildren();
       s.tracks.forEach((track,index) => {const b=document.createElement('button');b.type='button';b.dataset.track=index;b.textContent=`${index+1}. ${track.title}`;b.title=`${track.title} · ${track.artist}`;fields.list.appendChild(b);});
@@ -143,6 +145,7 @@ export function createMusicPlayerUi(music) {
     update(dt,driving=false,locked=false,cinematic=false,cutscene=false,menu=false) {
       if(disposed) return;
       idle+=dt;toastTime=Math.max(0,toastTime-dt);acc+=dt;
+      if(toastTime===0) notice='';
       // Primitive bit mask avoids per-frame objects/strings and catches immediate mode transitions.
       const context=(driving?1:0)|(locked?2:0)|(cinematic?4:0)|(cutscene?8:0)|(menu?16:0);
       if(dirty || acc>=MUSIC.progressInterval || context!==lastContext) {render(driving,locked,cinematic,cutscene,menu);acc=0;dirty=false;lastContext=context;}

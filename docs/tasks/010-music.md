@@ -1,7 +1,7 @@
 # Task 010 - music player
 
 ## Intent and state
-Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A/M1-M3 complete; M4/M5 wired and minimal live test passed. M6-M8 acceptance pending.
+Add a persistent, gesture-started music player that remains usable while driving without covering the road or existing HUD. Move emergency lights/siren from T to Y. Preserve physics and the existing game audio mix. Phase A/M1-M5 complete. M6 music tests pass; shake regression remains unresolved. M7/M8 completion pending.
 
 ## Phase A evidence (2026-11-06, clock checked with Get-Date)
 
@@ -71,11 +71,11 @@ Make music playable in the real game before the broad acceptance sweep. First wr
 
 ## Acceptance tracking
 
-- [ ] Three canonical songs play; palette placeholder cover.
-- [ ] T toggle; no HUD/road overlap at all three sizes.
-- [ ] Keyboard while driving and free-cursor controls, seek/volume/shuffle/repeat.
-- [ ] Car-only, ducking, master volume and M mute.
-- [ ] Siren Y everywhere; T never toggles siren.
+- [x] Three canonical songs play; palette placeholder cover (numeric/DOM verified, visual review pending M7).
+- [x] T toggle; no HUD/road overlap at all three sizes (bounding boxes; M7 visual review pending).
+- [x] Keyboard while driving and free-cursor controls, seek/volume/shuffle/repeat.
+- [x] Car-only, ducking, master volume and M mute.
+- [x] Siren Y everywhere; T never toggles siren.
 - [x] Source audio visibility decision verified (404); generated copy ignored and untracked.
 - [ ] musictest and required regressions pass.
 - [ ] Final implementation/docs pushed.
@@ -113,3 +113,39 @@ Playback decoding is verified in headless Edge, not listening quality or a separ
 - `$env:GTA_URL='http://127.0.0.1:5180/'; .\dev.cmd node scripts/musicWiringtest.mjs`: **6/6**, exit 0. Actual pointer capture, T card shown, / media playback with advancing currentTime, . another playing track, T hiding without pause, Y real emergency lights/siren on and off while T leaves siren unchanged, no page errors. No module injection. All browsers closed.
 - Current unauthenticated GitHub API result **404**. Exactly three source MP3s tracked; generated manifest exists with Kaali Hoodie / Sidhu Moose Wala feat. Bohemia, GTA Mohali / Sultaan, Bexley. Road / SMG. `git check-ignore` confirms codex-music-ui.log, codex-music-wiring.log, .tools/music-audit.mjs and public/music/playlist.json ignored; no tracked logs or scratch fixtures.
 - Try on 5173: refresh, enter hero car with F, click game, T then plain /. Period skips; T hides while playing. In a stolen police car/ambulance Y toggles siren. Esc releases pointer; close Settings if it opens, then use sliders/List/Car. M unmutes if previously muted. Full lifecycle, broader hotkeys, regressions, perf and screenshot evidence remain M6-M8; this milestone does not claim those pass.
+
+## M6 checkpoint - 2026-11-06 14:26 IST
+
+Files: scripts/musictest.mjs (serial combined acceptance), musicUitest.mjs (component isolation and readiness/error regressions), phase4test.mjs (GTA_URL default still 5173), phase5test.mjs (clear-footpath map fixture); src/audio/musicKeys.js (keys while Shift boost held), src/ui/musicPlayerUi.js (preserve failure notice through automatic skip).
+
+Commands below used `$env:GTA_URL='http://127.0.0.1:5180/'` and `.\dev.cmd node`; SHOTS unset. Each browser closed before the next command. No dependencies, builds or screenshots.
+
+| Script / arguments | Result | Evidence / limitations |
+| --- | --- | --- |
+| scripts/musictest.mjs | **64/64, exit 0** | Index8, repository1, engine23, wiring6, UI12, live integration14. Actual three MP3s advance. Same scene off/on: 60/58.7 fps, 146/146.2 calls, 2514 scene nodes both. No browser script errors. |
+| scripts/walktest.mjs | **7/7, exit 0** | Porch, wall, movement, jump, debug camera. |
+| scripts/phase2test.mjs | **16/16, exit 0** | Day/night 60 fps; 213/235 calls. |
+| scripts/phase4test.mjs cameras police | **14/14, exit 0** | Mirrors live at 60 fps/124 calls, cinematic clear; pursuit/arrest/escape/carjack. |
+| scripts/phase5test.mjs steal pov cabin zoom map copstars | **48/48, exit 0** | Police and ambulance Y sirens verified; map fixture correction below. |
+| scripts/phase5test.mjs map (diagnostic before fixture correction) | **11/11, exit 0** | Resume movement2.1 m versus .49 m in original combined run. |
+| scripts/shaketest.mjs | **20/21, exit 1** | Downtown/Northgate chase spike .262 m, RMS .0251 below .060. All non-crash shake=0; real-crash shake=1. |
+| scripts/shaketest.mjs (isolated retry) | **20/21, exit 1** | Downtown now clean; straight chase spike .212 m (steps0, dt.0123), RMS .0184 below .060. |
+| .tools/shake-baseline.mjs (ignored diagnostic) | **19/21, exit 1** | Same shaketest with music player/UI disposed before recording. Straight spike .241 m (steps0, dt.0082), downtown .179 m (steps1, dt.0099). Non-crash shake=0, crash shake=1. This reproduces spikes without music; root cause remains unproven. |
+
+Test failures investigated without reducing thresholds:
+
+1. Seek fixture initially clicked immediately after metadata, before the UI's scheduled render had installed the duration maximum. Wait explicitly for slider max=duration; original seek fraction assertion retained.
+2. Failed-track UI notification was overwritten by the immediate track-change notification. Added a real corrupt-media route regression, observed failure, then preserved the failure notice alongside the next track for the toast duration; tooltip exposes full text. Test now passes.
+3. Shift blanket exclusion blocked next-track while boosting. Added failing captured-pointer Shift+Period test, then restricted the exclusion to Shift+Slash (existing Help). All other music keys remain available while holding boost; no handling numbers changed.
+4. Map's `fresh()` reset input/health but inherited the prior theft position. Combined run resumed only .49 m versus >.5 required; singly at spawn resumed2.1 m. Added clear-footpath start to the map section only. Same assertion now passes in the original combined command.
+
+### Exact continuation
+
+Do **not** mark Task010 done or start002. Investigate the chase spikes with the existing shaketest assertions intact. Read chaseCamera.js, jitterMonitor.js, physics interpolation and debugApi.drivePoints first. Record camera desired/smoothed pose, collision-ray distance/tag, focus, car velocity, physics.alpha, dt and preceding frame dt around spike frames. The disposed-music baseline proves occurrence without the new player, but does not identify whether abrupt collision pull-in, car motion or timing/interpolation causes it. `drivePoints` also teleports inside the recording helper, so distinguish initial setup from mid-run spikes (observed frames232-358 are well past setup). Keep original failed logs (ignored codex-music-shake*.log). After resolving or establishing an honest scoped regression disposition, finish M6, then M7 exactly three 1280x720 captures (none used) and M8 final README/report/status. No screenshots have been taken.
+
+### Owner by-hand checks / unverified
+
+- Refresh5173, enter car, click, T then /. Try comma/period/brackets/volume while driving; Y in police/ambulance. Shift+/ remains Help; Backslash shuffle, Semicolon repeat.
+- Listen to loudness, transitions and exit fade; headless tests verify decoding/timing/state but do not assess listening quality or a separate Chrome installation.
+- Inspect card legibility/road clearance in chase/cabin at normal display scaling; automated bounds pass, M7 images remain pending.
+- Source songs remain tracked under the 404/private check. Generated playlist contains all three canonical tracks. public/music/, *.log, .tools/ ignored; no tracked logs or scratch probes.

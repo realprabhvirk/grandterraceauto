@@ -1,4 +1,4 @@
-// M3: inject the unconnected UI into the live game, test real input and HUD bounds. No screenshots.
+// Component test: replace the live music instance to isolate UI modes against the real HUD/input.
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
@@ -14,6 +14,7 @@ export async function testMusicUi(browser) {
     await page.goto(new URL('?cam=player',process.env.GTA_URL || 'http://127.0.0.1:5173/').href);
     await page.waitForFunction(()=>window.__gta?.ready,null,{timeout:90000});
     await page.evaluate(async()=>{
+      __gta.musicUi?.dispose();__gta.music?.dispose();
       const {createMusicPlayer}=await import('/src/audio/musicPlayer.js');
       const {createMusicPlayerUi}=await import('/src/ui/musicPlayerUi.js');
       localStorage.removeItem('gta-music');
@@ -38,7 +39,7 @@ export async function testMusicUi(browser) {
     await click('previous');assert.equal(await page.evaluate(()=>testMusic.state.index),1);assert.ok(await page.evaluate(()=>testMusic.currentTime)<0.2);
     await click('previous');assert.equal(await page.evaluate(()=>testMusic.state.index),0);
     pass('mouse play/pause, next, previous, rewind/forward use real player');
-    await page.waitForFunction(()=>testMusic.duration>0);
+    await page.waitForFunction(()=>testMusic.duration>0 && Number(document.querySelector('[data-m="seek"]').max)===testMusic.duration);
     const seek=await page.locator('[data-m="seek"]').boundingBox();
     await page.mouse.click(seek.x+seek.width*0.6,seek.y+seek.height/2);
     const fraction=await page.evaluate(()=>testMusic.currentTime/testMusic.duration);assert.ok(fraction>0.5 && fraction<0.7);
@@ -129,6 +130,11 @@ export async function testMusicUi(browser) {
     });
     assert.ok(updates.renders>=3 && updates.renders<=5,JSON.stringify(updates));assert.ok(updates.mutations<=5,JSON.stringify(updates));
     pass('playing progress/DOM mutations stay at roughly four updates per second');
+    await page.route('**/music/Kaali*',r=>r.fulfill({contentType:'audio/mpeg',body:'broken media fixture'}));
+    await page.evaluate(()=>{testMusic.setShuffle(false);testMusic.select(0);testMusic.play();});
+    await page.waitForFunction(()=>testMusic.state.index===1 && testMusic.state.playing);
+    await page.waitForFunction(()=>document.querySelector('[data-m="note"]').textContent.includes('Could not play'),null,{timeout:3000});
+    pass('failed track remains visible in notice after automatic next-track selection');
     assert.deepEqual(errors,[]);pass('no browser script errors');
     await page.evaluate(()=>{clearInterval(musicUiTick);testMusicUi.dispose();testMusic.dispose();});
     return checks;

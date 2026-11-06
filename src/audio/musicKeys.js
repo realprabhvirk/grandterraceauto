@@ -5,8 +5,8 @@ export function createMusicKeys({ music, ui, input, menuOpen }) {
   function keydown(e) {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || input.locked || menuOpen()) return;
     if (!input.pointerLocked && document.activeElement?.closest('input,textarea,select,button,[contenteditable="true"]')) return;
-    // Shift+/ is the existing help key. All music shortcuts use the plain key.
-    if (e.shiftKey) return;
+    // Shift+/ is help; other music keys remain usable while holding Shift to boost.
+    if (e.shiftKey && e.code === 'Slash') return;
     switch (e.code) {
       case 'KeyT': music.setVisible(!music.state.visible); break;
       case 'Slash': music.toggle(); break;

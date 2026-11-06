@@ -980,6 +980,10 @@ try {
   if (run('map')) {
     await load();
     await fresh();
+    // Earlier theft sections can leave the walker beside a parked car/kerb. Test resume
+    // on a clear footpath so movement measures the map pause, rather than that obstacle.
+    await ev(() => { const g = window.__gta; g.debug.teleport(380, -92.8, Math.PI / 2); g.controls.player.state.yaw = Math.PI / 2; });
+    await wait(200);
     const tab = () => page.keyboard.press('Tab');
     let m = await ev(() => ({ mode: window.__gta.mapUI.mode }));
     await tab(); await wait(200);

@@ -16,7 +16,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ?
 const ev = (fn, arg) => page.evaluate(fn, arg);
 const wait = (ms) => page.waitForTimeout(ms);
 const load = async (q = '?cam=player') => {
-  await page.goto(`http://127.0.0.1:5173/${q}`, { waitUntil: 'load' });
+  await page.goto(new URL(q, process.env.GTA_URL || 'http://127.0.0.1:5173/').href, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__gta?.ready, null, { timeout: 90000 });
   await wait(600);
 };
