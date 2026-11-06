@@ -152,7 +152,9 @@ the southern town grid. Gravel roads have earth shoulders: rural connectors80km/
 Three farm clusters now have buildings, planted fields, orchards, dams and windmill pumps: Gumleaf Orchard
 Farm, Redbank Fields and Springbank Smallholding. Use their Farm markers on the map. Two farmers at each
 cluster walk work routes and tend the crops/orchard; they use the usual civilian reactions and witnesses.
-Animals, machinery and the enterable shop are next; industries and military operations are still being built.
+Gumleaf and Redbank have working field tractors; Redbank also has a harvester with a rotating header.
+They stop for people/cars, kick up dust and switch their lamps at night. These field machines are not enterable.
+Animals, farm utes and the enterable shop are next; industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -175,6 +177,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs walking # rural shoulder junctions, civilian links and original resident areas
 .\dev.cmd node scripts/worldtest.mjs farmstatic # actual farm content/solids/maps, day/night views and pause/culling
 .\dev.cmd node scripts/worldtest.mjs farmers # working/moving adults, clear paths, pause/sleep, reactions/get-up/witnesses
+.\dev.cmd node scripts/worldtest.mjs machinery # solid field routes, full real-time circuits, stops, dust/wheels, pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```

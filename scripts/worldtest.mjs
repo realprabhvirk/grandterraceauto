@@ -121,6 +121,53 @@ try{
   const recovered=await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id);return {state:p.state,hp:p.hp,solid:p.collider.isEnabled(),witness:g.crimes.getWitnesses({x:p.pos.x+1,y:p.pos.y,z:p.pos.z}).some(w=>w.ref===p&&!w.cop)};},id);
   console.log('Farmer reactions/recovery',JSON.stringify({shot,recovered}));assert.equal(recovered.state,'home');assert.equal(recovered.hp,100);assert.ok(recovered.solid&&recovered.witness);console.log('PASS farmers: working/moving adults, pause/sleep, alarm/shot/real car knockdown/get-up/witness behavior');
  }
+ if(run('machinery')){
+  const r=await page.evaluate(()=>{const g=__gta,ops=g.farmMachinery;if(!ops)throw Error('Farm machinery is not wired into the game');
+   return {count:ops.machines.length,kinds:ops.machines.map(m=>m.kind),farms:ops.machines.map(m=>m.farmId),dustCapacity:ops.dust.capacity};
+  });console.log('Machinery registry',JSON.stringify(r));assert.equal(r.count,3);assert.equal(r.kinds.filter(k=>k==='tractor').length,2);assert.equal(r.kinds.filter(k=>k==='harvester').length,1);assert.equal(r.dustCapacity,60);
+  const shapeScan=await page.evaluate(()=>{const g=__gta,R=g.RAPIER,blocked=[],summaries=[];let samples=0;
+   for(const m of g.farmMachinery.machines){const c=m.cfg,parts=[{x:0,y:(c.h+c.clearance)/2,z:0,shape:new R.Cuboid(c.w/2,(c.h-c.clearance)/2,c.l/2)}];
+    for(const w of m.model.wheels)parts.push({...w,shape:new R.Cylinder(c.wheelWidth/2,w.r),wheel:true});
+    if(c.header){const h=c.header;parts.push({x:0,y:h.y,z:h.z,shape:new R.Cuboid(h.w/2,h.h/2,h.d/2)});}
+    for(const p of m.route.samples){if(!Number.isFinite(p.x+p.y+p.z+p.yaw))throw Error('non-finite machine route');const cy=Math.cos(p.yaw),sy=Math.sin(p.yaw),s=Math.sin(p.yaw/2),co=Math.cos(p.yaw/2);
+     for(const part of parts){samples++;const position={x:p.x+part.x*cy+part.z*sy,y:p.y+part.y,z:p.z-part.x*sy+part.z*cy},q=part.wheel?{x:s*Math.SQRT1_2,y:s*Math.SQRT1_2,z:co*Math.SQRT1_2,w:co*Math.SQRT1_2}:{x:0,y:s,z:0,w:co};
+      g.physics.world.intersectionsWithShape(position,q,part.shape,col=>{const tag=g.physics.tagOf(col.handle);if(col.isEnabled()&&!['terrain','farm machinery','car','traffic','ped','player','police sensor'].includes(tag.type)&&blocked.length<20)blocked.push({id:m.id,x:p.x,z:p.z,tag});return true;});
+     }
+    }
+    const start=m.route.at(0,{}),wrapped=m.route.at(m.route.length,{});if(Math.hypot(start.x-wrapped.x,start.z-wrapped.z)>1e-6)throw Error('route seam');
+    summaries.push({id:m.id,length:m.route.length,parts:m.colliders.length,operator:m.model.driver.mesh.isSkinnedMesh,solidTags:m.colliders.every(c=>g.physics.tagOf(c.handle).owner===m.id),wheelColliders:m.colliders.filter(c=>c.shape.type===R.ShapeType.Cylinder).length});
+   }return {samples,blocked,summaries};
+  });console.log('Whole-route native shape scan',JSON.stringify(shapeScan));assert.deepEqual(shapeScan.blocked,[]);assert.ok(shapeScan.samples>10000);for(const m of shapeScan.summaries){assert.ok(m.operator&&m.solidTags&&m.parts>=5);assert.equal(m.wheelColliders,4);}
+  for(let i=0;i<3;i++){
+   await page.evaluate(i=>{const g=__gta,m=g.farmMachinery.machines[i],p=m.pose;g.debug.teleport(p.x+8,p.z+8,-3*Math.PI/4);},i);await page.waitForTimeout(600);
+   const a=await page.evaluate(i=>{const m=__gta.farmMachinery.machines[i],matrix=__gta.farmMachinery.wheels.instanceMatrix.array;return {s:m.s,spin:m.spin,header:m.model.header?.rotation.x||0,dust:__gta.farmMachinery.dust.emitted,wheel:Array.from(matrix.slice(i*64,i*64+12))};},i);await page.waitForTimeout(3000);
+   for(const dusk of [0,1]){await page.evaluate(({dusk,i})=>{const g=__gta,m=g.farmMachinery.machines[i];g.lighting.setDusk(dusk);g.debug.teleport(m.pose.x+18,m.pose.z+18,-3*Math.PI/4);},{dusk,i});await page.waitForTimeout(2500);
+    const b=await page.evaluate(i=>{const g=__gta,m=g.farmMachinery.machines[i],screen=m.model.root.position.clone();screen.y+=1.7;screen.project(g.camera);const body=m.body.translation();return {id:m.id,s:m.s,spin:m.spin,header:m.headerAngle,dust:g.farmMachinery.dust.emitted,activeDust:g.farmMachinery.dust.active,v:m.v,sleeping:m.sleeping,bodyError:Math.hypot(body.x-m.pose.x,body.y-m.pose.y,body.z-m.pose.z),renderError:Math.hypot(m.render.x-m.pose.x,m.render.z-m.pose.z),screen:{x:screen.x,y:screen.y,z:screen.z},arm:m.model.driver.bones.rShoulder.rotation.x,lamps:m.model.lamps.material.emissiveIntensity,fps:g.stats().fps,calls:g.renderer.info.render.calls,shadowLights:g.scene.children.filter(o=>o.isLight&&o.castShadow).length};},i);
+    const rotation=await page.evaluate(i=>Array.from(__gta.farmMachinery.wheels.instanceMatrix.array.slice(i*64,i*64+12)),i);assert.ok(rotation.some((v,k)=>Math.abs(v-a.wheel[k])>.01),'uploaded wheel rotation must change');
+    console.log('Moving field-machine view',dusk,JSON.stringify(b));assert.ok(!b.sleeping&&b.s>a.s+1&&b.spin>a.spin&&b.dust>a.dust&&b.activeDust>0&&b.activeDust<=60);assert.ok(b.bodyError<.002&&b.renderError<.1);assert.ok(Math.abs(b.screen.x)<1&&Math.abs(b.screen.y)<1&&Math.abs(b.arm)>.2);assert.ok(b.screen.z>=-1&&b.screen.z<=1);assert.equal(b.lamps>1,dusk===1);assert.equal(b.shadowLights,1);assert.ok(b.fps>=45&&b.calls<600);if(i===2){assert.ok(b.header>a.header);assert.ok(await page.evaluate(()=>__gta.farmMachinery.machines[2].model.header.rotation.x>0));}
+   }
+  }
+  const stopped=await page.evaluate(async()=>{const g=__gta,m=g.farmMachinery.machines[2],wait=ms=>new Promise(r=>setTimeout(r,ms)),p=m.pose,fx=Math.sin(p.yaw),fz=Math.cos(p.yaw);g.debug.teleport(p.x+fx*10,p.z+fz*10,0);await wait(1800);const hp=g.combat.hp,s=m.s,v=m.v,blocked=m.blocked;await wait(600);return {v,blocked,advance:m.s-s,hpBefore:hp,hpAfter:g.combat.hp};});console.log('Player obstacle stop',JSON.stringify(stopped));assert.ok(stopped.blocked&&stopped.v<.01&&stopped.advance<.01);assert.equal(stopped.hpBefore,stopped.hpAfter);
+  // Move an existing reactive farmer into the clear stopping zone, without disabling its collider or machine avoidance.
+  const farmerStop=await page.evaluate(async()=>{const g=__gta,m=g.farmMachinery.machines[2],p=g.peds.peds.find(p=>p.role==='farmer'&&p.home.farmId==='redbank'),wait=ms=>new Promise(r=>setTimeout(r,ms));g.debug.teleport(m.pose.x+12,m.pose.z+12,0);const old={home:p.home,state:p.state,x:p.pos.x,y:p.pos.y,z:p.pos.z};
+   p.home={...p.home,route:null,x:m.pose.x+Math.sin(m.pose.yaw)*7,y:m.pose.y+.05,z:m.pose.z+Math.cos(m.pose.yaw)*7,action:'phone'};p.pos.set(p.home.x,p.home.y,p.home.z);p.state='home';await wait(1800);const result={blocked:m.blocked,v:m.v,ped:p.state,hp:p.hp};p.home=old.home;p.pos.set(old.x,old.y,old.z);p.state=old.state;return result;
+  });console.log('Farmer obstacle stop',JSON.stringify(farmerStop));assert.ok(farmerStop.blocked&&farmerStop.v<.01);assert.notEqual(farmerStop.ped,'down');assert.equal(farmerStop.hp,100);
+  const carStop=await page.evaluate(async()=>{const g=__gta,m=g.farmMachinery.machines[2],c=g.vehicles.cars.find(c=>c.type==='ute'),wait=ms=>new Promise(r=>setTimeout(r,ms)),old={...c.position},yaw=c.body.yaw();g.debug.teleport(m.pose.x+14,m.pose.z+14,0);c.body.teleport(m.pose.x+Math.sin(m.pose.yaw)*10,m.pose.y,m.pose.z+Math.cos(m.pose.yaw)*10,m.pose.yaw);await wait(1800);const result={blocked:m.blocked,v:m.v,health:c.health};c.body.teleport(old.x,old.y,old.z,yaw);return result;});console.log('Car obstacle stop',JSON.stringify(carStop));assert.ok(carStop.blocked&&carStop.v<.01);assert.equal(carStop.health,100);
+  await page.evaluate(()=>{const g=__gta,m=g.farmMachinery.machines[2];g.debug.teleport(m.pose.x+12,m.pose.z+12,0);g.mapUI.setMode(2);});await page.waitForTimeout(100);
+  const paused=await page.evaluate(()=>__gta.farmMachinery.machines.map(m=>[m.s,m.spin,m.headerAngle]));await page.waitForTimeout(400);assert.deepEqual(await page.evaluate(()=>__gta.farmMachinery.machines.map(m=>[m.s,m.spin,m.headerAngle])),paused);
+  await page.evaluate(()=>{__gta.mapUI.setMode(1);__gta.debug.teleport(900,-400,0);});await page.waitForTimeout(200);const sleeping=await page.evaluate(()=>__gta.farmMachinery.machines.map(m=>({s:m.s,enabled:m.body.isEnabled(),sleeping:m.sleeping})));await page.waitForTimeout(400);assert.deepEqual(await page.evaluate(()=>__gta.farmMachinery.machines.map(m=>({s:m.s,enabled:m.body.isEnabled(),sleeping:m.sleeping}))),sleeping);assert.ok(sleeping.every(m=>m.sleeping&&!m.enabled));
+  await page.evaluate(()=>{const g=__gta,m=g.farmMachinery.machines[2],p=m.pose,c=Math.cos(p.yaw),s=Math.sin(p.yaw);g.debug.teleport(p.x+2.5*c+m.cfg.header.z*s,p.z-2.5*s+m.cfg.header.z*c,0);});await page.waitForTimeout(350);assert.ok(await page.evaluate(()=>{const m=__gta.farmMachinery.machines[2];return m.sleeping&&!m.body.isEnabled()&&__gta.combat.hp===100;}),'waking must not materialize the wide header on the player');
+  await page.evaluate(()=>{const g=__gta,m=g.farmMachinery.machines[2];g.debug.teleport(m.pose.x+10,m.pose.z+10,0);});await page.waitForTimeout(2500);assert.ok(await page.evaluate(()=>{const m=__gta.farmMachinery.machines[2];return !m.sleeping&&m.v>.5&&m.body.isEnabled();}));
+  // Observe real simulation-time circuits. No s/speed edits or accelerated stepping.
+  for(const ids of [[0],[1,2]]){
+   await page.keyboard.press('F2');
+   const cycle=await page.evaluate(async ids=>{const g=__gta,ms=ids.map(i=>g.farmMachinery.machines[i]),start=ms.map(m=>({s:m.s,laps:m.laps})),t0=performance.now(),timeout=Math.max(...ms.map(m=>m.route.length/m.cfg.speed))*1000+22000;
+    while(performance.now()-t0<timeout){const centre=ms[0].farm.config;g.camera.position.set(centre.id==='gumleaf'?-120:-1120,20,centre.id==='gumleaf'?-370:170);g.camera.lookAt(ms[0].pose.x,ms[0].pose.y,ms[0].pose.z);g.controls.syncFly();if(ms.every((m,i)=>m.laps>start[i].laps&&m.s>=start[i].s))break;await new Promise(r=>setTimeout(r,200));}
+    return {elapsed:(performance.now()-t0)/1000,machines:ms.map((m,i)=>({id:m.id,travel:(m.laps-start[i].laps)*m.route.length+m.s-start[i].s,length:m.route.length,laps:m.laps,blocked:m.blocked}))};
+   },ids);console.log('Observed real field circuits',JSON.stringify(cycle));for(const m of cycle.machines)assert.ok(m.travel>=m.length,JSON.stringify(m));await page.keyboard.press('F2');
+  }
+  console.log('PASS machinery: native solid route clearance, movement/circuits/wheels/header/dust, operators, obstacle stops, pause/sleep/wake and day/night budgets');
+ }
  if(run('drive')){
   await page.evaluate(async()=>{const g=__gta;g.debug.enter(g.vehicles.cars.findIndex(c=>c.type==='sedan'&&!c.dead));await new Promise(r=>setTimeout(r,1400));g.wanted.clear(true);g.police.reset();});
   const roads=(await page.evaluate(()=>__gta.world.rural.roads.map(r=>r.name))).filter(n=>!roadFilter||n===roadFilter);

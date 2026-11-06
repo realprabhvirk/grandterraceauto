@@ -21,6 +21,7 @@ import { createMusicPlayerUi } from './ui/musicPlayerUi.js';
 import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
 import { createTraffic } from './traffic/trafficManager.js';
+import { createFarmMachinery } from './rural/farmMachinery.js';
 import { createMirrors } from './camera/mirrors.js';
 import { createParticles } from './combat/particles.js';
 import { createBreakables } from './combat/breakables.js';
@@ -106,9 +107,10 @@ const debugDraw = createDebugDraw(scene, physics, world.terrain);
 world.town?.npcSpots.push(...activitySpots(world)); // Phase 6: bus-stop waiters, plaza dancers, stadium fans...
 const peds = createPedestrians({ scene, physics, world, townCount: 7, downtownCount: 9 });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
+const farmMachinery = createFarmMachinery({ scene, physics, world, controls, peds, vehicles, traffic });
 const cyclists = createCyclists({ scene, traffic, terrain: world.terrain });
 /** Everything with wheels that pedestrians should watch out for. */
-const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
+const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...farmMachinery.movers, ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
 
 // --- Damage, destruction, cash -------------------------------------------------------------
 const particles = createParticles(scene);
@@ -214,7 +216,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  music, musicUi,
+  music, musicUi, farmMachinery,
   ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, airport, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
@@ -259,6 +261,7 @@ renderer.setAnimationLoop(() => {
   }
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   world.town?.update(dt, { focus: controls.focus(), dusk: lighting.dusk });
+  farmMachinery.update(dt, physics.alpha, lighting.dusk);
   combat.update(dt);
   breakables.update(dt, controls.focus());
   particles.update(dt);
