@@ -2,7 +2,9 @@
 // label priority (higher wins when two labels collide). The legend is generated from the types
 // actually in use. Also shared drawing helpers: icons, labels with collision culling, the route
 // (part already driven fades out) and street names along roads.
+import { PALETTE } from '../art/palette.js';
 export const ICON = {
+  farm: { t: 'F', c: PALETTE.road.signBlade, label: 'Farm', pri: 6 },
   home: { t: '62', c: '#d86c3d', label: 'House 62', pri: 10 },
   police: { t: 'P', c: '#4f7bd8', label: 'Police station', pri: 9 },
   hospital: { t: 'H', c: '#3d8fd1', label: 'Hospital', pri: 9 },

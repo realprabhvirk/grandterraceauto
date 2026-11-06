@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
-import { analyzeCoverage,insideBox } from '../src/utils/mapCoverage.js';
+import { analyzeCoverage,insideBox,roadCovered } from '../src/utils/mapCoverage.js';
 const bounds={x0:0,x1:50,z0:0,z1:50},height=()=>0;
 let n=0;
 const check=(name,fn)=>{fn();n++;console.log('PASS coverage: '+name);};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} differs from ${b}`);
 check('empty grid and total area',()=>{const r=analyzeCoverage({bounds,height});near(r.unusedPercent,100);assert.equal(r.area,2500);assert.equal(r.regions.length,1);});
 check('water excluded from land denominator',()=>{const r=analyzeCoverage({bounds,height,water:[{...bounds,x1:25,y:1}]});assert.ok(Math.abs(r.counts.water-1250)<1e-7);near(r.unusedPercent,100);near(r.emptyMapPercent,50);});
+check('elliptical dams do not turn dry rectangle corners into water',()=>{const r=analyzeCoverage({bounds,height,water:[{...bounds,x:25,z:25,rx:25,rz:25,y:1}]});assert.ok(r.counts.water>1250&&r.counts.water<2400);assert.ok(r.counts.EMPTY>0);});
 check('low ground without an actual water footprint is empty',()=>near(analyzeCoverage({bounds,height:()=>-20}).unusedPercent,100));
 check('road corridor separates empty regions',()=>{const r=analyzeCoverage({bounds:{...bounds,x1:75},height,roadAt:x=>x>=25 && x<50});assert.equal(r.regions.length,2);assert.ok(Math.abs(r.counts.road-1250)<1e-7);});
+check('gravel counts its actual shoulders without invented urban footpaths',()=>{const b={x0:0,x1:20,z0:0,z1:10},sample=road=>analyzeCoverage({bounds:b,height,roadAt:x=>roadCovered({road,d:x})},{cell:5,samples:1});assert.equal(sample({rural:true,halfW:4.5}).counts.road,50);assert.equal(sample({town:true,halfW:4.5}).counts.road,100);});
 check('rotated footprint and solid classifier',()=>{assert.equal(insideBox(3,0,{x:0,z:0,hx:1,hz:5,rot:Math.PI/2}),true);assert.equal(insideBox(0,3,{x:0,z:0,hx:1,hz:5,rot:Math.PI/2}),false);assert.equal(analyzeCoverage({bounds,height,solids:[{x:25,z:25,hx:50,hz:50}]}).unusedPercent,0);});
 check('yards/districts, parks, dense groves',()=>{for(const content of [{yards:[{x:25,z:25,hx:50,hz:50}]},{districts:[bounds]},{parks:[bounds]},{trees:[{x:25,z:25},{x:26,z:25},{x:24,z:25}]}])assert.equal(analyzeCoverage({bounds:{x0:10,x1:40,z0:10,z1:40},height,...content}).unusedPercent,0);});
 check('one isolated tree does not fill land',()=>near(analyzeCoverage({bounds,height,trees:[{x:25,z:25}]}).unusedPercent,100));

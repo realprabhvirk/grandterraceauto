@@ -20,18 +20,18 @@ try {
     const {MAP,WATER_Y}=await import('/src/world/terrain.js');
     const {AP}=await import('/src/airport/airportPlan.js');
     const {lotPads}=await import('/src/world/layout.js');
-    const {analyzeCoverage}=await import('/src/utils/mapCoverage.js');
+    const {analyzeCoverage,roadCovered}=await import('/src/utils/mapCoverage.js');
     const water=w.town.beach.water.mesh;water.geometry.computeBoundingBox();water.updateMatrixWorld(true);
     const box=water.geometry.boundingBox.clone().applyMatrix4(water.matrixWorld);
     const park=w.town.wattle.mesh;park.geometry.computeBoundingBox();park.updateMatrixWorld(true);
     const parkBox=park.geometry.boundingBox.clone().applyMatrix4(park.matrixWorld);
     const r=analyzeCoverage({bounds:{x0:MAP.x0,x1:MAP.x1,z0:MAP.z0,z1:MAP.z1},height:(x,z)=>w.terrain.getHeight(x,z),
-      roadAt:(x,z)=>{const hit=w.network.index.nearest(x,z,20);return hit && hit.d<=(hit.road.halfW||3.6)+(hit.road.town?4.8:3.7);},
+      roadAt:(x,z)=>roadCovered(w.network.index.nearest(x,z,20)),
       solids:w.colliders.filter(c=>c.hy>=1 && c.hx>=1 && c.hz>=1),
       yards:lotPads(w.layout).map(l=>({x:l.x,z:l.z,hx:l.hw,hz:l.hd,rot:l.rot})),
-      districts:[{x0:AP.fence.x0,x1:AP.fence.x1,z0:AP.fence.north,z1:AP.fence.z}],
+      districts:[{x0:AP.fence.x0,x1:AP.fence.x1,z0:AP.fence.north,z1:AP.fence.z},...(w.rural?.cultivated||[])],
       parks:[w.town.gardens.bounds,{x0:parkBox.min.x,x1:parkBox.max.x,z0:parkBox.min.z,z1:parkBox.max.z}],
-      trees:w.trunks,water:[{x0:box.min.x,x1:box.max.x,z0:box.min.z,z1:box.max.z,y:WATER_Y}]
+      trees:w.trunks,water:[{x0:box.min.x,x1:box.max.x,z0:box.min.z,z1:box.max.z,y:WATER_Y},...(w.rural?.water||[])]
     });
     await new Promise(resolve=>setTimeout(resolve,1200));
     r.baseline={terrainTriangles:w.terrain.triangleCount ?? w.terrain.mesh.geometry.attributes.position.count/3,heightSamples:w.terrain.heights.length,

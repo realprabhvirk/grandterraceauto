@@ -44,6 +44,49 @@ try{
    return {lines:ids.length,edges:rural.edges.length,marked:ids.every(id=>lines[id].rural),unreachable,badPoints,north:north.length,misplaced:civilian.filter(p=>ruralIds.has(p.li)).map(p=>p.id)};
   });console.log('Walking evidence',JSON.stringify(r));assert.ok(r.lines>=r.edges*2);assert.ok(r.marked);assert.deepEqual(r.unreachable,[]);assert.deepEqual(r.badPoints,[]);assert.equal(r.north,4);assert.deepEqual(r.misplaced,[]);console.log('PASS walking: rural junctions/civilian verge links and legacy resident routes');
  }
+ if(run('farmstatic')){
+  const r=await page.evaluate(async()=>{
+   const g=__gta,{ICON}=await import('/src/ui/mapIcons.js'),farms=g.world.rural.farms;
+   if(!farms)throw Error('Farm clusters not built');
+   const required=['farmhouse','barn','shed','silo','tank','windmill','paddock','crop','orchard','hay','scarecrow','dam','track'],failures=[],summaries=[];
+   let lights=0,totalCrops=0;g.scene.traverse(o=>{if(o.isLight&&o.castShadow)lights++;});
+   for(const f of farms){
+    for(const kind of required)if(!f.features.some(p=>p.kind===kind))failures.push(`${f.id}: missing ${kind}`);
+    let triangles=0;f.group.traverse(m=>{if(m.isMesh&&m.geometry.attributes.position)triangles+=(m.geometry.index?m.geometry.index.count:m.geometry.attributes.position.count)/3*(m.isInstancedMesh?m.count:1);});
+    const crops=f.fields.reduce((s,p)=>s+p.mesh.count,0);totalCrops+=crops;
+    const solids=[];g.physics.world.forEachCollider(c=>{const tag=g.physics.tagOf(c.handle);if(tag.type==='farm'&&tag.owner.startsWith(`${f.id}:`))solids.push(c);});
+    if(solids.length<10||triangles<500||crops<20||f.orchard.trunks.length<4||!f.paddocks.length)failures.push(`${f.id}: missing physical/instanced content`);
+    for(const kind of ['farmhouse','barn','shed','silo','tank'])if(!solids.some(c=>g.physics.tagOf(c.handle).owner.startsWith(`${f.id}:${kind}`)))failures.push(`${f.id}: missing solid ${kind}`);
+    if(!solids.some(c=>c.shape.type===g.RAPIER.ShapeType.Cylinder))failures.push(`${f.id}: native round collider missing`);
+    const barn=f.config.barn,bh=g.world.terrain.getHeight(barn.x,barn.z);
+    const roof=g.physics.world.castRay(new g.RAPIER.Ray({x:barn.x,y:bh+30,z:barn.z+barn.d/4},{x:0,y:-1,z:0}),40,true,undefined,undefined,undefined,undefined,c=>g.physics.tagOf(c.handle).owner===`${f.id}:barn-roof`);
+    if(!roof)failures.push(`${f.id}: visible pitched roof not solid`);
+    const dam=f.config.dam,water=g.world.rural.water.find(b=>dam.x>=b.x0&&dam.x<=b.x1&&dam.z>=b.z0&&dam.z<=b.z1);
+    if(!water||water.y-g.world.terrain.getHeight(dam.x,dam.z)<.5)failures.push(`${f.id}: dam has no real depth`);
+    const sign=f.sign,n=sign.mesh.geometry.attributes.normal,near=g.world.network.index.nearest(sign.x,sign.z,20),dx=near.sample.x-sign.x,dz=near.sample.z-sign.z;
+    if((n.getX(0)*dx+n.getZ(0)*dz)/Math.hypot(dx,dz)<.9)failures.push(`${f.id}: sign faces away from approach road`);
+    for(let i=1;i<f.config.track.length;i++){const [ax,az]=f.config.track[i-1],[bx,bz]=f.config.track[i],length=Math.hypot(bx-ax,bz-az),tx=(bx-ax)/length,tz=(bz-az)/length;
+      for(let s=0;s<=length;s+=.5)for(const lat of [-2.25,0,2.25]){const x=ax+tx*s-tz*lat,z=az+tz*s+tx*lat;if(Math.abs(g.world.terrain.getHeight(x,z)+4.4)>.004)failures.push(`${f.id}: private yard track not flush`);}
+    }
+    if(!g.world.places.some(p=>p.kind==='farm'&&p.label===f.label))failures.push(`${f.id}: marker missing`);
+    summaries.push({id:f.id,triangles,crops,solids:solids.length,trees:f.orchard.trunks.length,rotor:f.windmill.rotor.rotation.z});
+   }
+   return {farms:farms.length,failures,summaries,totalCrops,lights,icon:ICON.farm?.label};
+  });console.log('Farm construction',JSON.stringify(r));assert.equal(r.farms,3);assert.deepEqual(r.failures,[]);assert.ok(r.totalCrops>=1000);assert.equal(r.lights,1);assert.equal(r.icon,'Farm');
+  for(const dusk of [0,1]){await page.evaluate(dusk=>__gta.lighting.setDusk(dusk),dusk);for(let i=0;i<r.farms;i++){
+   await page.evaluate(i=>{const f=__gta.world.rural.farms[i];__gta.debug.teleport(f.access.x,f.access.z,0);},i);await page.waitForTimeout(2700);
+   const a=await page.evaluate(i=>{const g=__gta,f=g.world.rural.farms[i];return {visible:f.group.visible,rotor:f.windmill.rotor.rotation.z,stats:g.stats(),calls:g.renderer.info.render.calls};},i);
+   await page.waitForTimeout(300);const angle=await page.evaluate(i=>__gta.world.rural.farms[i].windmill.rotor.rotation.z,i);
+   console.log('Farm view',i,'dusk',dusk,JSON.stringify(a));assert.ok(a.visible);assert.notEqual(a.rotor,angle);assert.ok(a.stats.fps>=45);assert.ok(a.calls<600);
+  }}
+  await page.evaluate(()=>__gta.mapUI.setMode(2));await page.waitForTimeout(100);
+  const pausedRotor=await page.evaluate(()=>__gta.world.rural.farms[2].windmill.rotor.rotation.z);await page.waitForTimeout(350);
+  assert.equal(await page.evaluate(()=>__gta.world.rural.farms[2].windmill.rotor.rotation.z),pausedRotor);
+  await page.evaluate(()=>{__gta.mapUI.setMode(1);__gta.lighting.setDusk(0);});await page.waitForTimeout(200);
+  assert.notEqual(await page.evaluate(()=>__gta.world.rural.farms[2].windmill.rotor.rotation.z),pausedRotor);
+  await page.evaluate(()=>__gta.debug.teleport(900,-400,0));await page.waitForTimeout(200);
+  assert.ok(await page.evaluate(()=>__gta.world.rural.farms.every(f=>!f.group.visible)));console.log('PASS farms: real structures/crops/solids/maps, windmill pumps, pause/resume, culling and day/night farm-view budget');
+ }
  if(run('drive')){
   await page.evaluate(async()=>{const g=__gta;g.debug.enter(g.vehicles.cars.findIndex(c=>c.type==='sedan'&&!c.dead));await new Promise(r=>setTimeout(r,1400));g.wanted.clear(true);g.police.reset();});
   const roads=(await page.evaluate(()=>__gta.world.rural.roads.map(r=>r.name))).filter(n=>!roadFilter||n===roadFilter);

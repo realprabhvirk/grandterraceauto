@@ -80,7 +80,7 @@ export class Terrain {
    * @param {Array} opts.pads    [{ x, z, r, h }]  circular flat areas (cul-de-sac ends)
    * @param {Array} opts.lots    [{ x, z, rot, hw, hd, h, fall }] oriented flat house pads
    */
-  constructor({ roads = [], pads = [], lots = [] } = {}) {
+  constructor({ roads = [], pads = [], lots = [], depressions = [] } = {}) {
     const { nx, nz, cell, x0, z0 } = MAP;
     const vn = nx + 1, vz = nz + 1, N = vn * vz;
     this.vn = vn; this.vz = vz;
@@ -156,6 +156,16 @@ export class Terrain {
       }
     }
 
+    // Shallow farm dams inside already-graded land. Roads always win; shared H drives physics.
+    for (const p of depressions) {
+      const ix0=Math.max(0,Math.floor((p.x-p.hw-p.fall-x0)/cell)),ix1=Math.min(nx,Math.ceil((p.x+p.hw+p.fall-x0)/cell));
+      const iz0=Math.max(0,Math.floor((p.z-p.hd-p.fall-z0)/cell)),iz1=Math.min(nz,Math.ceil((p.z+p.hd+p.fall-z0)/cell));
+      for(let iz=iz0;iz<=iz1;iz++)for(let ix=ix0;ix<=ix1;ix++){
+        const k=iz*vn+ix;if(roadDist[k]<R)continue;
+        const dx=Math.max(0,Math.abs(x0+ix*cell-p.x)-p.hw),dz=Math.max(0,Math.abs(z0+iz*cell-p.z)-p.hd),w=1-smoothstep(0,p.fall,Math.hypot(dx,dz));
+        H[k]+=(p.h-H[k])*w;
+      }
+    }
     this.mesh = this._buildMesh();
   }
 

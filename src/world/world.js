@@ -26,6 +26,9 @@ import { SPEEDING } from '../police/speedingConfig.js';
 import { fbm } from '../utils/noise.js';
 import { buildRuralPlan, attachRuralGraph } from '../rural/ruralPlan.js';
 import { buildRuralRoads } from '../rural/ruralRoads.js';
+import { buildFarms } from '../rural/farms.js';
+import { farmPonds, farmTracks } from '../rural/farmConfig.js';
+import { TOWN } from './terrain.js';
 
 export function buildWorld(scene) {
   const t0 = performance.now();
@@ -38,7 +41,7 @@ export function buildWorld(scene) {
   // street corridors under its bridges to the streets that pass underneath.
   const hwRoad = plan.roads.find((r) => r.highway && !r.ramp);
   const hwGrade = [-6, 0, 6].map((dz) => ({ halfW: 4, samples: hwRoad.samples.filter((s) => !HWY.crossings.some((c) => Math.abs(s.x - c) < HWY.deckHalf)).map((s) => ({ ...s, z: s.z + dz })) }));
-  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade, ...rural.roads], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots(), ...rural.sites] });
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade, ...rural.roads, ...farmTracks(TOWN.h)], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots(), ...rural.sites], depressions: farmPonds(TOWN.h) });
   terrain.bridges = BRIDGES;
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));
@@ -82,9 +85,15 @@ export function buildWorld(scene) {
   const highway = buildHighway({ scene, terrain });
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders, ...highway.colliders];
+  const originalColliders = colliders.slice();
+  const farms = buildFarms({ parent: scene, terrain });
+  rural.farms = farms.farms; rural.cultivated = farms.cultivated; rural.water = farms.water;
+  town.chunks.push(...farms.chunks); town.places.push(...farms.places); town.updaters.push(...farms.updaters);
+  colliders.push(...farms.colliders);
   const trunks = [...trees.trunks, ...town.trunks];
+  trunks.push(...farms.trunks);
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, town, rural, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway, areas: airportAreas() };
+  return { network, layout, terrain, colliders, originalColliders, trunks, hero, town, rural, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway, areas: airportAreas() };
 }
 
 /**

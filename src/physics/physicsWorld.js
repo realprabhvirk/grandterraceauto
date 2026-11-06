@@ -34,7 +34,8 @@ export function createPhysics(world) {
     return { x: cy * sx, y: sy * cx, z: -sy * sx, w: cy * cx };
   };
   for (const c of world.colliders) {
-    add(RAPIER.ColliderDesc.cuboid(c.hx, c.hy, c.hz).setTranslation(c.x, c.y, c.z).setRotation(quat(c.rot, c.rotX)), c.tag || 'building', c.owner || '');
+    const desc = c.shape === 'cylinder' ? RAPIER.ColliderDesc.cylinder(c.hy, c.radius) : c.shape === 'cone' ? RAPIER.ColliderDesc.cone(c.hy, c.radius) : RAPIER.ColliderDesc.cuboid(c.hx, c.hy, c.hz);
+    add(desc.setTranslation(c.x, c.y, c.z).setRotation(quat(c.rot, c.rotX)), c.tag || 'building', c.owner || '');
   }
   // Switchable colliders (62's doors): handles go back to their owner.
   const toggles = {};

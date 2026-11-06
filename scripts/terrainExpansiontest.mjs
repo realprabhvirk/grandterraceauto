@@ -5,6 +5,7 @@ import {chromium} from 'playwright';
 import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 const baseline=JSON.parse(await readFile(new URL('../docs/terrain-baseline.json',import.meta.url),'utf8'));
+const originalColliderCount=JSON.parse(await readFile(new URL('../docs/coverage-baseline.json',import.meta.url),'utf8')).baseline.colliders;
 const originalBytes=gunzipSync(await readFile(new URL('../docs/terrain-baseline.f32.gz',import.meta.url)));
 assert.equal(createHash('sha256').update(originalBytes).digest('hex'),baseline.sha256);
 const original=Array.from(new Float32Array(originalBytes.buffer,originalBytes.byteOffset,originalBytes.byteLength/4));
@@ -14,14 +15,15 @@ try {
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto(new URL('?cam=player',process.env.GTA_URL||'http://127.0.0.1:5173/').href);
  await page.waitForFunction(()=>__gta?.ready,null,{timeout:90000});
- const r=await page.evaluate(async ({baseline,original})=>{
+ const r=await page.evaluate(async ({baseline,original,originalColliderCount})=>{
   const g=__gta,t=g.world.terrain,{MAP}=await import('/src/world/terrain.js');
   const b=baseline.bounds,old=new Float32Array(baseline.heightCount),offset=Math.round((b.x0-MAP.x0)/MAP.cell);
   for(let iz=0;iz<=b.nz;iz++) for(let ix=0;ix<=b.nx;ix++) old[iz*(b.nx+1)+ix]=t.heights[iz*(MAP.nx+1)+offset+ix];
   const digest=await crypto.subtle.digest('SHA-256',old);
   const hash=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
   const {CORRIDOR}=await import('/src/world/terrain.js'),rural=g.world.rural;
-  const protectedSolids=[...g.world.colliders];
+  const protectedSolids=[...(g.world.originalColliders || g.world.colliders)];
+  if(protectedSolids.length<originalColliderCount)throw Error('Original developed collider footprints were lost');
   g.physics.world.forEachCollider(c=>{if(g.physics.tagOf(c.handle).type==='landmark'&&c.shape.halfExtents){const p=c.translation(),q=c.rotation(),e=c.shape.halfExtents;protectedSolids.push({x:p.x,z:p.z,hx:e.x,hz:e.z,rot:2*Math.atan2(q.y,q.w)});}});
   let changed=0,unplanned=0,protectedChanged=0;const examples=[];
   for(let iz=0;iz<=b.nz;iz++)for(let ix=0;ix<=b.nx;ix++){
@@ -60,7 +62,7 @@ try {
   t.updateVisibility({x:-1100,z:-300},300);const visible=t.chunks.filter(c=>c.mesh.visible).length;
   return {MAP,hash,changed,unplanned,protectedChanged,examples,triangles,vertices,vertexErrors,shadowLights,boundary,rays,missing,misses,exactBoundaryMisses,boundaryReference,maxError,chunks:t.chunks.length,visible,
    mapBounds:g.minimap.bounds,bgWidth:g.minimap.bg.width,bgHeight:g.minimap.bg.height};
- },{baseline,original});
+ },{baseline,original,originalColliderCount});
  assert.equal(r.MAP.x0,-1500);assert.equal(r.MAP.x1,1060);assert.equal(r.MAP.nz,440);console.log('PASS terrain: expanded west only');
  assert.equal(r.unplanned,0,JSON.stringify(r.examples));assert.equal(r.protectedChanged,0,JSON.stringify(r.examples));console.log(`PASS terrain: ${r.changed} intentional grading samples; every other original height bit-for-bit unchanged, developed ground preserved`);
  assert.equal(r.triangles,901120);assert.equal(r.chunks,32);assert.equal(r.vertexErrors,0);console.log('PASS terrain: all chunk vertices match heightfield; exact triangle total');

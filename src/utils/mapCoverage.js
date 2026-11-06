@@ -7,6 +7,11 @@ export function insideBox(x,z,b) {
   return Math.abs(dx*c-dz*s)<=b.hx && Math.abs(dx*s+dz*c)<=b.hz;
 }
 const insideRect=(x,z,b)=>x>=b.x0 && x<=b.x1 && z>=b.z0 && z<=b.z1;
+export function roadCovered(hit) {
+  if(!hit)return false;
+  const r=hit.road;
+  return hit.d<=(r.halfW||3.6)+(r.rural?1:r.town?4.8:3.7);
+}
 
 function boxIndex(boxes,cell) {
   const bins=new Map();
@@ -27,7 +32,7 @@ export function analyzeCoverage(data, options={}) {
   const counts=Object.fromEntries(COVERAGE_CLASSES.map(k=>[k,0])),cells=[];
   const cols=Math.ceil((b.x1-b.x0)/cfg.cell),rows=Math.ceil((b.z1-b.z0)/cfg.cell);
   function classify(x,z,h) {
-    if((data.water||[]).some(w=>insideRect(x,z,w) && h<w.y)) return 'water';
+    if((data.water||[]).some(w=>insideRect(x,z,w) && h<w.y && (!w.rx || ((x-w.x)/w.rx)**2+((z-w.z)/w.rz)**2<=1))) return 'water';
     if(data.roadAt?.(x,z)) return 'road';
     if(building(x,z)) return 'building';
     if(yard(x,z) || (data.districts||[]).some(r=>insideRect(x,z,r))) return 'district';
