@@ -34,6 +34,16 @@ try{
   });
   console.log('Road evidence',JSON.stringify(r));assert.ok(r.roads>=12&&r.lanes>=r.roads*2);for(const k of ['unreachable','missingSigns','missingBlades','badLimits','badLanes','ghosts'])assert.deepEqual(r[k],[],k);assert.ok(r.unique);assert.ok(r.paths>0);assert.equal(r.missing,0);assert.ok(r.maxError<=.01);assert.ok(r.maxStep<=.02);console.log('PASS roads: directed connectivity, signs, limits, full-width terrain and ghost scan');
  }
+ if(run('walking')){
+  const r=await page.evaluate(()=>{const g=__gta,rural=g.world.rural,{lines,links,suburbLines}=g.peds.graph,ids=rural.pedLines.map(l=>lines.indexOf(l)),ruralIds=new Set(ids),unreachable=[];
+   for(const start of ids){const seen=new Set([start]),q=[start];for(let i=0;i<q.length;i++)for(const e of [...links[q[i]].start,...links[q[i]].end])if(!seen.has(e.line)){seen.add(e.line);q.push(e.line);}
+    if(ids.some(id=>!seen.has(id))||!q.some(id=>id>=suburbLines&&!ruralIds.has(id)))unreachable.push(start);
+   }
+   const badPoints=[];for(const id of ids)for(const p of lines[id])if(!Number.isFinite(p.x+p.y+p.z)||Math.abs(p.y-g.world.terrain.getHeight(p.x,p.z))>.01){if(badPoints.length<8)badPoints.push({id,x:p.x,z:p.z,y:p.y});}
+   const north=g.peds.peds.filter(p=>p.area==='north'),civilian=g.peds.peds.filter(p=>['north','town','downtown','beach'].includes(p.area));
+   return {lines:ids.length,edges:rural.edges.length,marked:ids.every(id=>lines[id].rural),unreachable,badPoints,north:north.length,misplaced:civilian.filter(p=>ruralIds.has(p.li)).map(p=>p.id)};
+  });console.log('Walking evidence',JSON.stringify(r));assert.ok(r.lines>=r.edges*2);assert.ok(r.marked);assert.deepEqual(r.unreachable,[]);assert.deepEqual(r.badPoints,[]);assert.equal(r.north,4);assert.deepEqual(r.misplaced,[]);console.log('PASS walking: rural junctions/civilian verge links and legacy resident routes');
+ }
  if(run('drive')){
   await page.evaluate(async()=>{const g=__gta;g.debug.enter(g.vehicles.cars.findIndex(c=>c.type==='sedan'&&!c.dead));await new Promise(r=>setTimeout(r,1400));g.wanted.clear(true);g.police.reset();});
   const roads=(await page.evaluate(()=>__gta.world.rural.roads.map(r=>r.name))).filter(n=>!roadFilter||n===roadFilter);

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { MAP } from '../world/terrain.js';
 import { PALETTE } from '../art/palette.js';
 import { MAT } from '../art/materials.js';
+import { T } from '../town/townPlan.js';
 
 export function buildRuralRoads(rural,terrain,parent) {
   for(const road of rural.roads){
@@ -20,7 +21,15 @@ export function buildRuralRoads(rural,terrain,parent) {
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));geo.computeVertexNormals();geo.computeBoundingSphere();
     const mesh=new THREE.Mesh(geo,MAT.decal);mesh.name=`gravel-${road.name}`;mesh.receiveShadow=true;parent.add(mesh);
     rural.chunks.push({group:mesh,x:(a.x+b.x)/2,z:(a.z+b.z)/2,r:road.length/2+w});
-    // Walking shoulders meet at rural intersections; no raised pavement or solid kerbs.
-    for(const side of [-1,1]){const line=[];for(let i=0;i<road.samples.length;i+=2){const s=road.samples[i],x=s.x+s.nx*(road.halfW+.6)*side,z=s.z+s.nz*(road.halfW+.6)*side;line.push({x,z,y:terrain.getHeight(x,z)+.005,ox:s.nx*side,oz:s.nz*side,detour:null});}rural.pedLines.push(line);}
   }
+  const shoulder=(ax,az,bx,bz,side,width)=>{
+    const length=Math.hypot(bx-ax,bz-az),dx=(bx-ax)/length,dz=(bz-az)/length,n=Math.ceil(length/2.5),line=[];
+    for(let i=0;i<=n;i++){const x=ax+(bx-ax)*i/n-dz*width*side,z=az+(bz-az)*i/n+dx*width*side;line.push({x,z,y:terrain.getHeight(x,z)+.005,ox:-dz*side,oz:dx*side,detour:null});}
+    line.rural=true;rural.pedLines.push(line);
+  };
+  // Pedestrians choose links only at line ends: split at the actual road junctions.
+  for(const {a,b,road} of rural.edges)for(const side of [-1,1])shoulder(a.x,a.z,b.x,b.z,side,road.halfW+.6);
+  // The existing west ramp connects the new gravel verge to the civilian footpaths.
+  const zs=[-215,-252,-290],width=T.hw+T.kerb+T.path/2;
+  for(let i=1;i<zs.length;i++)for(const side of [-1,1])shoulder(330,zs[i-1],330,zs[i],side,width);
 }

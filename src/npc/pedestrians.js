@@ -36,17 +36,17 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   if (parkLines.length) specs.push({ role: 'jogger', area: 'park' }, { role: 'dogWalker', area: 'park' });
   // Old town centre lines only for the town shoppers (the grid now also covers downtown / Northgate).
   const oldTown = [];
-  for (let k = graph.suburbLines; k < parkStart; k++) { const p = graph.lines[k][0]; if (p.x > 320 && p.x < 612 && p.z > -225 && p.z < 52) oldTown.push(k); }
+  for (let k = graph.suburbLines; k < parkStart; k++) { const p = graph.lines[k][0]; if (!graph.lines[k].rural && p.x > 320 && p.x < 612 && p.z > -225 && p.z < 52) oldTown.push(k); }
   // Downtown crowds: office workers with briefcases (lines whose start is east of Station St).
   const dtLines = [];
-  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].x > 612 && graph.lines[k][0].x < 1000) dtLines.push(k);
+  for (let k = graph.suburbLines; k < parkStart; k++) if (!graph.lines[k].rural && graph.lines[k][0].x > 612 && graph.lines[k][0].x < 1000) dtLines.push(k);
   if (dtLines.length) for (let i = 0; i < downtownCount; i++) specs.push({ role: i % 4 === 3 ? 'walker' : 'office', area: 'downtown' });
   // Promenade walkers (the beach line runs along z ~60, x > 620).
   const beachLines = [];
-  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z > 55 && graph.lines[k][0].x > 620) beachLines.push(k);
+  for (let k = graph.suburbLines; k < parkStart; k++) if (!graph.lines[k].rural && graph.lines[k][0].z > 55 && graph.lines[k][0].x > 620) beachLines.push(k);
   // Northgate residents (block loops north of the ring road).
   const ngLines = [];
-  for (let k = graph.suburbLines; k < parkStart; k++) if (graph.lines[k][0].z < -250) ngLines.push(k);
+  for (let k = graph.suburbLines; k < parkStart; k++) if (!graph.lines[k].rural && graph.lines[k][0].z < -250) ngLines.push(k);
   if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' }, { role: 'shopper', area: 'north' });
   if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
@@ -70,7 +70,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     physics.tag?.(collider, 'ped', `ped-${i}`);
     const jog = spec.role === 'jogger';
     const ped = {
-      id: `ped-${i}`, role: spec.role, home: spec.spot || null, ch, body, collider, scale, flee: 0,
+      id: `ped-${i}`, role: spec.role, area: spec.area || spec.spot?.area || 'spot', home: spec.spot || null, ch, body, collider, scale, flee: 0,
       li, idx, dir: r.chance(0.5) ? 1 : -1,
       pos: new THREE.Vector3(p.x, p.y, p.z), yaw: spec.spot ? spec.spot.yaw : 0,
       speed: jog ? r.range(4.6, 5.3) : r.range(1.05, 1.45), cur: 0,
