@@ -4,5 +4,6 @@ dist/
 shots/
 public/music/
 *.log
+docs/coverage-current.*
 
 scripts/_probe.mjs

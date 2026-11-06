@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { analyzeCoverage,insideBox } from '../src/utils/mapCoverage.js';
+const bounds={x0:0,x1:50,z0:0,z1:50},height=()=>0;
+let n=0;
+const check=(name,fn)=>{fn();n++;console.log('PASS coverage: '+name);};
+const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} differs from ${b}`);
+check('empty grid and total area',()=>{const r=analyzeCoverage({bounds,height});near(r.unusedPercent,100);assert.equal(r.area,2500);assert.equal(r.regions.length,1);});
+check('water excluded from land denominator',()=>{const r=analyzeCoverage({bounds,height,water:[{...bounds,x1:25,y:1}]});assert.ok(Math.abs(r.counts.water-1250)<1e-7);near(r.unusedPercent,100);near(r.emptyMapPercent,50);});
+check('low ground without an actual water footprint is empty',()=>near(analyzeCoverage({bounds,height:()=>-20}).unusedPercent,100));
+check('road corridor separates empty regions',()=>{const r=analyzeCoverage({bounds:{...bounds,x1:75},height,roadAt:x=>x>=25 && x<50});assert.equal(r.regions.length,2);assert.ok(Math.abs(r.counts.road-1250)<1e-7);});
+check('rotated footprint and solid classifier',()=>{assert.equal(insideBox(3,0,{x:0,z:0,hx:1,hz:5,rot:Math.PI/2}),true);assert.equal(insideBox(0,3,{x:0,z:0,hx:1,hz:5,rot:Math.PI/2}),false);assert.equal(analyzeCoverage({bounds,height,solids:[{x:25,z:25,hx:50,hz:50}]}).unusedPercent,0);});
+check('yards/districts, parks, dense groves',()=>{for(const content of [{yards:[{x:25,z:25,hx:50,hz:50}]},{districts:[bounds]},{parks:[bounds]},{trees:[{x:25,z:25},{x:26,z:25},{x:24,z:25}]}])assert.equal(analyzeCoverage({bounds:{x0:10,x1:40,z0:10,z1:40},height,...content}).unusedPercent,0);});
+check('one isolated tree does not fill land',()=>near(analyzeCoverage({bounds,height,trees:[{x:25,z:25}]}).unusedPercent,100));
+check('clipped edge cells conserve area',()=>{const r=analyzeCoverage({bounds:{x0:0,x1:53,z0:0,z1:37},height});assert.equal(r.area,1961);assert.ok(Math.abs(Object.values(r.counts).reduce((a,b)=>a+b,0)-r.area)<1e-7);});
+check('slope and invalid terrain',()=>{const r=analyzeCoverage({bounds,height:x=>x});assert.ok(Math.abs(r.cells[0].slope-45)<1e-7);assert.throws(()=>analyzeCoverage({bounds,height:()=>NaN}),/Non-finite/);});
+check('flat empty rectangle cannot bridge an occupied corridor',()=>{const r=analyzeCoverage({bounds:{...bounds,x1:75},height,roadAt:x=>x>=25 && x<50});assert.equal(r.flatEmptyRectangle.area,1250);assert.equal(r.flatEmptyRectangle.width,25);assert.equal(analyzeCoverage({bounds,height:x=>x}).flatEmptyRectangle,null);});
+console.log(`${n} coverage checks passed`);
