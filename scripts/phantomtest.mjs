@@ -134,6 +134,8 @@ try {
       await window.__ph.enterFresh('sedan');
       for (const t of [...g.traffic.cars]) g.traffic.removeCar(t);
       const wall = await fire(553, -82, Math.PI, 25);
+      const wallVelocity = g.controls.car.body.body.linvel();
+      const wallSpeed = Math.hypot(wallVelocity.x, wallVelocity.y, wallVelocity.z);
       // Pole: a town street light.
       const set = g.breakables.sets.find((s) => s.name === 'townLight'), it = set.items.find((i) => !i.broken);
       const yaw = 0; await fire(it.x, it.z - 14, yaw, 15);
@@ -143,9 +145,10 @@ try {
       const parked = g.vehicles.cars.find((c) => !c.hero && c !== g.controls.car && !c.dead && !c.impounded);
       parked.body.teleport(520, g.world.terrain.getHeight(520, -87.2), -87.2, Math.PI / 2); await wait(500);
       const parkedLoss = await fire(506, -87.2, Math.PI / 2, 18);
-      return { wall, pole, parkedLoss };
+      return { wall, wallSpeed, pole, parkedLoss };
     });
     check('real wall at 25 m/s still costs 8-12', r.wall >= 8 && r.wall <= 12, r);
+    check('real wall at 25 m/s stops the car (<1 m/s after impact)', r.wallSpeed < 1, { wallSpeed: r.wallSpeed });
     check('a pole hit still breaks the pole', r.pole, r);
     check('hitting a parked car still hurts', r.parkedLoss > 0, r);
   }

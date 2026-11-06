@@ -1,6 +1,9 @@
 # MASTER PLAN (the owner's full task queue for Codex)
 
 ## EXECUTION RULES
+Latest owner override (Task004 + pre-check): advance004 now. Run the bump pre-check, defer failures to the
+end of the queue, and continue004 anyway. Give010 one investigation pass; mark it BLOCKED if unresolved.
+Map expansion is explicitly requested after measuring existing land. New roads must still drive clean.
 - Do the tasks IN ORDER. Don't start a task until the previous one has passed its acceptance checklist with
   evidence, is committed and pushed on codex-work, and its row below is updated.
 - Before each task: re-read its section here, write docs/tasks/<id>.md (read, plan, sub-tasks), commit it.
@@ -18,14 +21,16 @@
 | Task | Name | State | Notes |
 | --- | --- | --- | --- |
 | 000 | Handoff triage | DONE | Audit and single-run evidence in docs/tasks/000-handoff.md. Phantom wall regression remains queued in 003; no game fixes claimed. |
-| 010 | Music player (T) | IN PROGRESS | PLAYABLE. M6 music 64/64; walk 7/7, phase2 16/16, phase4 cameras/police 14/14, phase5 selected 48/48. Shake remains red: 1 spike per music run, 2 spikes with music disposed. Next instrument chase pose/dt at spike frames without weakening assertions; then finish M6, M7 (0/3 shots), M8. Details in 010 report. |
+| 010 | Music player (T) | BLOCKED | Owner-authorized time box exhausted. Playable/music64/64; fresh shake19/21, unresolved chase spikes also reproduced without music previously. Resume after004 via R2; M7 0/3 and M8 pending. |
 | 002 | Braking stoppie | TODO | |
 | 003 | Phantom bumps at speed | TODO | |
 | 001 | Boost rockets + cabin boost | TODO | |
 | L1 | Test reliability and cul-de-sac completion | TODO | After 001, before 004: stalled routes and bus/district/shake timing evidence; see 000 report. |
 | L2 | Pull-over pursuit obstacle avoidance and return | TODO | After L1, before 004: breadcrumb corner cutting and visible return-to-post pop. |
 | L3 | Airport pushback tug and apron vehicle solidity | TODO | After L2, before 004: preserve existing operations, add missing support-vehicle polish. |
-| 004 | World fill (farms, industries, military base, busier world) | TODO | After L1-L3. Include deferred house/infill variety and assess laneways in WORLD_PLAN. |
+| 004 | World fill (farms, industries, military base, busier world) | IN PROGRESS | Owner advanced this task. Pre-check complete with deferred failures R1/R2. Next A: read map modules, implement coverage baseline/heat map and WORLD_PLAN. World screenshots0/8. |
+| R1 | Deferred bump pre-check failures and coverage | TODO | At end of queue, per owner: wall11.16% but speed1.262m/s after impact; motorway/ramp check remains n/a; see004 Pre-check and task003. |
+| R2 | Deferred shake regression / music completion | TODO | At end of queue, per owner: chase .196/.288m spikes; retain thresholds and finish010 M6-M8 after investigation. |
 
 ---
 ## TASK 000: HANDOFF TRIAGE (read-only: no game code changes)
