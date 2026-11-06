@@ -56,6 +56,10 @@ Chosen zone: **left 12px, below health at top 80px**, width capped at 280px and 
 
 ## Numbered implementation and verification plan
 
+### Owner priority update (2026-11-06 05:48 IST)
+
+Make music playable in the real game before the broad acceptance sweep. First write and run a minimal real-game wiring test (no module injection) to expose the missing T/player connection. Then implement M4 keys/docs/siren tests and M5 main wiring as the playable milestone, run that wiring test and directly affected siren regression, review/commit/push, and immediately give the owner browser steps for 5173. Only after that milestone continue M6 full tests/regressions, M7 three screenshots and M8 final docs. Report visibility, manifest and ignored scratch/log status with the milestone. This owner instruction supersedes the earlier separation of unconnected M4 and M5 work.
+
 1. **M1 indexer:** ignore generated directory, add npm music and scripts/musicIndex.mjs. Stable known-track order and aliases, conventional Title - Artist parsing for other files, filename fallback, safe URL encoding, supported audio extensions, missing/empty handling. Add serial filesystem tests with temporary fixtures (source bytes untouched), run real index, verify copied hashes and Edge-served manifest. Review diff, report, commit, push.
 2. **M2 audio engine:** musicConfig.js + musicPlayer.js, one audio element, bounded failure recovery, event subscriptions, explicit playback intent and gesture gate, seeded shuffle/repeat, previous/seek/volume limits, storage validation/failure tolerance, car fade/resume, master mute and duck. Test real audio plus empty/error playlists, gesture and reload behavior in one Edge instance. Modules remain unconnected to main until UI/integration. Review, report, commit, push.
 3. **M3 UI:** responsive card/cover/control/list, accessible names, seek and volume sliders, idle opacity, fixed 4 Hz progress and changed-text updates, pointer isolation, hidden cinematic/cutscene/menu states and track toast. Test layout and pointer/input isolation independently, then commit/push.
