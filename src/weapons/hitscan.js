@@ -72,7 +72,7 @@ export function createHitscan({ physics, world, peds, police, vehicles, traffic,
     targets,
     /**
      * Cast from origin along unit dir up to maxD. opts.exclude: a person to skip (the shooter).
-     * Returns { point, normal, dist, kind: 'terrain'|'wall'|'car'|'prop'|'ped'|'officer'|'none', ref, zone }.
+     * Returns { point, normal, dist, kind: 'terrain'|'wall'|'car'|'prop'|'ped'|'officer'|'animal'|'none', ref, zone }.
      */
     cast(origin, dir, maxD = 150, opts = {}) {
       let best = { dist: maxD, kind: 'none', point: origin.clone().addScaledVector(dir, maxD), normal: dir.clone().negate() };
@@ -97,6 +97,8 @@ export function createHitscan({ physics, world, peds, police, vehicles, traffic,
           best = { dist: tt, kind: t.kind, ref: t.ref, zone: th <= tb ? 'head' : 'body', point: origin.clone().addScaledVector(dir, tt), normal: dir.clone().negate() };
         }
       }
+      const animal = world.rural?.animals?.raycast(origin, dir, best.dist);
+      if (animal) best = { dist: animal.dist, kind: 'animal', ref: animal.ref, point: origin.clone().addScaledVector(dir, animal.dist), normal: dir.clone().negate() };
       return best;
     },
   };

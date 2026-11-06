@@ -22,6 +22,7 @@ import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
 import { createTraffic } from './traffic/trafficManager.js';
 import { createFarmMachinery } from './rural/farmMachinery.js';
+import { createFarmAnimals } from './rural/farmAnimals.js';
 import { createMirrors } from './camera/mirrors.js';
 import { createParticles } from './combat/particles.js';
 import { createBreakables } from './combat/breakables.js';
@@ -108,6 +109,8 @@ world.town?.npcSpots.push(...activitySpots(world)); // Phase 6: bus-stop waiters
 const peds = createPedestrians({ scene, physics, world, townCount: 7, downtownCount: 9 });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
 const farmMachinery = createFarmMachinery({ scene, physics, world, controls, peds, vehicles, traffic });
+const farmAnimals = createFarmAnimals({ physics, world });
+world.rural.animals = farmAnimals;
 const cyclists = createCyclists({ scene, traffic, terrain: world.terrain });
 /** Everything with wheels that pedestrians should watch out for. */
 const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...farmMachinery.movers, ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
@@ -266,7 +269,7 @@ renderer.setAnimationLoop(() => {
   breakables.update(dt, controls.focus());
   particles.update(dt);
   statusHud.update(dt, { health: combat.hp, carHealth: controls.mode === 'drive' && controls.car ? controls.car.health : null, cash: wallet.cash, stars: world.wanted?.stars || 0, searching: world.wanted?.searching || false });
-  { const mc = movingCars(); peds.update(dt, { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: mc }); cyclists.update(dt, { focus: controls.focus(), cars: mc }); }
+  { const mc = movingCars(), ctx = { focus: controls.focus(), player: controls.mode === 'walk' ? controls.player.position : null, cars: mc }; peds.update(dt, ctx); farmAnimals.update(dt, ctx); cyclists.update(dt, { focus: ctx.focus, cars: mc }); }
   const lit = controls.car && controls.car.lights ? controls.car : vehicles.cars.find((c) => c.lights) || null;
   headlights.update(dt, lit, lighting.dusk);
   lighting.update(dt, preset.noFog && controls.mode === 'fly' ? preset.target : controls.focus(), camera.position);

@@ -74,6 +74,7 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
   function applyHit(W, h) {
     if (h.kind === 'none') return false;
     st.lastHit = { kind: h.kind, zone: h.zone || null, dist: +h.dist.toFixed(1) };
+    if (h.kind === 'animal') { world.rural?.animals?.hit(h.ref); return false; } // scatter only: no injury, impact/decal or hit score
     if (h.kind === 'ped' || h.kind === 'officer') {
       const dmg = hitDamage(W, h.zone, h.dist);
       fx.impact(h.point, h.normal, 'body');
@@ -147,6 +148,7 @@ export function createPlayerWeapons({ scene, camera, controls, physics, world, p
     if (W.id !== 'shotgun') ejectCasing(W);
     // Everybody within 40 m reacts; witnessed gunfire is a crime (capped per burst).
     peds.alarm?.(player.position, 40);
+    world.rural?.animals?.alarm(player.position);
     if (st.t - st.lastHeatT > 2.5 && st.shotsFiredHeat < 40 && world.crimes?.isWitnessed(player.position)) { st.lastHeatT = st.t; st.shotsFiredHeat += 10; heat('shotsFired'); }
   }
 

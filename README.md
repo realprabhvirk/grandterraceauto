@@ -155,7 +155,9 @@ cluster walk work routes and tend the crops/orchard; they use the usual civilian
 Gumleaf and Redbank have working field tractors; Redbank also has a harvester with a rotating header.
 They stop for people/cars, kick up dust and switch their lamps at night. These field machines are not enterable.
 Each farm also has a ute using the regular road traffic and carjacking controls.
-Animals and the enterable shop are next; industries and military operations are still being built.
+Cows, sheep and farm dogs wander in the paddocks. They scatter when approached or hearing gunfire;
+car encounters knock them down briefly and they get up. Animals show no injury.
+The farm shop, industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -180,6 +182,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs farmers # working/moving adults, clear paths, pause/sleep, reactions/get-up/witnesses
 .\dev.cmd node scripts/worldtest.mjs machinery # solid field routes, full real-time circuits, stops, dust/wheels, pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs farmtraffic # stock farm utes, wheels, pause/night, actual F theft and signal stops
+.\dev.cmd node scripts/worldtest.mjs animals # seeded livestock/dogs, native clearance, safe hits/recovery, gunfire/pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
