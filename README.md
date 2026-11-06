@@ -144,6 +144,14 @@ To add songs, drop audio files into `Car Music/` and run `.\dev.cmd npm run musi
 Generated `public/music/` is ignored. Source songs are committed under the verified private-repository
 decision (unauthenticated GitHub API returned 404); recheck visibility before adding more audio.
 
+### Western countryside (Task004 in progress)
+
+The map now extends west to x=-1500. At the motorway's west junction, Stoneleaf Rd leads west to the
+planned Stoneleaf Garrison site. Ridge Access Rd and Creek Valley Rd loop back through Meadow Link to
+the southern town grid. Gravel roads have earth shoulders: rural connectors80km/h, farm tracks/base roads40.
+The roads and graded sites are implemented; farms, industries and military operations are still being built.
+See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
+
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
 
 ```powershell
@@ -159,7 +167,10 @@ decision (unauthenticated GitHub API returned 404); recheck visibility before ad
 .\dev.cmd node scripts/phantomtest.mjs   # 5.2: full-throttle runs on every route (no phantom damage), ghost-collider scan, top speed, real-crash regression
 .\dev.cmd node scripts/shaketest.mjs    # 5.3: camera jitter in every camera mode (walk/run/jump/POV/drive), shake only on real crashes
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
-.\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles per scene (incl. the new districts + gunfire)
+.\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles (districts, countryside + gunfire)
+.\dev.cmd node scripts/worldtest.mjs roads  # rural directed connectivity, signs, full-width ground and ghost scan
+.\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
+.\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
 
 ## Folder structure

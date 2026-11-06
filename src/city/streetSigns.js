@@ -60,8 +60,12 @@ export function buildStreetSigns({ network, plan, terrain }) {
   const junctions = [];
   for (const n of plan.nodes) {
     const v = streetAt(n, true), h = streetAt(n, false);
-    if (!v || !h) continue;
-    junctions.push({ n, v: v.street, h: h.street });
+    if (v && h) junctions.push({ n, v: v.street, h: h.street });
+    else if (n.rural) {
+      // Collinear road-name/limit transitions also need both names, with parallel blades.
+      const names = [...new Set(plan.edges.filter(e => e.a === n || e.b === n).map(e => e.road?.street).filter(Boolean))];
+      if (names.length > 1) junctions.push({ n, v: names[0], h: names[1], vYaw: v ? Math.PI / 2 : 0, hYaw: v ? Math.PI / 2 : 0 });
+    }
   }
   // Highway / other roads can add junctions later through network.extraJunctions ({ x, z, a, b, yaw }).
   for (const j of network.extraJunctions || []) junctions.push({ n: { x: j.x, z: j.z }, v: j.a, h: j.b, yaw: j.yaw || 0 });
@@ -92,8 +96,9 @@ export function buildStreetSigns({ network, plan, terrain }) {
       mesh.geometry.attributes.aCell.array[i] = names.indexOf(name);
     };
     const base = j.yaw || 0;
-    put(blades[0], j.v, base + Math.PI / 2, 2.95, 1); put(blades[1], j.v, base - Math.PI / 2, 2.95, 1);
-    put(blades[2], j.h, base, 2.7, 1); put(blades[3], j.h, base + Math.PI, 2.7, 1);
+    const vYaw = j.vYaw ?? base + Math.PI / 2, hYaw = j.hYaw ?? base;
+    put(blades[0], j.v, vYaw, 2.95, 1); put(blades[1], j.v, vYaw + Math.PI, 2.95, 1);
+    put(blades[2], j.h, hYaw, 2.7, 1); put(blades[3], j.h, hYaw + Math.PI, 2.7, 1);
     bladeItems.push({ x, y, z, rot: 0 });
     registry.blades.push({ x: j.n.x, z: j.n.z, names: [j.v, j.h] });
   });

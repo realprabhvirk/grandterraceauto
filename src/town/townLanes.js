@@ -35,13 +35,14 @@ export function buildTownLanes(plan, { add, fwd, bwd, lanePt, S }) {
   const push = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
   const streetOf = (a, b) => plan.roads.find((r) => (a.x === b.x ? r.samples[0].x === a.x && r.samples[0].tx === 0 : r.samples[0].z === a.z && r.samples[0].tz === 0));
 
-  for (const { a, b } of plan.edges) {
+  for (const { a, b, road: explicitRoad } of plan.edges) {
     for (const [p, q] of [[a, b], [b, a]]) {
       const dx = Math.sign(q.x - p.x), dz = Math.sign(q.z - p.z);
       // Right of travel is (-dz, dx); keep left = minus that.
-      const ox = dz * T.lane, oz = -dx * T.lane;
+      const road = explicitRoad || streetOf(p, q), offset = road?.rural ? Math.min(1.8, road.halfW / 2) : T.lane;
+      const ox = dz * offset, oz = -dx * offset;
       const pts = line(p.x + dx * STOP + ox, p.z + dz * STOP + oz, q.x - dx * STOP + ox, q.z - dz * STOP + oz);
-      const lane = add({ name: `${streetOf(p, q)?.name || 'town'} ${p.id}->${q.id}`, pts, road: streetOf(p, q), town: true, from: p, to: q });
+      const lane = add({ name: `${road?.name || 'town'} ${p.id}->${q.id}`, pts, road, town: true, from: p, to: q });
       push(into, q.id, lane); push(outOf, p.id, lane);
     }
   }

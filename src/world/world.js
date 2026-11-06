@@ -24,6 +24,8 @@ import { airportAreas } from '../airport/airportPlan.js';
 import { cameraAheadSigns } from '../city/cameraPlan.js';
 import { SPEEDING } from '../police/speedingConfig.js';
 import { fbm } from '../utils/noise.js';
+import { buildRuralPlan, attachRuralGraph } from '../rural/ruralPlan.js';
+import { buildRuralRoads } from '../rural/ruralRoads.js';
 
 export function buildWorld(scene) {
   const t0 = performance.now();
@@ -31,11 +33,12 @@ export function buildWorld(scene) {
   const layout = buildLayout(network);
   // Terrace Town Centre street plan (after the suburb layout, so lots are unaffected).
   const plan = (network.town = buildTownPlan(network));
+  const rural = buildRuralPlan();
   // The motorway grades the terrain as three parallel sample lines (20 m wide), but leaves the
   // street corridors under its bridges to the streets that pass underneath.
   const hwRoad = plan.roads.find((r) => r.highway && !r.ramp);
   const hwGrade = [-6, 0, 6].map((dz) => ({ halfW: 4, samples: hwRoad.samples.filter((s) => !HWY.crossings.some((c) => Math.abs(s.x - c) < HWY.deckHalf)).map((s) => ({ ...s, z: s.z + dz })) }));
-  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots()] });
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade, ...rural.roads], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots(), ...rural.sites] });
   terrain.bridges = BRIDGES;
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));
@@ -49,7 +52,9 @@ export function buildWorld(scene) {
   // Wattle Park (suburb): pick an open flat spot near the cul-de-sacs before the bush goes in.
   const wattleSite = findWattleSite(network, layout, terrain);
   const clearOfPark = (p) => !wattleSite || Math.hypot(p.x - wattleSite.x, p.z - wattleSite.z) > 30;
-  const trees = buildTrees([...layout.treeSpots, ...bushSpots(network, layout).filter(clearOfPark)], terrain);
+  const ruralIndex = new RoadIndex(rural.roads);
+  const clearOfRural = p => !ruralIndex.nearest(p.x, p.z, 12);
+  const trees = buildTrees([...layout.treeSpots, ...bushSpots(network, layout).filter(clearOfPark)].filter(clearOfRural), terrain);
   scene.add(trees.group);
 
   const hero = buildHeroHouse(layout.hero, terrain);
@@ -61,6 +66,11 @@ export function buildWorld(scene) {
   // Everything else in town (streets, buildings, props); then the road index covers town too.
   network.allRoads = [...network.roads, plan.link, ...plan.roads];
   const town = buildTown(scene, { network, layout, terrain, plan, wattleSite });
+  attachRuralGraph(rural, plan);
+  network.allRoads.push(...rural.roads);
+  buildRuralRoads(rural, terrain, scene);
+  town.pedLines.push(...rural.pedLines);
+  town.chunks.push(...rural.chunks);
   network.index = new RoadIndex(network.allRoads);
   // Street names (road.street) + speed limits (road.speedLimit) on every road definition.
   for (const r of network.allRoads) r.street = r.street || r.name;
@@ -74,7 +84,7 @@ export function buildWorld(scene) {
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders, ...highway.colliders];
   const trunks = [...trees.trunks, ...town.trunks];
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
-  return { network, layout, terrain, colliders, trunks, hero, town, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway, areas: airportAreas() };
+  return { network, layout, terrain, colliders, trunks, hero, town, rural, poles: [...town.poles], streetLights: lights, toggles: [...(hero ? hero.toggles : []), ...town.toggles], citySigns, highway, areas: airportAreas() };
 }
 
 /**

@@ -6,6 +6,7 @@ import { UI, injectStyles } from './uiStyle.js';
 import { ROAD } from '../world/roadNetwork.js';
 import { MAP } from '../world/terrain.js';
 import { RURAL } from '../rural/ruralConfig.js';
+import { PALETTE } from '../art/palette.js';
 import { drawIcon, sortPlaces, drawRoute, drawStreetNames, ICON } from './mapIcons.js';
 
 const SIZE = 190, METRES = 230; // metres across the minimap
@@ -40,7 +41,8 @@ export function createMinimap(world) {
     for (const [w, col] of [[ROAD.pathOut * 2, '#b9ad95'], [ROAD.halfW * 2 + 1, '#3e3c42']]) {
       b.strokeStyle = col; b.lineWidth = w;
       for (const r of roads) {
-        b.lineWidth = r.town ? (w > 9 ? (r.halfW + 4.8) * 2 : r.halfW * 2 + 1) : w;
+        b.lineWidth = r.rural ? (r.halfW + (w > 9 ? 1 : 0)) * 2 : r.town ? (w > 9 ? (r.halfW + 4.8) * 2 : r.halfW * 2 + 1) : w;
+        b.strokeStyle = r.rural ? (w > 9 ? PALETTE.ground.soil : PALETTE.town.gravel) : col;
         b.beginPath();
         r.samples.forEach((s, i) => (i ? b.lineTo(s.x + half, s.z + half) : b.moveTo(s.x + half, s.z + half)));
         b.stroke();

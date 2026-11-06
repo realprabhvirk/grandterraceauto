@@ -80,3 +80,27 @@ Every road has one unique name (`road.street`), used by the maps, the street sig
 | Airport Link | 60 | airport |
 
 Airport Rd runs north from the top of Waratah St (Northgate) to the terminal; Terminal Dr passes the terminal drop-off and the car park; Airport Link returns to the top of Jacaranda St. From the motorway, take the west end (gantry: "AIRPORT  NORTHGATE  WARATAH ST >"). The runway, taxiway and apron are not streets (no lanes, no limit) - you can drive onto them.
+
+## Western countryside (Task004 B2)
+
+Gravel surfaces and earth shoulders, no urban kerbs. Stoneleaf Rd joins the motorway's west node; Meadow Link joins the southern town grid. The base facilities are still under construction at this checkpoint.
+
+| Street | Limit | Type |
+| --- | --- | --- |
+| Stoneleaf Rd | 80 | rural |
+| Ridge Access Rd | 80 | rural |
+| Creek Valley Rd | 80 | rural |
+| Meadow Link | 80 | rural |
+| Riverside Lane | 40 | track |
+| Spring Lane | 40 | track |
+| Orchard Lane | 40 | track |
+| Windmill Track | 40 | track |
+| Harvest Lane | 40 | track |
+| Works Rd | 40 | track |
+| Parade Way | 40 | base |
+| West Patrol Rd | 40 | base |
+| Range Rd | 40 | base |
+| Gatehouse Rd | 40 | base |
+| Barracks Way | 40 | base |
+| Aviation Dr | 40 | base |
+| Airfield Link | 40 | base |

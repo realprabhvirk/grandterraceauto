@@ -44,6 +44,12 @@ try {
     d.teleport(835, -300, 0); out.push(await measure('industrial estate'));
     d.teleport(520, -545, Math.PI); out.push(await measure('airport terminal (aircraft, apron vehicles)'));
     d.teleport(900, -660, -Math.PI / 2); out.push(await measure('airport airside (runway, lights)'));
+    // Task004: real western terrain/road sites, then working content as phases add it.
+    if(g.world.rural)for(const [name,x,z] of [
+      ['rural: garrison gate',-480,-252],['rural: parade road',-1000,-252],
+      ['rural: orchard access',100,-350],['rural: creek farm',535,180],
+      ['rural: west farm',-980,180],['rural: works access',-335,-480],
+    ]){d.teleport(x,z,0);out.push(await measure(name));}
     d.teleport(470, -92, Math.PI);
     g.weapons.arsenal.give('smg', 200); g.weapons.arsenal.select('smg');
     g.controls.input.setVirtual('Mouse0', true);
