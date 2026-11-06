@@ -154,7 +154,8 @@ Farm, Redbank Fields and Springbank Smallholding. Use their Farm markers on the 
 cluster walk work routes and tend the crops/orchard; they use the usual civilian reactions and witnesses.
 Gumleaf and Redbank have working field tractors; Redbank also has a harvester with a rotating header.
 They stop for people/cars, kick up dust and switch their lamps at night. These field machines are not enterable.
-Animals, farm utes and the enterable shop are next; industries and military operations are still being built.
+Each farm also has a ute using the regular road traffic and carjacking controls.
+Animals and the enterable shop are next; industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -178,6 +179,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs farmstatic # actual farm content/solids/maps, day/night views and pause/culling
 .\dev.cmd node scripts/worldtest.mjs farmers # working/moving adults, clear paths, pause/sleep, reactions/get-up/witnesses
 .\dev.cmd node scripts/worldtest.mjs machinery # solid field routes, full real-time circuits, stops, dust/wheels, pause/night/perf
+.\dev.cmd node scripts/worldtest.mjs farmtraffic # stock farm utes, wheels, pause/night, actual F theft and signal stops
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
