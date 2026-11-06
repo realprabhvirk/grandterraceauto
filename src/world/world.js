@@ -88,6 +88,7 @@ export function buildWorld(scene) {
   const originalColliders = colliders.slice();
   const farms = buildFarms({ parent: scene, terrain });
   rural.farms = farms.farms; rural.cultivated = farms.cultivated; rural.water = farms.water;
+  rural.npcSpots = farms.npcSpots;
   town.chunks.push(...farms.chunks); town.places.push(...farms.places); town.updaters.push(...farms.updaters);
   colliders.push(...farms.colliders);
   const trunks = [...trees.trunks, ...town.trunks];

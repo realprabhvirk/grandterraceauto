@@ -150,8 +150,9 @@ The map now extends west to x=-1500. At the motorway's west junction, Stoneleaf 
 planned Stoneleaf Garrison site. Ridge Access Rd and Creek Valley Rd loop back through Meadow Link to
 the southern town grid. Gravel roads have earth shoulders: rural connectors80km/h, farm tracks/base roads40.
 Three farm clusters now have buildings, planted fields, orchards, dams and windmill pumps: Gumleaf Orchard
-Farm, Redbank Fields and Springbank Smallholding. Use their Farm markers on the map. Farm workers, animals,
-machinery and the enterable shop are next; industries and military operations are still being built.
+Farm, Redbank Fields and Springbank Smallholding. Use their Farm markers on the map. Two farmers at each
+cluster walk work routes and tend the crops/orchard; they use the usual civilian reactions and witnesses.
+Animals, machinery and the enterable shop are next; industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -173,6 +174,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs roads  # rural directed connectivity, signs, full-width ground and ghost scan
 .\dev.cmd node scripts/worldtest.mjs walking # rural shoulder junctions, civilian links and original resident areas
 .\dev.cmd node scripts/worldtest.mjs farmstatic # actual farm content/solids/maps, day/night views and pause/culling
+.\dev.cmd node scripts/worldtest.mjs farmers # working/moving adults, clear paths, pause/sleep, reactions/get-up/witnesses
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```

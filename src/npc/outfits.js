@@ -28,6 +28,7 @@ export function randomOutfit(rng) {
 
 /** Role outfits (all adults): uniforms and hi-vis over a random base. */
 const ROLE = {
+  farmer: { shirt: [PALETTE.npc.shirts[1], PALETTE.npc.shirts[7]], shirtTrim: PALETTE.tree.leaves[2], shorts: PALETTE.npc.bottoms[3], longPants: true, cap: PALETTE.ground.grassDry, hairStyle: 'cap', shoes: PALETTE.npc.shoes[2] },
   cop: { shirt: '#2d4f7c', shirtTrim: '#e8e6e0', shorts: '#1f2f4a', longPants: true, cap: '#1f2f4a', hairStyle: 'cap', shoes: '#1d1d1f' },
   worker: { shirt: '#f07a1a', shirtTrim: '#e8f04a', shorts: '#3d4f63', longPants: true, cap: '#f2d23a', hairStyle: 'cap', shoes: '#5a4a3c' },
   paramedic: { shirt: '#2f6b5a', shirtTrim: '#e2e2da', shorts: '#2f4a3f', longPants: true, shoes: '#1d1d1f' },

@@ -87,6 +87,40 @@ try{
   await page.evaluate(()=>__gta.debug.teleport(900,-400,0));await page.waitForTimeout(200);
   assert.ok(await page.evaluate(()=>__gta.world.rural.farms.every(f=>!f.group.visible)));console.log('PASS farms: real structures/crops/solids/maps, windmill pumps, pause/resume, culling and day/night farm-view budget');
  }
+ if(run('farmers')){
+  const r=await page.evaluate(()=>{const g=__gta,ps=g.peds.peds.filter(p=>p.role==='farmer'),counts={},blocked=[];let tools=0;
+   for(const p of ps){counts[p.home.farmId]=(counts[p.home.farmId]||0)+1;if(p.workTool?.isMesh)tools++;
+    const route=p.home.route,shape=new g.RAPIER.Capsule(.55,.28);
+    for(let i=0;i<route.length;i++){const a=route[i],b=route[(i+1)%route.length],len=Math.hypot(b.x-a.x,b.z-a.z);
+     for(let s=0;s<=len;s+=1){const x=a.x+(b.x-a.x)*s/len,z=a.z+(b.z-a.z)*s/len,y=g.world.terrain.getHeight(x,z)+.88;
+      g.physics.world.intersectionsWithShape({x,y,z},{x:0,y:0,z:0,w:1},shape,c=>{const tag=g.physics.tagOf(c.handle);if(c.isEnabled()&&['farm','building','landmark','door'].includes(tag.type)&&blocked.length<12)blocked.push({ped:p.id,x,z,tag});return true;});
+     }
+    }
+   }return {count:ps.length,counts,tools,blocked,total:g.peds.peds.length,ids:ps.filter(p=>p.home.route?.length>=4).map(p=>p.id)};
+  });console.log('Farmer registry/paths',JSON.stringify(r));assert.equal(r.count,6);assert.equal(r.tools,6);assert.equal(r.ids.length,6);assert.deepEqual(Object.values(r.counts),[2,2,2]);assert.deepEqual(r.blocked,[]);
+  for(const id of [r.ids[0],r.ids[2],r.ids[4]]){
+   await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);__gta.debug.teleport(p.pos.x+5,p.pos.z+5,-3*Math.PI/4);},id);await page.waitForTimeout(350);
+   const a=await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return {x:p.pos.x,z:p.pos.z,work:p.workT,action:p.jobAction,arm:p.ch.bones.rShoulder.rotation.x};},id);
+   assert.ok(a.work>0&&a.action==='farmWork'&&Math.abs(a.arm)>.1,JSON.stringify(a));await page.waitForTimeout(2700);
+   const b=await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id),screen=p.pos.clone();screen.y+=1;screen.project(g.camera);return {x:p.pos.x,z:p.pos.z,visible:p.ch.root.visible,screen:{x:screen.x,y:screen.y,z:screen.z},fps:g.stats().fps,calls:g.renderer.info.render.calls};},id);console.log('Working farmer view',id,JSON.stringify(b));assert.ok(b.visible&&Math.hypot(b.x-a.x,b.z-a.z)>.5,JSON.stringify({a,b}));assert.ok(Math.abs(b.screen.x)<=1&&Math.abs(b.screen.y)<=1&&b.screen.z>=-1&&b.screen.z<=1);assert.ok(b.fps>=45&&b.calls<600);
+  }
+  const id=r.ids[4];await page.evaluate(()=>__gta.mapUI.setMode(2));await page.waitForTimeout(100);
+  const paused=await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return [p.pos.x,p.pos.z,p.workT];},id);await page.waitForTimeout(350);
+  assert.deepEqual(await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return [p.pos.x,p.pos.z,p.workT];},id),paused);
+  await page.evaluate(()=>{__gta.mapUI.setMode(1);__gta.debug.teleport(900,-400,0);});await page.waitForTimeout(200);
+  const sleeping=await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return [p.pos.x,p.pos.z,p.ch.root.visible];},id);await page.waitForTimeout(350);
+  assert.equal(sleeping[2],false);assert.deepEqual(await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return [p.pos.x,p.pos.z,p.ch.root.visible];},id),sleeping);
+  await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id);g.debug.teleport(p.pos.x+5,p.pos.z+5,0);g.peds.alarm(p.pos,10);},id);await page.waitForTimeout(150);
+  assert.ok(await page.evaluate(id=>{const p=__gta.peds.peds.find(p=>p.id===id);return (p.flee>0||p.cower>0)&&!p.workTool.visible;},id));
+  await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id);g.peds.revive(p);p.flee=0;p.cower=0;p.startled=0;},id);await page.waitForTimeout(250);
+  const shot=await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id),wasWorking=p.workT>0;g.peds.shoot(p,10,g.controls.player.position);return {hp:p.hp,flee:p.flee,work:p.workT,wasWorking};},id);assert.equal(shot.hp,90);assert.ok(shot.flee>0&&shot.wasWorking);assert.equal(shot.work,0,'interrupted work must wait until the farmer returns to a waypoint');
+  await page.evaluate(async id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id),{CAR_TYPES}=await import('/src/vehicles/carTypes.js'),{PALETTE}=await import('/src/art/palette.js');g.peds.revive(p);p.flee=0;p.cower=0;p.startled=0;const c=g.vehicles.spawn({type:'hatch',cfg:CAR_TYPES.hatch,paint:PALETTE.cars.paints[0],x:p.pos.x,z:p.pos.z-3,yaw:0});window.__farmTestCar=c;c.body.body.setLinvel({x:0,y:0,z:8},true);},id);
+  await page.waitForFunction(id=>__gta.peds.peds.find(p=>p.id===id).state==='down',id,{timeout:4000});
+  await page.evaluate(()=>{const c=window.__farmTestCar;c.body.teleport(-1400,__gta.world.terrain.getHeight(-1400,-100),-100,0);});
+  await page.waitForTimeout(5100);
+  const recovered=await page.evaluate(id=>{const g=__gta,p=g.peds.peds.find(p=>p.id===id);return {state:p.state,hp:p.hp,solid:p.collider.isEnabled(),witness:g.crimes.getWitnesses({x:p.pos.x+1,y:p.pos.y,z:p.pos.z}).some(w=>w.ref===p&&!w.cop)};},id);
+  console.log('Farmer reactions/recovery',JSON.stringify({shot,recovered}));assert.equal(recovered.state,'home');assert.equal(recovered.hp,100);assert.ok(recovered.solid&&recovered.witness);console.log('PASS farmers: working/moving adults, pause/sleep, alarm/shot/real car knockdown/get-up/witness behavior');
+ }
  if(run('drive')){
   await page.evaluate(async()=>{const g=__gta;g.debug.enter(g.vehicles.cars.findIndex(c=>c.type==='sedan'&&!c.dead));await new Promise(r=>setTimeout(r,1400));g.wanted.clear(true);g.police.reset();});
   const roads=(await page.evaluate(()=>__gta.world.rural.roads.map(r=>r.name))).filter(n=>!roadFilter||n===roadFilter);

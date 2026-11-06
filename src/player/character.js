@@ -131,9 +131,9 @@ function bodyGeometry(O) {
 
 /**
  * @param outfit colours + hairStyle (defaults to the player)
- * @param opts   { shadow = true, name }
+ * @param opts   { shadow = true, name, idlePhase } (authored NPCs can supply a seeded phase)
  */
-export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 'player' } = {}) {
+export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 'player', idlePhase = Math.random() * 10 } = {}) {
   const root = new THREE.Group();
   root.name = name;
   const bones = BONES.map(([n, , off]) => { const b = new THREE.Bone(); b.name = n; b.position.set(...off); return b; });
@@ -157,7 +157,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
     lhx: 0, lhz: 0, lkx: 0, rhx: 0, rhz: 0, rkx: 0,
   });
   const cur = zero();
-  let phase = 0, t = Math.random() * 10;
+  let phase = 0, t = idlePhase;
 
   function target(s) {
     const p = zero();
@@ -165,6 +165,14 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
     const run = Math.max(0, Math.min(1, (s.speed - 4.5) / 3));
     t += s.dt;
     switch (s.action) {
+      case 'farmWork': {
+        const hoe = Math.sin(t * 3.6);
+        p.torsoX = .22 + hoe * .06; p.headX = .3;
+        p.rsx = -.6 + hoe * .3; p.rex = -.4 + hoe * .18;
+        p.lsx = -.65; p.lex = -1.1; p.lsz = .12;
+        p.lhx = p.rhx = -.08; p.lkx = p.rkx = .12;
+        return p;
+      }
       case 'seated': {
         p.rootY = 0; p.lhx = p.rhx = -1.45; p.lkx = p.rkx = 1.35;
         p.lsx = p.rsx = -1.05; p.lsz = 0.2; p.rsz = -0.2; p.lex = p.rex = -0.55;
@@ -339,7 +347,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
     /** Bones by name (props such as shopping bags hang off the elbows). */
     bones: B,
     /**
-     * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'look'|'phone'|'seated', steer }
+     * @param s { dt, speed, grounded, crouch, action: null|'wave'|'dance'|'sit'|'point'|'look'|'phone'|'seated'|'farmWork', steer }
      */
     animate(s) {
       const tgt = target(s);

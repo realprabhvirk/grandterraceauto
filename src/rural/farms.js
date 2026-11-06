@@ -21,7 +21,7 @@ function cropGeo(kind){
 }
 
 export function buildFarms({parent,terrain}){
-  const out={farms:[],chunks:[],colliders:[],trunks:[],places:[],updaters:[],cultivated:[],water:[]};
+  const out={farms:[],chunks:[],colliders:[],trunks:[],places:[],updaters:[],cultivated:[],water:[],npcSpots:[]};
   const rng=makeRng(FARM.seed),matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),scale=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),position=new THREE.Vector3();
   for(const [fi,cfg] of FARM.farms.entries()){
     const r=rng.fork(fi+1),group=new THREE.Group();group.name=`farm-${cfg.id}`;parent.add(group);
@@ -109,6 +109,7 @@ export function buildFarms({parent,terrain}){
     const sf=F(cfg.access.x-7,cfg.access.z+9,fi===0?Math.PI/2:Math.PI);block('sign',sf,.12,2.4,.12,0,0,0,P.road.signPole);ch.box(sf,5,.8,.1,0,1.6,0,P.road.signBlade);atlas.sign(sf,atlas.row(cfg.label,P.road.signBlade,P.road.signText),4.8,.65,0,2,.06);const sign=atlas.mesh();group.add(sign);
     ch.finish(group);out.colliders.push(...ch.colliders);
     const farm={id:cfg.id,label:cfg.label,group,features,fields,paddocks,orchard:{mesh:orchardMesh,trunks},windmill:{rotor},sign:{mesh:sign,x:sf.cx,z:sf.cz},access:cfg.access,config:cfg};out.farms.push(farm);
+    for(const points of cfg.workers){const route=points.map(([x,z])=>({x,z,y:terrain.getHeight(x,z)+.05}));out.npcSpots.push({role:'farmer',area:'farm',farmId:cfg.id,...route[0],yaw:0,route,speed:FARM.workerSpeed,workTime:FARM.workTime,workAction:'farmWork',idlePhase:r.range(0,10)});}
     out.chunks.push({group,x:cfg.x,z:cfg.z,r:Math.hypot(cfg.hw,cfg.hd)+10});out.places.push({kind:'farm',x:cfg.access.x,z:cfg.access.z,label:cfg.label});
   }
   return out;

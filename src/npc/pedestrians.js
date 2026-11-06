@@ -8,6 +8,7 @@ import { buildFootpaths } from './footpaths.js';
 import { randomOutfit, roleOutfit } from './outfits.js';
 import { buildDog } from './dog.js';
 import { MAT } from '../art/materials.js';
+import { PALETTE } from '../art/palette.js';
 import { boxB, merge, paint } from '../utils/geom.js';
 import { G_NPC } from '../physics/physicsWorld.js';
 import { makeRng } from '../utils/rng.js';
@@ -17,8 +18,9 @@ const DEAD_FADE = 5, DEAD_RESPAWN = 30; // shot: lie ~5 s, fade 1.2 s, back ~30 
 const RADIUS = 0.28, HALF = 0.55;
 // Roles: walker, jogger, dogWalker, shopper (bags) walk lines; sitter, picnic, cop, worker,
 // paramedic, shopkeeper stay at a spot (and walk back to it after being knocked down).
-const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach', 'teacher']);
+const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach', 'teacher', 'farmer']);
 const BAG_COLORS = ['#f4f1e8', '#c8553e', '#3d5f8a', '#e2c25a', '#4f9a55'];
+let hoeGeometry = null;
 
 export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 6, downtownCount = 7 }) {
   const rng = makeRng(3131);
@@ -50,6 +52,9 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   if (ngLines.length) specs.push({ role: 'walker', area: 'north' }, { role: 'dogWalker', area: 'north' }, { role: 'jogger', area: 'north' }, { role: 'shopper', area: 'north' });
   if (beachLines.length) specs.push({ role: 'beach', area: 'beach' }, { role: 'jogger', area: 'beach' });
   for (const sp of world.town?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
+  // Append farm workers after the original roster, preserving its seeded outfit/spawn stream.
+  const originalCount = specs.length;
+  for (const sp of world.rural?.npcSpots || []) specs.push({ role: sp.role, spot: sp });
   const bagGeo = merge([boxB(0.3, 0.32, 0.12, 0, -0.36, 0, '#ffffff'), boxB(0.02, 0.12, 0.02, 0, -0.06, 0, '#3a3a3c')]);
 
   specs.forEach((spec, i) => {
@@ -61,7 +66,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       idx = r.int(1, line.length - 2);
       p = line[idx];
     }
-    const ch = createCharacter(UNIFORM.has(spec.role) ? roleOutfit(spec.role, r) : randomOutfit(r), { name: `ped-${i}` });
+    const ch = createCharacter(UNIFORM.has(spec.role) ? roleOutfit(spec.role, r) : randomOutfit(r), { name: `ped-${i}`, idlePhase: spec.spot?.idlePhase });
     const scale = r.range(0.92, 1.08);
     ch.root.scale.setScalar(scale);
     scene.add(ch.root);
@@ -70,7 +75,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     physics.tag?.(collider, 'ped', `ped-${i}`);
     const jog = spec.role === 'jogger';
     const ped = {
-      id: `ped-${i}`, role: spec.role, area: spec.area || spec.spot?.area || 'spot', home: spec.spot || null, ch, body, collider, scale, flee: 0,
+      id: `ped-${i}`, role: spec.role, cohort: i < originalCount ? 'original' : 'added', area: spec.area || spec.spot?.area || 'spot', home: spec.spot || null, ch, body, collider, scale, flee: 0,
       li, idx, dir: r.chance(0.5) ? 1 : -1,
       pos: new THREE.Vector3(p.x, p.y, p.z), yaw: spec.spot ? spec.spot.yaw : 0,
       speed: jog ? r.range(4.6, 5.3) : r.range(1.05, 1.45), cur: 0,
@@ -78,6 +83,11 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       detour: null, dodge: null, waved: 0, animAcc: 0, frame: i, hp: 100, cower: 0, gone: false,
       rng: r.fork(i + 1),
     };
+    if (spec.role === 'farmer') {
+      if (!hoeGeometry) hoeGeometry = merge([boxB(.045, 1.2, .045, 0, -1.05, 0, PALETTE.town.wood), boxB(.4, .1, .18, 0, -1.08, .06, PALETTE.cars.chrome)]);
+      ped.workTool = new THREE.Mesh(hoeGeometry, MAT.solid); ped.workTool.name = 'farm-hoe'; ped.workTool.castShadow = true; ped.workTool.visible = false;
+      ch.bones.rElbow.add(ped.workTool); ped.jobIndex = 0; ped.workT = 0;
+    }
     if (spec.role === 'shopper') {
       for (const [bone, k] of [['rElbow', 0], ['lElbow', 1]]) {
         if (k && !r.chance(0.6)) continue;
@@ -140,7 +150,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   /** Run away from a point (walkers pick the line direction away from it). */
   function fleeFrom(o, from, sec = 8) {
     o.flee = sec; o.action = null; o.fleeFrom = from.clone ? from.clone() : new THREE.Vector3(from.x, from.y || 0, from.z);
-    if (o.home) { o.flee = Math.min(sec, 5); o.state = 'home'; return; }
+    if (o.home) { o.flee = Math.min(sec, 5); o.state = 'home'; if (o.home.route) o.workT = 0; return; }
     o.state = 'walk';
     const L = graph.lines[o.li], a = L[Math.min(L.length - 1, o.idx + 1)], b = L[Math.max(0, o.idx - 1)];
     o.dir = Math.hypot(a.x - from.x, a.z - from.z) > Math.hypot(b.x - from.x, b.z - from.z) ? 1 : -1;
@@ -151,7 +161,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       if (o.state === 'dead' || o.state === 'down' || o.gone) continue;
       if (Math.hypot(o.pos.x - pos.x, o.pos.z - pos.z) > radius) continue;
       if (o.flee > 2 || o.cower > 0) continue;
-      if (o.rng.next() < 0.3) { o.cower = 3 + o.rng.next() * 2; o.action = null; }
+      if (o.rng.next() < 0.3) { o.cower = 3 + o.rng.next() * 2; o.action = null; if (o.home?.route) o.workT = 0; }
       else fleeFrom(o, pos);
     }
   }
@@ -172,15 +182,18 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     else { const L = graph.lines[ped.li]; ped.idx = ped.rng.int(1, L.length - 2); const p = L[ped.idx]; ped.pos.set(p.x, p.y, p.z); }
     ped.collider.setEnabled(true);
     ped.ch.root.rotation.set(0, ped.yaw, 0);
+    if (ped.home?.route) { ped.jobIndex = 0; ped.workT = 0; }
   }
   function knockDown(ped, car) {
     ped.state = 'down'; ped.downT = 0; ped.dodge = null; ped.action = null;
+    if (ped.workTool) ped.workTool.visible = false;
+    if (ped.home?.route) ped.workT = 0;
     ped.yaw = Math.atan2(-car.fx * Math.sign(car.speed), -car.fz * Math.sign(car.speed)); // falls away from the car
     ped.collider.setEnabled(false);
     ped.pos.x += car.fx * Math.sign(car.speed) * 1.2; ped.pos.z += car.fz * Math.sign(car.speed) * 1.2;
     // Everyone nearby runs off for ~8 s.
     for (const o of peds) if (o !== ped && o.state !== 'down' && o.state !== 'dead' && o.pos.distanceTo(ped.pos) < 25) { o.flee = 8; o.action = null; o.fleeFrom = ped.pos.clone();
-      if (o.home) { o.flee = 5; o.state = 'home'; continue; }
+      if (o.home) { o.flee = 5; o.state = 'home'; if (o.home.route) o.workT = 0; continue; }
       o.state = 'walk';
       const L = graph.lines[o.li], a = L[Math.min(L.length - 1, o.idx + 1)], b = L[Math.max(0, o.idx - 1)];
       o.dir = Math.hypot(a.x - ped.pos.x, a.z - ped.pos.z) > Math.hypot(b.x - ped.pos.x, b.z - ped.pos.z) ? 1 : -1; }
@@ -230,7 +243,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       }
       if (ped.flee > 0) ped.flee -= dt;
 
-      // --- Stationary roles: hold the spot (sit / stand / chat); run off when scared, walk back.
+      // --- Home roles: hold a spot or follow a work route; react first, then return.
       if (ped.home) {
         const h = ped.home;
         let speed = 0, action = null;
@@ -239,6 +252,15 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
           const tx = ped.pos.x + (ax / al) * 3, tz = ped.pos.z + (az / al) * 3;
           stepToward(ped, tx, world.terrain.getHeight(tx, tz) + 0.05, tz, 3.4, dt);
           speed = ped.cur;
+        } else if (h.route) {
+          const index = ped.jobIndex || 0, target = h.route[index];
+          if (ped.workT > 0) {
+            ped.workT = Math.max(0, ped.workT - dt); ped.cur = 0; action = h.workAction;
+            if (ped.workT === 0) ped.jobIndex = (index + 1) % h.route.length;
+          } else {
+            const d = stepToward(ped, target.x, target.y, target.z, h.speed, dt); speed = ped.cur;
+            if (d < .2) { ped.pos.set(target.x, target.y, target.z); ped.cur = 0; speed = 0; ped.workT = h.workTime; action = h.workAction; }
+          }
         } else {
           const d = stepToward(ped, h.x, h.y, h.z, 1.3, dt);
           if (d < 0.2) {
@@ -319,6 +341,8 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
 
   /** Visuals + collider (+ the dog). Animate every frame up close, every 3rd frame further out. */
   function finishPed(ped, dt, dist, speed, action) {
+    if (ped.home?.route) ped.jobAction = action;
+    if (ped.workTool) ped.workTool.visible = action === 'farmWork';
     ped.ch.root.position.copy(ped.pos);
     ped.ch.root.rotation.y = ped.yaw;
     ped.body.setNextKinematicTranslation({ x: ped.pos.x, y: ped.pos.y + (HALF + RADIUS) * ped.scale, z: ped.pos.z });
@@ -340,9 +364,9 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     shoot, alarm, revive,
     onScare(f) { scareListeners.push(f); },
     stats() {
-      const roles = {};
-      for (const p of peds) roles[p.role] = (roles[p.role] || 0) + 1;
-      return { roles, total: peds.length, awake: peds.filter((p) => p.ch.root.visible).length, paused: peds.filter((p) => p.state === 'pause').length, down: peds.filter((p) => p.state === 'down').length, fleeing: peds.filter((p) => p.flee > 0).length };
+      const roles = {}; let original = 0;
+      for (const p of peds) { roles[p.role] = (roles[p.role] || 0) + 1; if (p.cohort === 'original') original++; }
+      return { roles, original, total: peds.length, awake: peds.filter((p) => p.ch.root.visible).length, paused: peds.filter((p) => p.state === 'pause').length, down: peds.filter((p) => p.state === 'down').length, fleeing: peds.filter((p) => p.flee > 0).length };
     },
   };
 }
