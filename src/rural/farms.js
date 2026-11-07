@@ -8,6 +8,7 @@ import { makeChunk,frame,createSignAtlas } from '../town/townKit.js';
 import { buildHouses } from '../world/houses.js';
 import { gableRoof } from '../world/houseParts.js';
 import { FARM } from './farmConfig.js';
+import { FARM_NIGHT as NIGHT } from '../audio/farmAudioConfig.js';
 
 const cropGeometry=new Map();
 function cropGeo(kind){
@@ -107,8 +108,11 @@ export function buildFarms({parent,terrain}){
     out.water.push({x0:dam.x-dam.r,x1:dam.x+dam.r,z0:dam.z-dam.r*.72,z1:dam.z+dam.r*.72,x:dam.x,z:dam.z,rx:dam.r,rz:dam.r*.72,y:waterY});
     for(let i=1;i<cfg.track.length;i++){const [ax,az]=cfg.track[i-1],[bx,bz]=cfg.track[i],len=Math.hypot(bx-ax,bz-az),f=F((ax+bx)/2,(az+bz)/2,-Math.atan2(bz-az,bx-ax));ch.box(f,len,.004,4.5,0,.002,0,P.town.gravel);}feature('track',cfg.access);
     const sf=F(cfg.access.x-7,cfg.access.z+9,fi===0?Math.PI/2:Math.PI);block('sign',sf,.12,2.4,.12,0,0,0,P.road.signPole);ch.box(sf,5,.8,.1,0,1.6,0,P.road.signBlade);atlas.sign(sf,atlas.row(cfg.label,P.road.signBlade,P.road.signText),4.8,.65,0,2,.06);const sign=atlas.mesh();group.add(sign);
+    const heads=[],pools=[],lampSpots=[{x:cfg.barn.x-cfg.barn.w*NIGHT.barnInset,z:cfg.barn.z+cfg.barn.d/2+NIGHT.wallOffset,h:NIGHT.barnHeight},{x:cfg.shed.x+cfg.shed.w/2,z:cfg.shed.z+cfg.shed.d/2+NIGHT.wallOffset,h:NIGHT.shedHeight}];
+    for(const p of lampSpots){const f=F(p.x,p.z);block('lamp',f,NIGHT.housingW,NIGHT.housingH,NIGHT.housingD,0,p.h-NIGHT.housingH/2,0,P.cars.trim);const c=ch.colliders[ch.colliders.length-1];c.hz+=NIGHT.headD/4;c.z+=NIGHT.headD/4;heads.push(new THREE.BoxGeometry(NIGHT.headW,NIGHT.headH,NIGHT.headD).translate(p.x,f.y+p.h,p.z+NIGHT.housingD/2));pools.push(new THREE.CircleGeometry(NIGHT.poolRadius,20).rotateX(-Math.PI/2).translate(p.x,terrain.getHeight(p.x,p.z+1)+NIGHT.poolLift,p.z+1));}
+    const lampHeads=new THREE.Mesh(merge(heads),MAT.lamp),lampPools=new THREE.Mesh(merge(pools),MAT.pool);lampHeads.name=`farm-${cfg.id}-lamps`;lampPools.name=`farm-${cfg.id}-light-pools`;lampPools.renderOrder=4;group.add(lampHeads,lampPools);
     ch.finish(group);out.colliders.push(...ch.colliders);
-    const farm={id:cfg.id,label:cfg.label,group,features,fields,paddocks,orchard:{mesh:orchardMesh,trunks},windmill:{rotor},sign:{mesh:sign,x:sf.cx,z:sf.cz},access:cfg.access,config:cfg};out.farms.push(farm);
+    const farm={id:cfg.id,label:cfg.label,group,features,fields,paddocks,orchard:{mesh:orchardMesh,trunks},windmill:{rotor},sign:{mesh:sign,x:sf.cx,z:sf.cz},nightFixtures:{count:lampSpots.length,heads:lampHeads,pools:lampPools,spots:lampSpots},access:cfg.access,config:cfg};out.farms.push(farm);
     for(const points of cfg.workers){const route=points.map(([x,z])=>({x,z,y:terrain.getHeight(x,z)+.05}));out.npcSpots.push({role:'farmer',area:'farm',farmId:cfg.id,...route[0],yaw:0,route,speed:FARM.workerSpeed,workTime:FARM.workTime,workAction:'farmWork',idlePhase:r.range(0,10)});}
     out.chunks.push({group,x:cfg.x,z:cfg.z,r:Math.hypot(cfg.hw,cfg.hd)+10});out.places.push({kind:'farm',x:cfg.access.x,z:cfg.access.z,label:cfg.label});
   }

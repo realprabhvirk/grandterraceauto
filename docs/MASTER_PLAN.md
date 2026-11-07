@@ -21,14 +21,14 @@ Map expansion is explicitly requested after measuring existing land. New roads m
 | Task | Name | State | Notes |
 | --- | --- | --- | --- |
 | 000 | Handoff triage | DONE | Audit and single-run evidence in docs/tasks/000-handoff.md. Phantom wall regression remains queued in 003; no game fixes claimed. |
-| 010 | Music player (T) | BLOCKED | Owner-authorized time box exhausted. Playable/music64/64; fresh shake19/21, unresolved chase spikes also reproduced without music previously. Resume after004 via R2; M7 0/3 and M8 pending. |
+| 010 | Music player (T) | BLOCKED | Time box exhausted; shake19/21 and M7-M8 remain deferred via R2. Previously64/64; C2d fresh functional55checks pass. On2026-11-07 unauthenticated GitHub200/public now fails original privacy prerequisite; new songs ignored, existing source history untouched. Owner restore private visibility before more audio commits. |
 | 002 | Braking stoppie | TODO | |
 | 003 | Phantom bumps at speed | TODO | |
 | 001 | Boost rockets + cabin boost | TODO | |
 | L1 | Test reliability and cul-de-sac completion | TODO | After 001, before 004: stalled routes and bus/district/shake timing evidence; see 000 report. |
 | L2 | Pull-over pursuit obstacle avoidance and return | TODO | After L1, before 004: breadcrumb corner cutting and visible return-to-post pop. |
 | L3 | Airport pushback tug and apron vehicle solidity | TODO | After L2, before 004: preserve existing operations, add missing support-vehicle polish. |
-| 004 | World fill (farms, industries, military base, busier world) | IN PROGRESS | A/B/C1/C2a-b verified; C2c33safe instanced cows/sheep/dogs pass actual movement/leg uploads, gunfire/hits/occlusion, car recovery100health, native player capsule/car exclusion, clearances/pause/sleep/night. Roads/farmers/farmtraffic PASS,walk7/7,phase2 16/16,guns/witness36/36,ghost14710clean. Close animals60fps;25scenes47-60fps/max381calls. Unused76.1859997%, target open. Next C2d read audio/master/ambience and farm night materials, commit plan/test first, shared synth sound/emissive fixtures; then C3shop, industries/base/fill/population. Screenshots0/8; R1/R2 deferred. |
+| 004 | World fill (farms, industries, military base, busier world) | IN PROGRESS | A/B/C1/C2a-d verified; safe33animals retained. C2d5voice/46node synth shares master, actual waveform/call/mute/pause/distance/duck/bfcache/dispose tests pass; six lamps physically mounted, close60fps. Roads/farmstatic/animals PASS,vibe8/8,music functional55checks,phase2 16/16; audio-unlocked25scenes51-60fps/max382calls. Unused76.1859997%, target open. Next C3 enterable farm shop: finish reads, commit plan/test first, shared shell/door/menu and registered adult keeper; then industries/base/fill/population. Screenshots0/8; R1/R2 deferred. |
 | R1 | Deferred bump pre-check failures and coverage | TODO | At end of queue, per owner: wall11.16% but speed1.262m/s after impact; motorway/ramp check remains n/a; see004 Pre-check and task003. |
 | R2 | Deferred shake regression / music completion | TODO | At end of queue, per owner: chase .196/.288m spikes; retain thresholds and finish010 M6-M8 after investigation. |
 

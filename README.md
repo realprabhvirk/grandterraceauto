@@ -141,8 +141,10 @@ Cinematic camera hides the card; full map pauses the game while music continues.
 Reload restores track/settings but starts paused until you request playback with a user gesture.
 
 To add songs, drop audio files into `Car Music/` and run `.\dev.cmd npm run music`.
-Generated `public/music/` is ignored. Source songs are committed under the verified private-repository
-decision (unauthenticated GitHub API returned 404); recheck visibility before adding more audio.
+Generated `public/music/` is ignored. The three existing source songs were committed when the repository
+returned 404. On 2026-11-07 GitHub reported it as public; `Car Music/` now ignores additional files.
+The full music acceptance test retains its private-repository requirement. To restore that prerequisite,
+the owner can use GitHub > Settings > General > Danger Zone > Change visibility before committing more audio.
 
 ### Western countryside (Task004 in progress)
 
@@ -157,6 +159,9 @@ They stop for people/cars, kick up dust and switch their lamps at night. These f
 Each farm also has a ute using the regular road traffic and carjacking controls.
 Cows, sheep and farm dogs wander in the paddocks. They scatter when approached or hearing gunfire;
 car encounters knock them down briefly and they get up. Animals show no injury.
+Nearby field machines have synthesised engine sounds, and awake cows, sheep and dogs make occasional calls.
+These share M mute and the Settings master volume, fade out with distance and while the full map pauses
+the farms, and duck during cutscenes. Barn and shed lamps glow at night without adding real lights.
 The farm shop, industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
@@ -183,6 +188,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs machinery # solid field routes, full real-time circuits, stops, dust/wheels, pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs farmtraffic # stock farm utes, wheels, pause/night, actual F theft and signal stops
 .\dev.cmd node scripts/worldtest.mjs animals # seeded livestock/dogs, native clearance, safe hits/recovery, gunfire/pause/night/perf
+.\dev.cmd node scripts/worldtest.mjs farmambience # shared synth waveforms/lifecycle, master/mute/pause and mounted night lamps
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
@@ -231,7 +237,7 @@ src/
                            townKit.js (building kit + sign atlas), townBuildings.js, townInteriors.js,
                            townProps.js (breakable trees/lights/bins/signs, bus stops), parks.js, roadworks.js
   npc/                     pedestrians.js (roles), footpaths.js, outfits.js, dog.js, cyclists.js
-  audio/                   carAudio.js (engine, horn, screech, thud, siren, gunshots - no audio files), ambience.js (zone loops)
+  audio/                   carAudio.js (engine, horn, screech, thud, siren, gunshots), ambience.js (zone loops), farmAudio.js (pooled synth)
   ui/                      hud.js (speed + tacho), statusHud.js (health/cash/stars), minimap.js, prompt.js, controlsPanel.js,
                            weaponHud.js (ammo, crosshair, hit marker), gunShopMenu.js
   utils/                   seeded RNG, noise, geometry helpers, F3 overlay, debugApi.js

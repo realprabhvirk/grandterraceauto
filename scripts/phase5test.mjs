@@ -870,7 +870,7 @@ try {
       g.lighting.setDusk(1); await wait(300);
       const birdsNight = g.skyLife.state.birdsVisible;
       g.lighting.setDusk(0);
-      // Peds: ~60 total, far ones asleep.
+      // Retain the original Phase6 roster cap; declared world additions are counted separately.
       d.teleport(0, 0, 0); await wait(800);
       const P = g.peds.peds, asleep = P.filter((p) => !p.ch.root.visible).length;
       // Warm light inside Terrace Central only.
@@ -879,12 +879,12 @@ try {
       // Automatic day/night cycle.
       g.dayCycle.on = true; g.dayCycle.t = g.dayCycle.period / 2 - 0.05; await wait(400);
       const cycDusk = g.lighting.dusk; g.dayCycle.on = false; g.lighting.setDusk(0);
-      return { c0, c1, birdsDay, birdsNight, z, peds: P.length, asleep, inStore, outside, cycDusk, lights: (() => { let n = 0; g.scene.traverse((o) => { if (o.isLight && o.castShadow) n++; }); return n; })() };
+      return { c0, c1, birdsDay, birdsNight, z, peds: P.length, originalPeds: P.filter(p=>p.cohort==='original').length, declaredAdded: g.world.rural?.npcSpots.length||0, asleep, inStore, outside, cycDusk, lights: (() => { let n = 0; g.scene.traverse((o) => { if (o.isLight && o.castShadow) n++; }); return n; })() };
     });
     check('clouds drift', r.c1 > r.c0 || r.c1 < r.c0 - 1000, { c0: r.c0, c1: r.c1 });
     check('birds by day, gone at night', r.birdsDay && !r.birdsNight);
     check('ambience by zone: birds/wind suburb, waves beach, traffic downtown, crickets at night', r.z.suburb.birds > 0.5 && r.z.beach.waves > 0.8 && r.z.downtown.traffic > 0.5 && r.z.night.crickets > 0.3 && r.z.suburb.waves === 0, r.z);
-    check('pedestrians capped ~90 (Phase 6), far ones asleep', r.peds >= 50 && r.peds <= 92 && r.asleep > r.peds / 3, { peds: r.peds, asleep: r.asleep });
+    check('original pedestrian cap, exact declared additions, far ones asleep', r.originalPeds >= 50 && r.originalPeds <= 92 && r.peds === r.originalPeds + r.declaredAdded && r.asleep > r.peds / 3, { peds: r.peds, original: r.originalPeds, declaredAdded: r.declaredAdded, asleep: r.asleep });
     check('warm pooled light inside the store, off outside', r.inStore > 1 && r.outside === 0, { inStore: r.inStore, outside: r.outside });
     check('optional automatic day/night cycle reaches night', r.cycDusk > 0.95, { dusk: r.cycDusk });
     check('still exactly ONE shadow-casting light', r.lights === 1, { lights: r.lights });

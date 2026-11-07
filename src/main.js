@@ -49,6 +49,7 @@ import { createCopGuns } from './police/copGuns.js';
 import { createGunShopMenu } from './ui/gunShopMenu.js';
 import { createShopMenu } from './ui/shopMenu.js';
 import { createAmbience } from './audio/ambience.js';
+import { createFarmAudio } from './audio/farmAudio.js';
 import { createSpeeding } from './police/speeding.js';
 import { createSpeedLimitHud } from './ui/speedLimitHud.js';
 import { createSpeedCameras } from './police/speedCameras.js';
@@ -196,6 +197,7 @@ const airport = createAirportOps({ scene, physics, world, controls, traffic, pol
 world.places.push(...landmarks.places);
 world.speeding = speeding;
 const ambience = createAmbience(audio);
+const farmAudio = createFarmAudio(audio,{machines:farmMachinery.machines,animals:farmAnimals.list});
 const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
 shopLight.castShadow = false;
 scene.add(shopLight);
@@ -219,7 +221,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  music, musicUi, farmMachinery,
+  music, musicUi, farmMachinery, farmAudio,
   ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, airport, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
@@ -244,6 +246,7 @@ renderer.setAnimationLoop(() => {
   { const f = controls.focus(); nav.update(rdt, f); minimap.update(rdt, { ...mapState(), route: nav.route, waypoint: nav.waypoint, nav }); mapUI.update(); }
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
+  farmAudio.update(dt, controls.focus(), cutscene.active);
   speeding.update(dt);
   if (!paused) { speedCams.update(dt); trafficCops.update(dt); pullOver.update(dt); landmarks.update(dt, lighting.dusk); airport.update(dt); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());

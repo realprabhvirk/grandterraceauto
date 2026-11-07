@@ -3,6 +3,7 @@ node_modules/
 dist/
 shots/
 public/music/
+Car Music/
 *.log
 docs/coverage-current.*
 
