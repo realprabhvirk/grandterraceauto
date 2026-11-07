@@ -9,6 +9,7 @@ import { buildHouses } from '../world/houses.js';
 import { gableRoof } from '../world/houseParts.js';
 import { FARM } from './farmConfig.js';
 import { FARM_NIGHT as NIGHT } from '../audio/farmAudioConfig.js';
+import { buildFarmShop } from './farmShop.js';
 
 const cropGeometry=new Map();
 function cropGeo(kind){
@@ -21,8 +22,8 @@ function cropGeo(kind){
   const geo=merge(parts);cropGeometry.set(kind,geo);return geo;
 }
 
-export function buildFarms({parent,terrain}){
-  const out={farms:[],chunks:[],colliders:[],trunks:[],places:[],updaters:[],cultivated:[],water:[],npcSpots:[]};
+export function buildFarms({parent,terrain,hooks={}}){
+  const out={farms:[],chunks:[],colliders:[],trunks:[],places:[],updaters:[],cultivated:[],water:[],npcSpots:[],shops:[],doors:[],toggles:[],targets:[]},staff=[];
   const rng=makeRng(FARM.seed),matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),scale=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),position=new THREE.Vector3();
   for(const [fi,cfg] of FARM.farms.entries()){
     const r=rng.fork(fi+1),group=new THREE.Group();group.name=`farm-${cfg.id}`;parent.add(group);
@@ -114,7 +115,9 @@ export function buildFarms({parent,terrain}){
     ch.finish(group);out.colliders.push(...ch.colliders);
     const farm={id:cfg.id,label:cfg.label,group,features,fields,paddocks,orchard:{mesh:orchardMesh,trunks},windmill:{rotor},sign:{mesh:sign,x:sf.cx,z:sf.cz},nightFixtures:{count:lampSpots.length,heads:lampHeads,pools:lampPools,spots:lampSpots},access:cfg.access,config:cfg};out.farms.push(farm);
     for(const points of cfg.workers){const route=points.map(([x,z])=>({x,z,y:terrain.getHeight(x,z)+.05}));out.npcSpots.push({role:'farmer',area:'farm',farmId:cfg.id,...route[0],yaw:0,route,speed:FARM.workerSpeed,workTime:FARM.workTime,workAction:'farmWork',idlePhase:r.range(0,10)});}
+    if(cfg.shop){const s=buildFarmShop({parent:group,terrain,site:cfg.shop,farmId:cfg.id,hooks});out.shops.push(s.shop);out.doors.push(s.shop.door);out.colliders.push(...s.colliders);out.toggles.push(...s.toggles);out.targets.push(...s.targets);out.places.push(s.place);out.updaters.push(s.update);staff.push(s.staff);}
     out.chunks.push({group,x:cfg.x,z:cfg.z,r:Math.hypot(cfg.hw,cfg.hd)+10});out.places.push({kind:'farm',x:cfg.access.x,z:cfg.access.z,label:cfg.label});
   }
+  out.npcSpots.push(...staff); // Append new staff after all existing seeded farmers.
   return out;
 }

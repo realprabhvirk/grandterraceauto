@@ -86,9 +86,11 @@ export function buildWorld(scene) {
 
   const colliders = [...houses.colliders, ...(hero ? hero.colliders : []), ...town.colliders, ...highway.colliders];
   const originalColliders = colliders.slice();
-  const farms = buildFarms({ parent: scene, terrain });
+  const farms = buildFarms({ parent: scene, terrain, hooks: town.hooks });
   rural.farms = farms.farms; rural.cultivated = farms.cultivated; rural.water = farms.water;
   rural.npcSpots = farms.npcSpots;
+  rural.shops = farms.shops; rural.doors = farms.doors;
+  town.toggles.push(...farms.toggles); town.targets.push(...farms.targets);
   town.chunks.push(...farms.chunks); town.places.push(...farms.places); town.updaters.push(...farms.updaters);
   colliders.push(...farms.colliders);
   const trunks = [...trees.trunks, ...town.trunks];

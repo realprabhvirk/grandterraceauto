@@ -162,7 +162,10 @@ car encounters knock them down briefly and they get up. Animals show no injury.
 Nearby field machines have synthesised engine sounds, and awake cows, sheep and dogs make occasional calls.
 These share M mute and the Settings master volume, fade out with distance and while the full map pauses
 the farms, and duck during cutscenes. Barn and shed lamps glow at night without adding real lights.
-The farm shop, industries and military operations are still being built.
+Gumleaf Farm Shop is enterable at the Food & drink marker beside Gumleaf Orchard Farm. Press E at the
+door, walk to the counter and press E to shop: seasonal fruit ($8, +12 health), a farm sandwich ($14, +20)
+or a picnic lunch ($20, +25). The keeper uses the regular civilian reactions and witness rules.
+Industries and military operations are still being built.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -189,6 +192,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs farmtraffic # stock farm utes, wheels, pause/night, actual F theft and signal stops
 .\dev.cmd node scripts/worldtest.mjs animals # seeded livestock/dogs, native clearance, safe hits/recovery, gunfire/pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs farmambience # shared synth waveforms/lifecycle, master/mute/pause and mounted night lamps
+.\dev.cmd node scripts/worldtest.mjs farmshop # native door/wall walks, food purchases, menu lock, keeper/witness and lighting
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
@@ -233,6 +237,7 @@ src/
   weapons/                 weaponStats.js (all gun numbers), arsenal.js (ammo/fire logic), gunModels.js, ik.js (2-bone arm IK),
                            hitscan.js (hit zones), gunFx.js (flash/tracers/casings/impacts/decals), viewmodel.js, playerWeapons.js
   districts/               downtown.js, beach.js, northgate.js, industrial.js (streets/lanes come from the town grid in townPlan.js)
+  rural/                   farms, crops/livestock, field machinery/traffic, farmShop.js + farmShopConfig.js (produce shop)
   town/                    Terrace Town Centre: townPlan.js (grid + link road), townLanes.js, townRoads.js,
                            townKit.js (building kit + sign atlas), townBuildings.js, townInteriors.js,
                            townProps.js (breakable trees/lights/bins/signs, bus stops), parks.js, roadworks.js

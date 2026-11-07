@@ -84,6 +84,7 @@ const physics = createPhysics(world);
 const vehicles = createVehicles({ physics, scene, world });
 world.hero?.attach(physics.toggles); // 62's door colliders
 world.town?.attach(physics.toggles); // town shop doors
+for(const d of world.rural.doors)d.attach(physics.toggles);
 world.vehicles = vehicles;
 world.physics = physics;
 const headlights = createHeadlightRig(scene);
@@ -201,7 +202,7 @@ const farmAudio = createFarmAudio(audio,{machines:farmMachinery.machines,animals
 const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
 shopLight.castShadow = false;
 scene.add(shopLight);
-const shopCentres = [world.town?.interiors.storeCentre && { ...world.town.interiors.storeCentre, h: 4.2, r: 30 }, world.town?.interiors.quickStopCentre && { ...world.town.interiors.quickStopCentre, h: 3.2, r: 14 }].filter(Boolean);
+const shopCentres = [world.town?.interiors.storeCentre && { ...world.town.interiors.storeCentre, h: 4.2, r: 30 }, world.town?.interiors.quickStopCentre && { ...world.town.interiors.quickStopCentre, h: 3.2, r: 14 }, ...world.rural.shops.map(s=>s.light)].filter(Boolean);
 const dayCycle = { on: params.has('cycle'), t: 0, period: 480 };
 // Barrel & Bolt: E at the counter opens the buy menu.
 const gunShop = createGunShopMenu({ arsenal: weapons.arsenal, wallet, input: controls.input, audio, hud: statusHud });

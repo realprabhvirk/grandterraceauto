@@ -54,6 +54,7 @@ try {
       ['rural: orchard access',100,-350,-Math.PI/2],['rural: creek farm',535,180],
       ['rural: west farm',-980,180,Math.PI],['rural: works access',-335,-480],
     ]){d.teleport(x,z,yaw);out.push(await measure(name));}
+    for(const s of g.world.rural?.shops||[]){d.teleport(s.counter.x,s.counter.z,Math.PI);out.push(await measure(`farm shop: ${s.label}`));}
     d.teleport(470, -92, Math.PI);
     g.weapons.arsenal.give('smg', 200); g.weapons.arsenal.select('smg');
     g.controls.input.setVirtual('Mouse0', true);
