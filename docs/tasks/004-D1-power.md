@@ -37,7 +37,7 @@ The station is beside a deliberately excavated cooling basin within its yard; th
 
 ## Status
 
-D1 COMPLETE, including D1a static/access (b6ad89e pushed) and D1b operations/serial acceptance below. Plan5e36aed and C3c378ec2 pushed. Review/commit/push D1b, then immediately D2 survey/plan and the remaining queue. Screenshots0/8; no build.
+D1 COMPLETE, including D1a static/access (b6ad89e pushed) and D1b operations/serial acceptance (57ef130 pushed) below. Plan5e36aed and C3c378ec2 pushed. D2 survey/plan follows, then the remaining queue. Screenshots0/8; no build.
 
 ### D1b implementation evidence (2026-11-08 10:32 IST, in progress)
 
