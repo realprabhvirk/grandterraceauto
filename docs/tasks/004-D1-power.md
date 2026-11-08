@@ -1,0 +1,40 @@
+# Task004 D1 - Stoneleaf Energy Works
+
+## Intent and measured fit
+
+Build the first required industry as a working, coherent low-poly power station: cooling towers with pooled steam, turbine hall, transformers/pipework, a real adjacent cooling basin, fenced yard/service buildings, reactive adult maintenance workers and a solid forklift doing a useful yard circuit. Connect it through a named, signed road, maps, shared sound/night treatment and the existing culling/physics systems. Complete and verify this industry before the wind farm; continue the full owner queue afterward.
+
+C3 is complete and pushed in c378ec2. No new production code has been written for D1. Read before this plan: world/terrain/physics construction, town/chunk/sign kit and industrial/airport patterns; rural roads/plan/speed limits; farms/ponds/coverage adapter; complete farm machinery/config/models/dust and audio/config; pedestrians/work routes/outfits/character actions; main update order, map registry, world/perf/terrain/NPC tests. Rapier0.21 declares `ColliderDesc.convexHull(Float32Array)` returning a descriptor or null; use this only for exact faceted tower-wall panels, without solver/vehicle tuning.
+
+Read-only native survey on5180,2026-11-08 (`codex-004-D1-native-survey.log`, ignored `_probe.mjs`, one closed Edge browser):
+
+| Candidate | Actual evidence | Decision |
+| --- | --- | --- |
+| Existing works pad, x[-425,-250],z[-595,-525] | Zero native collider overlaps in the above-ground40m column;540terrain/native samples, all-4.400000095m, no missing rays, zero measured height disagreement; no existing road through footprint. | Use this12,250m2 footprint inside the declared works grade; do not expand the map or regrade existing development. |
+| Original southern/coastal envelope x[365,540],z[190,260] |540terrain samples range-4.4..118.864m; landmark TV tower and southern boundary detected. This steep envelope is not a flat industrial site; nearby protected farm remains. | Reject; do not flatten the landmark/hills/farm or move the boundary. |
+| Spur envelope x[-340.5,-329.5],z[-522,-478] | No native blockers;27flat/native samples with no missing/error; crosses only Works Rd at its attachment. | Add Energy Way from(-335,-480) to(-335,-520), gravel40km/h; actual length40m. |
+
+The station is beside a deliberately excavated cooling basin within its yard; this is real water/depth, not a near-water label on dry ground. This revises the broad coastal allocation based on actual terrain/landmark evidence. Keep the original63.980116%baseline fixed; current expanded unused land76.1859997% remains far above target. Only actual paved surfaces/buildings/water count, never the entire works pad.
+
+## Numbered implementation and acceptance
+
+1. **D1a static/ground/access (test first, implement, verify, commit/push).**
+   - Add config and builder under `src/industry/`; all new colors/materials use art/palette/materials, seeded geometry, merged static meshes and one culled site group. No new dependencies or real lights.
+   - Layout within the cleared envelope: hall near(-370,-551),62x18x9m; two staggered faceted cooling towers near(-408,-579)/(-381,-580),about24/22m tall; transformer row near(-304,-548); storage shed near(-267,-542); gate office near(-348,-532). Fenced perimeter with a10m north-facing gate at(-335,-525). Keep the road/shoulders and machinery/worker corridors clear.
+   - Real basin near(-281,-578),30x20m outer envelope, shallow1.6m excavation through the shared height grid; actual water surface and solid retaining walls. Cut the paving around the basin; no slab hiding the hole. Existing terrain, roads, protected original solids and farm ponds remain intact. Native/render ground difference<=1cm.
+   - Match hollow, faceted cooling-tower walls using convex panel solids, with the same vertices as the merged visible geometry. Add only a bounded optional convex descriptor case to physics construction; reject invalid hulls rather than silently falling back to an inaccurate box. Ordinary collider paths and vehicle tuning unchanged. Hall, shed, office, transformers, supports, pipes, fence/posts and basin walls are solid and tagged.
+   - Add actual Energy Way graph/shoulder junctions, limits/blades, Power station map icon/label/legend and sign facing the approach. Aggregate the site after protected original collider snapshot and farms; preserve existing NPC roster order. Record only its built paving rectangles in coverage, water separately.
+   - Extend `worldtest powerstatic` first (red missing site), then check feature/native shape counts, actual visible/native tower surfaces, basin depth/walls, existing-ground preservation, gate/road full-footprint clearance, map types/signs/unique names/connectivity, day/night view budget and culling. Run roads/walking/terrain, map/POI/sign and affected farm regressions. Drive Energy Way at full throttle both directions with live traffic/parked cars, report actual attainable speed on this40m spur; no invented high-speed result. Add a power-station perf scene, retain every existing scene/assertion. Commit/push verified D1a; D1 overall stays in progress.
+
+2. **D1b working site (test first, implement, verify, commit/push).**
+   - Append two registered adult workers after the current99, preserving prior RNG/IDs/reactions. Use clear config work routes, visible wrench/maintenance action, existing flee/knockdown/get-up/witness behavior, distance sleep and full-map pause. Reuse the existing work-route machinery; only add a maintenance action alias/tool handling needed here, no population refactor.
+   - Procedural forklift with seated operator, four pooled rotating/steering wheels, mast/forks and carried pallet/crate. A real fixed60Hz/interpolated solid circuit between hall and storage, roughly x[-328,-282],z[-557,-532], native clearance throughout; brakes for player/registered people/vehicles, safe wake occupancy, pauses/sleeps/night lamps. Not enterable. Reuse farm machinery via optional config/model/site/tag injection with unchanged farm defaults; allow exact model-specific fork/load solids if needed. Retain the existing farm route/stop/harvester behavior and tests.
+   - Seeded steam in one bounded shared-material InstancedMesh, around64slots, no per-frame allocation or real light; rising/expanding puffs, actual emissions from both tower mouths, pause/culling/sleep behavior. Fixed mounted night housings/pools, native support and no additional shadow caster. Use existing shared-material render paths correctly.
+   - Bounded synth hum and forklift engine through the existing AudioContext/master. Reuse farm synth via optional config/defaults rather than a second audio system; preserve original5voices/46nodes. Test actual waveform, distance, mute/master, pause/duck, pooled nodes, bfcache and disposal; never add or commit song files.
+   - Extend `worldtest powerops` for workers/tools/routes/native clearance/reactions, full real forklift circuit and stop/resume/wake, interpolation/wheels/pallet/native solids, steam pool/motion/pause, synth lifecycle and mounted lights/day-night budget. Preserve actual sleep/wake/first-frame tests from C3.
+   - Serial affected regression: farm machinery full circuits/stops, farmers/animals/farmtraffic/audio/shop/roads/walking, walk/phase2, NPC/guns/witness, airport/map/POI/sign, material/render-path tests and ordinary perfscenes with the added site. If a test fails, diagnose it without weakening/skipping thresholds. Measure before claiming performance; >=45fps/<600calls, exactly one shadow-casting light. No build or screenshots in D1 (world budget remains0/8).
+   - Update STREETS/WORLD_PLAN/README/DECISIONS/PROGRESS/master status with commands/results, coverage measured from actual content, costs, limitations and hand checks. Review diff, commit/push, then immediately D2 wind survey/plan/test; continue all remaining required work.
+
+## Status
+
+Plan only. Native works/spur survey is complete; production footprint/content/road/operations are not built. Next commit this plan, add/run the failing powerstatic test, implement D1a and verify its checklist. Screenshots0/8; no build.
