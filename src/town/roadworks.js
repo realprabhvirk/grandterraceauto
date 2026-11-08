@@ -22,7 +22,7 @@ export function buildRoadworks({ network, terrain, atlas, avoid = [] }) {
   const cones = [];
   for (let k = -6; k <= 6; k += 2) { const p = at(k, ROAD.halfW - 0.55); cones.push({ x: p.x, y: p.y + 0.06, z: p.z, rot: 0 }); }
   const coneGeo = merge([cylinder(0.02, 0.17, 0.62, 8, 0, 0, 0, '#f07a1a'), cylinder(0.11, 0.13, 0.1, 8, 0, 0.3, 0, '#f4f1e8'), boxB(0.4, 0.04, 0.4, 0, 0, 0, '#2b2b2e')]);
-  const coneMesh = new THREE.InstancedMesh(coneGeo, MAT.solid, cones.length);
+  const coneMesh = new THREE.InstancedMesh(coneGeo, MAT.instanced, cones.length);
   const m = new THREE.Matrix4();
   cones.forEach((c, k) => coneMesh.setMatrixAt(k, m.makeTranslation(c.x, c.y, c.z)));
   coneMesh.castShadow = true;

@@ -535,6 +535,7 @@ try {
       g.wanted.clear(true); g.police.reset();
       const car = g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded && !c.sleeping) || g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded);
       const h0 = car.health ?? 100, cp = car.position;
+      const carFixture = {type:car.type,sleeping:car.sleeping,position:{x:cp.x,y:cp.y,z:cp.z},body:car.body.position,colliders:car.body.colliders.map(c=>({enabled:c.isEnabled(),position:c.translation(),halfExtents:c.shape.halfExtents}))};
       const r = W.debugShot({ x: cp.x - 6, y: cp.y + 0.8, z: cp.z }, { x: 1, y: 0, z: 0 }, 'rifle');
       const carDmg = h0 - car.health;
       // A street light (breakable): shoot until it breaks.
@@ -547,7 +548,7 @@ try {
       g.controls.input.setVirtual('Mouse0', true); await wait(60); g.controls.input.setVirtual('Mouse0', false); await wait(300);
       const P = g.controls.player.position;
       const near = g.peds.peds.filter((p) => p.ch.root.visible && p.state !== 'dead' && p.state !== 'down' && Math.hypot(p.pos.x - P.x, p.pos.z - P.z) < 40);
-      return { r, carDmg, poleBroken: it.broken, shotsToBreak: n, near: near.length, reacting: near.filter((p) => p.flee > 0 || p.cower > 0).length };
+      return { r, carDmg, carFixture, poleBroken: it.broken, shotsToBreak: n, near: near.length, reacting: near.filter((p) => p.flee > 0 || p.cower > 0).length };
     });
     check('bullets damage cars a little', misc.r.kind === 'car' && misc.carDmg > 5 && misc.carDmg < 15, misc);
     check('street light breaks from gunfire', misc.poleBroken && misc.shotsToBreak >= 2, misc);

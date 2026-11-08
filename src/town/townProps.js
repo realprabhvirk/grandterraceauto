@@ -8,7 +8,7 @@ import { T } from './townPlan.js';
 import { frame } from './townKit.js';
 
 function instanced(geo, mat, items, shadow = true) {
-  const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, items.length));
+  const mesh = new THREE.InstancedMesh(geo, mat === MAT.solid ? MAT.instanced : mat, Math.max(1, items.length));
   mesh.count = items.length;
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
   items.forEach((it, i) => { m.compose(new THREE.Vector3(it.x, it.y, it.z), q.setFromAxisAngle(Y, it.rot || 0), it.s ? new THREE.Vector3(it.s, it.s, it.s) : one); mesh.setMatrixAt(i, m); });

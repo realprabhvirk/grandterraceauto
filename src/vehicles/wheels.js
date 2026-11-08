@@ -31,12 +31,12 @@ function unitWheel(rimColor) {
 }
 
 export function createWheelInstances(count) {
-  const mesh = new THREE.InstancedMesh(unitWheel(C.rim), MAT.solid, count);
+  const mesh = new THREE.InstancedMesh(unitWheel(C.rim), MAT.instanced, count);
   mesh.name = 'car-wheels';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.frustumCulled = false; // instances move every frame; cheaper than recomputing bounds
-  const hero = new THREE.InstancedMesh(unitWheel(C.rimHero), MAT.solid, 4);
+  const hero = new THREE.InstancedMesh(unitWheel(C.rimHero), MAT.instanced, 4);
   hero.name = 'car-wheels-hero';
   hero.castShadow = true;
   hero.frustumCulled = false;

@@ -184,6 +184,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/shaketest.mjs    # 5.3: camera jitter in every camera mode (walk/run/jump/POV/drive), shake only on real crashes
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
 .\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles (districts, countryside + gunfire)
+.\dev.cmd node scripts/materialstest.mjs # stable shared shader caches, unchanged appearance/programs, dusk and NPC revive
 .\dev.cmd node scripts/worldtest.mjs roads  # rural directed connectivity, signs, full-width ground and ghost scan
 .\dev.cmd node scripts/worldtest.mjs walking # rural shoulder junctions, civilian links and original resident areas
 .\dev.cmd node scripts/worldtest.mjs farmstatic # actual farm content/solids/maps, day/night views and pause/culling
@@ -196,6 +197,9 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```
+
+Set `GTA_URL` to test a separate server. `GTA_PERF_TRACE=1` adds bounded frame, shader-wait and
+long-task diagnostics to perfscenes; its 45 fps and 600 draw-call limits remain unchanged.
 
 ## Folder structure
 

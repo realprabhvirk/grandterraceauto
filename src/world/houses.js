@@ -106,7 +106,7 @@ export function buildHouses(lots) {
     if (!mine.length) return;
     const parts = variantParts(v, vi);
     for (const [name, geo] of Object.entries(parts)) {
-      const mesh = new THREE.InstancedMesh(geo, name === 'glass' ? MAT.glass : MAT.solid, mine.length);
+      const mesh = new THREE.InstancedMesh(geo, name === 'glass' ? MAT.instancedGlass : MAT.instancedColor, mine.length);
       mesh.name = `house-${v.name}-${name}`;
       mesh.castShadow = name !== 'glass';
       mesh.receiveShadow = true;

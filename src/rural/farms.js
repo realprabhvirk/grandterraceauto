@@ -89,7 +89,7 @@ export function buildFarms({parent,terrain,hooks={}}){
     }
     for(const b of cfg.fields){
       const countX=Math.floor((b.x1-b.x0)/FARM.plantStep),countZ=Math.floor((b.z1-b.z0)/FARM.plantStep),count=countX*countZ;
-      const mesh=new THREE.InstancedMesh(cropGeo(b.kind),MAT.solid,count);mesh.name=`crop-${cfg.id}-${b.kind}`;mesh.receiveShadow=true;
+      const mesh=new THREE.InstancedMesh(cropGeo(b.kind),MAT.instanced,count);mesh.name=`crop-${cfg.id}-${b.kind}`;mesh.receiveShadow=true;
       for(let iz=0;iz<countZ;iz++)for(let ix=0;ix<countX;ix++){
         const x=b.x0+(ix+.5)*(b.x1-b.x0)/countX,z=b.z0+(iz+.5)*(b.z1-b.z0)/countZ;
         position.set(x,terrain.getHeight(x,z),z);q.setFromAxisAngle(Y,r.range(-.3,.3));scale.set(r.range(.7,1.05),r.range(.55,b.kind==='maize'?1.9:1.2),r.range(.7,1.05));matrix.compose(position,q,scale);mesh.setMatrixAt(iz*countX+ix,matrix);
@@ -99,7 +99,7 @@ export function buildFarms({parent,terrain,hooks={}}){
     const treeGeo=merge([cylinder(.15,.22,1.8,6,0,0,0,P.tree.trunk),icosa(1.5,0,0,2.25,0,P.tree.leaves[2],{sy:.8}),icosa(1.15,0,.55,2.65,.2,P.tree.leaves[1],{sy:.8}),icosa(.12,0,.9,1.9,.8,P.town.fuelRed),icosa(.12,0,-.8,2.5,-.5,P.town.yellow)]);
     const orchardSpots=[],o=cfg.orchard;
     for(let z=o.z0+2;z<=o.z1-2;z+=o.step)for(let x=o.x0+2;x<=o.x1-2;x+=o.step)orchardSpots.push({x,z});
-    const orchardMesh=new THREE.InstancedMesh(treeGeo,MAT.solid,orchardSpots.length),trunks=[];orchardMesh.name=`orchard-${cfg.id}`;orchardMesh.castShadow=orchardMesh.receiveShadow=true;
+    const orchardMesh=new THREE.InstancedMesh(treeGeo,MAT.instanced,orchardSpots.length),trunks=[];orchardMesh.name=`orchard-${cfg.id}`;orchardMesh.castShadow=orchardMesh.receiveShadow=true;
     orchardSpots.forEach((p,i)=>{const y=terrain.getHeight(p.x,p.z),s=r.range(.88,1.12);position.set(p.x,y,p.z);q.setFromAxisAngle(Y,r.range(0,6.28));scale.setScalar(s);matrix.compose(position,q,scale);orchardMesh.setMatrixAt(i,matrix);trunks.push({x:p.x,y,z:p.z,r:.22*s,h:1.8*s});});orchardMesh.computeBoundingSphere();group.add(orchardMesh);out.trunks.push(...trunks);feature('orchard',{x:(o.x0+o.x1)/2,z:(o.z0+o.z1)/2});
 
     for(let k=0;k<6;k++){const x=cfg.hay.x+(k%3)*1.6,z=cfg.hay.z+Math.floor(k/3)*1.5,f=F(x,z);block('hay',f,1.2,.9,1.1,0,0,0,P.ground.grassDry);ch.box(f,.07,.94,1.13,-.3,0,0,P.town.wood);ch.box(f,.07,.94,1.13,.3,0,0,P.town.wood);}feature('hay',cfg.hay);

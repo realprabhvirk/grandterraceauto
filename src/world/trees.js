@@ -52,8 +52,8 @@ export function buildTrees(spots, terrain) {
   species.forEach((sp, k) => {
     const list = buckets[k];
     if (!list.length) return;
-    const trunk = new THREE.InstancedMesh(sp.trunk, MAT.solid, list.length);
-    const leaves = new THREE.InstancedMesh(sp.leaves, MAT.solid, list.length);
+    const trunk = new THREE.InstancedMesh(sp.trunk, MAT.instancedColor, list.length);
+    const leaves = new THREE.InstancedMesh(sp.leaves, MAT.instancedColor, list.length);
     list.forEach((t, i) => {
       const y = terrain.getHeight(t.x, t.z) - 0.05;
       q.setFromAxisAngle(Y, t.rot);

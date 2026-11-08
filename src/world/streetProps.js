@@ -13,7 +13,7 @@ import { makeRng } from '../utils/rng.js';
 const TIMBER = '#7a5b42', STEEL = '#8d8f8a';
 
 function instanced(geo, mat, items, { shadow = true } = {}) {
-  const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+  const mesh = new THREE.InstancedMesh(geo, mat === MAT.solid ? MAT.instanced : mat, items.length);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
   items.forEach((it, i) => { m.compose(new THREE.Vector3(it.x, it.y, it.z), q.setFromAxisAngle(Y, it.rot || 0), one); mesh.setMatrixAt(i, m); });
   mesh.castShadow = shadow; mesh.receiveShadow = true;

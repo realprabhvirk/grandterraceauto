@@ -154,7 +154,7 @@ export function buildAirport({ parent, rng }) {
     // Service road from Terminal Dr to the gate.
     ch.box(F, g.w, 0.05, AP.roadZ - Fz.z - 4, g.x, 0.02, (AP.roadZ - 4 + Fz.z) / 2, '#4a484e');
   }
-  const postMesh = new THREE.InstancedMesh(paint(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 5).translate(0, 1.1, 0), '#5c5f66', 0.02), MAT.solid, posts.length);
+  const postMesh = new THREE.InstancedMesh(paint(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 5).translate(0, 1.1, 0), '#5c5f66', 0.02), MAT.instanced, posts.length);
   posts.forEach(([x, z], i) => postMesh.setMatrixAt(i, new THREE.Matrix4().makeTranslation(x, y, z)));
   postMesh.name = 'ap-fence-posts'; postMesh.receiveShadow = true;
 

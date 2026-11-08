@@ -34,6 +34,13 @@ export const MAT = {
   }),
 };
 
+// Three caches object-type shader flags per material. Keep each render path stable
+// while sharing identical appearance and the same compiled shader families.
+MAT.skinned = MAT.solid.clone();
+MAT.instanced = MAT.solid.clone();
+MAT.instancedColor = MAT.solid.clone();
+MAT.instancedGlass = MAT.glass.clone();
+
 // Street light heads and the soft additive pools they throw on the road.
 MAT.streetHead = new THREE.MeshLambertMaterial({ color: '#e9e2cf', emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0 });
 MAT.pool = new THREE.MeshBasicMaterial({
@@ -51,6 +58,7 @@ MAT.innerPane = new THREE.MeshBasicMaterial({ color: '#cfe0ea' });
 export function setGlow(dusk) {
   const d = Math.min(1, Math.max(0, dusk));
   MAT.glass.emissiveIntensity = d * d * 1.25;
+  MAT.instancedGlass.emissiveIntensity = MAT.glass.emissiveIntensity;
   MAT.lamp.emissiveIntensity = 0.15 + d * 1.6;
   const s = Math.max(0, (d - 0.35) / 0.65); // street lights come on a little after sunset
   MAT.streetHead.emissiveIntensity = s * 2.4;

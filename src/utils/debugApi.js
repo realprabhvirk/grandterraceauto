@@ -7,6 +7,8 @@ import { MAT } from '../art/materials.js';
 export function createDebugApi({ world, vehicles, controls, camera }) {
   const hero = () => vehicles.cars.find((c) => c.hero);
   return {
+    /** Exact live material registry, including Vite's current module identity. */
+    materials: () => MAT,
     /** Park one car of each type in a row on Grand Terrace near 62, for a group photo. */
     lineup() {
       const S = world.network.main.samples, i0 = world.layout.hero.site.i + 30;

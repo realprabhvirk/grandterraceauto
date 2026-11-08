@@ -177,7 +177,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   }
   function revive(ped) {
     ped.hp = 100; ped.gone = false; ped.state = ped.home ? 'home' : 'walk'; ped.downT = 0;
-    if (ped.fadeMat) { ped.ch.mesh.material = MAT.solid; ped.fadeMat.dispose(); ped.fadeMat = null; ped.ch.mesh.castShadow = true; }
+    if (ped.fadeMat) { ped.ch.mesh.material = MAT.skinned; ped.fadeMat.dispose(); ped.fadeMat = null; ped.ch.mesh.castShadow = true; }
     if (ped.home) ped.pos.set(ped.home.x, ped.home.y, ped.home.z);
     else { const L = graph.lines[ped.li]; ped.idx = ped.rng.int(1, L.length - 2); const p = L[ped.idx]; ped.pos.set(p.x, p.y, p.z); }
     ped.collider.setEnabled(true);

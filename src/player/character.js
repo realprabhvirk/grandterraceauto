@@ -138,7 +138,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
   root.name = name;
   const bones = BONES.map(([n, , off]) => { const b = new THREE.Bone(); b.name = n; b.position.set(...off); return b; });
   BONES.forEach(([, parent], i) => { if (parent) bones[BONE_INDEX[parent]].add(bones[i]); });
-  const mesh = new THREE.SkinnedMesh(bodyGeometry({ ...PLAYER_OUTFIT, ...outfit }), MAT.solid);
+  const mesh = new THREE.SkinnedMesh(bodyGeometry({ ...PLAYER_OUTFIT, ...outfit }), MAT.skinned);
   mesh.add(bones[0]);
   root.add(mesh);
   root.updateMatrixWorld(true);

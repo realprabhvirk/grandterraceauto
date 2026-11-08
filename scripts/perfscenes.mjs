@@ -2,6 +2,7 @@
 // Usage (dev server running): .\dev.cmd node scripts/perfscenes.mjs
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
+import { installPerfTrace } from './perfTrace.mjs';
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 const context = await browser.newContext({ viewport: { width: 960, height: 540 } });
@@ -14,12 +15,14 @@ try {
   // Measure the real shared audio graph too; virtual debug taps never unlock WebAudio.
   await page.keyboard.press('Shift');
   await page.waitForFunction(() => !window.__gta.farmAudio || window.__gta.farmAudio.ready);
+  if(process.env.GTA_PERF_TRACE==='1')await installPerfTrace(page);
   const rows = await page.evaluate(async () => {
     const g = window.__gta, d = g.debug, wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const measure = async (name) => {
+      window.__perfTrace?.begin();
       await wait(2500);
       const i = g.renderer.info.render;
-      return { scene: name, fps: g.stats().fps, calls: i.calls, tris: i.triangles };
+      return { scene: name, fps: g.stats().fps, calls: i.calls, tris: i.triangles,trace:window.__perfTrace?.end() };
     };
     const out = [];
     out.push(await measure('suburb: on foot outside 62'));
@@ -68,6 +71,7 @@ try {
     return out;
   });
   for (const r of rows) console.log(`${r.scene.padEnd(40)} fps ${String(r.fps).padStart(3)}  calls ${String(r.calls).padStart(4)}  tris ${r.tris}`);
+  for(const r of rows)if(r.trace&&(r.fps<45||r.scene.includes('cabin')||r.scene.includes('Terrace Pde')))console.log('TRACE',JSON.stringify({scene:r.scene,...r.trace}));
   console.log(errors.length ? `page errors: ${errors.slice(0, 3).join(' | ')}` : 'no page errors');
   assert.deepEqual(errors,[]);
   for(const r of rows){assert.ok(r.fps>=45,`${r.scene}: ${r.fps}fps below45`);assert.ok(r.calls<600,`${r.scene}: ${r.calls}draw calls reaches600`);}

@@ -24,7 +24,7 @@ function kit(kind,c){
 }
 
 export function animalInstances(parent,kind,c,count){
-  const g=kit(kind,c),body=new THREE.InstancedMesh(g.body,MAT.solid,count),legs=new THREE.InstancedMesh(g.leg,MAT.solid,count*4);
+  const g=kit(kind,c),body=new THREE.InstancedMesh(g.body,MAT.instancedColor,count),legs=new THREE.InstancedMesh(g.leg,MAT.instancedColor,count*4);
   for(const m of [body,legs]){m.castShadow=m.receiveShadow=true;m.frustumCulled=false;m.visible=false;parent.add(m);}body.name=`farm-${kind}-bodies`;legs.name=`farm-${kind}-legs`;
   return {kind,body,legs,list:[]};
 }

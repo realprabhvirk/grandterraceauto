@@ -56,7 +56,7 @@ export function buildStreetLights(network, layout) {
   const poolGeo = new THREE.CircleGeometry(5.5, 20).rotateX(-Math.PI / 2);
 
   const n = spots.length;
-  const poles = new THREE.InstancedMesh(poleGeo, MAT.solid, n);
+  const poles = new THREE.InstancedMesh(poleGeo, MAT.instanced, n);
   const heads = new THREE.InstancedMesh(headGeo, MAT.streetHead, n);
   const pools = new THREE.InstancedMesh(poolGeo, MAT.pool, n);
   poles.castShadow = true;
