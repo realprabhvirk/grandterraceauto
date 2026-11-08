@@ -97,6 +97,7 @@ Gravel surfaces and earth shoulders, no urban kerbs. Stoneleaf Rd joins the moto
 | Windmill Track | 40 | track |
 | Harvest Lane | 40 | track |
 | Works Rd | 40 | track |
+| Energy Way | 40 | track |
 | Parade Way | 40 | base |
 | West Patrol Rd | 40 | base |
 | Range Rd | 40 | base |
@@ -104,3 +105,7 @@ Gravel surfaces and earth shoulders, no urban kerbs. Stoneleaf Rd joins the moto
 | Barracks Way | 40 | base |
 | Aviation Dr | 40 | base |
 | Airfield Link | 40 | base |
+
+Energy Way is the40m gravel spur from Works Rd to Stoneleaf Energy Works. A gravel apron continues
+through the open gate into its paved yard. Rural dead ends have slow return connectors; the public
+spur's endpoint is not a two-street junction. The works' operating equipment follows in Task004 D1b.

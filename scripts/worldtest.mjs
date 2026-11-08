@@ -22,6 +22,15 @@ try{
    const badLanes=ruralLanes.filter(l=>{const p=l.pts[0],dx=Math.sign(l.to.x-l.from.x),dz=Math.sign(l.to.z-l.from.z),left=(p.x-l.from.x)*dz-(p.z-l.from.z)*dx;return !l.exits.length||!Number.isFinite(l.len)||l.len<1||Math.abs(left-1.8)>.001||l.pts.some(p=>!Number.isFinite(p.x+p.z));}).map(l=>l.name);
    const {CORRIDOR}=await import('/src/world/terrain.js');let samples=0,maxError=0,maxStep=0,missing=0;const ghosts=[];
    const P=g.physics,R=g.RAPIER,shape=new R.Cuboid(.85,.7,2),ignore=new Set(['terrain','car','traffic','police sensor','ped','player']);
+   const deadEnds=rural.nodes.filter(n=>n.links.length===1),badReturns=[];let returnSamples=0;
+   for(const n of deadEnds){
+    const incoming=ruralLanes.filter(l=>l.to===n),outgoing=ruralLanes.find(l=>l.from===n);
+    for(const lane of incoming){const cons=lane.exits.map(e=>lanes[e.lane]);if(cons.length!==1||!cons[0].slow||!cons[0].exits.some(e=>e.lane===outgoing?.id))badReturns.push(n.id);else for(let i=0;i<cons[0].pts.length;i++){
+     const p=cons[0].pts[i],q=cons[0].pts[Math.min(i+1,cons[0].pts.length-1)],prev=cons[0].pts[Math.max(0,i-1)],yaw=Math.atan2(q.x-prev.x,q.z-prev.z);
+     for(const type of new Set(g.vehicles.cars.map(c=>c.type))){const cfg=g.vehicles.cars.find(c=>c.type===type).cfg,hull=new R.Cuboid(cfg.W/2,cfg.roof/2,cfg.L/2);returnSamples++;P.world.intersectionsWithShape({x:p.x,y:w.terrain.getHeight(p.x,p.z)+cfg.roof/2+.1,z:p.z},{x:0,y:Math.sin(yaw/2),z:0,w:Math.cos(yaw/2)},hull,c=>{const tag=P.tagOf(c.handle);if(c.isEnabled()&&!ignore.has(tag.type)&&badReturns.length<12)badReturns.push({node:n.id,type,tag});return true;});}
+    }}
+    const road=incoming[0]?.road;if(!road||w.citySigns.registry.limits.filter(s=>s.road===road.name&&s.limit===road.speedLimit).length<2)badReturns.push('dead-end limits '+n.id);
+   }
    for(const r of rural.roads){const S=r.samples;for(let i=0;i<S.length;i++){
     const s=S[i];for(let lat=-r.halfW-1;lat<=r.halfW+1;lat+=.5){const x=s.x+s.nx*lat+.001,z=s.z+s.nz*lat+.001,h=w.terrain.getHeight(x,z);samples++;
      const hit=P.world.castRay(new R.Ray({x,y:h+10,z},{x:0,y:-1,z:0}),20,true,undefined,undefined,undefined,undefined,c=>P.tagOf(c.handle).type==='terrain');
@@ -30,9 +39,9 @@ try{
     }
     if(i%2===0)for(const lat of [-2,0,2]){const x=s.x+s.nx*lat,z=s.z+s.nz*lat,y=w.terrain.getHeight(x,z)+1.05,yaw=Math.atan2(s.tx,s.tz);P.world.intersectionsWithShape({x,y,z},{x:0,y:Math.sin(yaw/2),z:0,w:Math.cos(yaw/2)},shape,c=>{const tag=P.tagOf(c.handle);if(c.isEnabled()&&!ignore.has(tag.type)&&ghosts.length<20)ghosts.push({road:r.name,tag,x,z});return true;});}
    }}
-   return {roads:rural.roads.length,lanes:ruralLanes.length,unreachable,missingSigns,missingBlades,badLimits,badLanes,unique:new Set(names).size===names.length,samples,maxError,maxStep,missing,ghosts,paths:rural.pedLines.length,sites:rural.sites.map(s=>({id:s.id,x:s.x,z:s.z})),CORRIDOR};
+   return {roads:rural.roads.length,lanes:ruralLanes.length,unreachable,missingSigns,missingBlades,badLimits,badLanes,unique:new Set(names).size===names.length,samples,maxError,maxStep,missing,ghosts,deadEnds:deadEnds.length,badReturns,returnSamples,paths:rural.pedLines.length,sites:rural.sites.map(s=>({id:s.id,x:s.x,z:s.z})),CORRIDOR};
   });
-  console.log('Road evidence',JSON.stringify(r));assert.ok(r.roads>=12&&r.lanes>=r.roads*2);for(const k of ['unreachable','missingSigns','missingBlades','badLimits','badLanes','ghosts'])assert.deepEqual(r[k],[],k);assert.ok(r.unique);assert.ok(r.paths>0);assert.equal(r.missing,0);assert.ok(r.maxError<=.01);assert.ok(r.maxStep<=.02);console.log('PASS roads: directed connectivity, signs, limits, full-width terrain and ghost scan');
+  console.log('Road evidence',JSON.stringify(r));assert.ok(r.roads>=12&&r.lanes>=r.roads*2);for(const k of ['unreachable','missingSigns','missingBlades','badLimits','badLanes','ghosts','badReturns'])assert.deepEqual(r[k],[],k);assert.ok(!r.deadEnds||r.returnSamples>0);assert.ok(r.unique);assert.ok(r.paths>0);assert.equal(r.missing,0);assert.ok(r.maxError<=.01);assert.ok(r.maxStep<=.02);console.log('PASS roads: directed connectivity, signs, limits, rural dead-end return clearance, full-width terrain and ghost scan');
  }
  if(run('walking')){
   const r=await page.evaluate(()=>{const g=__gta,rural=g.world.rural,{lines,links,suburbLines}=g.peds.graph,ids=rural.pedLines.map(l=>lines.indexOf(l)),ruralIds=new Set(ids),unreachable=[];
@@ -43,6 +52,54 @@ try{
    const north=g.peds.peds.filter(p=>p.area==='north'),civilian=g.peds.peds.filter(p=>['north','town','downtown','beach'].includes(p.area));
    return {lines:ids.length,edges:rural.edges.length,marked:ids.every(id=>lines[id].rural),unreachable,badPoints,north:north.length,misplaced:civilian.filter(p=>ruralIds.has(p.li)).map(p=>p.id)};
   });console.log('Walking evidence',JSON.stringify(r));assert.ok(r.lines>=r.edges*2);assert.ok(r.marked);assert.deepEqual(r.unreachable,[]);assert.deepEqual(r.badPoints,[]);assert.equal(r.north,4);assert.deepEqual(r.misplaced,[]);console.log('PASS walking: rural junctions/civilian verge links and legacy resident routes');
+ }
+ if(run('powerstatic')){
+  await page.reload();await page.waitForFunction(()=>window.__gta?.ready,null,{timeout:90000});
+  const r=await page.evaluate(async()=>{
+   const g=__gta,w=g.world,p=w.rural.power;if(!p)throw Error('Power station is not built');
+   const C=p.config,{ICON}=await import('/src/ui/mapIcons.js'),bad=[],native=[];
+   g.physics.world.forEachCollider(c=>{if(g.physics.tagOf(c.handle).type==='power station')native.push(c);});
+   for(const kind of ['hall','tower','transformer','basin','store','office','fence','pipe','gate','paving','sign'])if(!p.features.some(f=>f.kind===kind))bad.push('missing '+kind);
+   if(p.towers.length!==2||native.filter(c=>c.shape.type===g.RAPIER.ShapeType.ConvexPolyhedron).length<40)bad.push('native faceted tower walls');
+   let lights=0;g.scene.traverse(o=>{if(o.isLight&&o.castShadow)lights++;});
+   const road=w.rural.roads.find(r=>r.name==='Energy Way');
+   if(!road||Math.abs(road.length-40)>.01||road.speedLimit!==40||!road.track)bad.push('actual signed service road');
+   if(!g.world.places.some(q=>q.kind==='power'&&q.label===C.label)||ICON.power?.label!=='Power station')bad.push('map registry/place');
+   const paving=p.paving.geometry.attributes.position;let maxPavingError=0;
+   for(const mesh of [p.paving,p.apron]){const a=mesh.geometry.attributes.position;for(let k=0;k<a.count;k++)maxPavingError=Math.max(maxPavingError,Math.abs(a.getY(k)-w.terrain.getHeight(a.getX(k),a.getZ(k))));}
+   const basin=C.basin,depth=p.water.y-w.terrain.getHeight(basin.x,basin.z),wallSolids=native.filter(c=>g.physics.tagOf(c.handle).owner.includes(':basin:')).length;
+   const formerApron=[];for(const x of [-339.6,-330.4])for(const z of [-527.5,-520]){const plane=p.water.y+C.basin.waterDrop+.005,h=w.terrain.getHeight(x,z),hit=g.physics.world.castRay(new g.RAPIER.Ray({x,y:plane+3,z},{x:0,y:-1,z:0}),10,true,undefined,undefined,undefined,undefined,c=>g.physics.tagOf(c.handle).type==='terrain');formerApron.push({x,z,plane,queried:h,native:hit?plane+3-hit.timeOfImpact:null});}
+   if(depth<1||wallSolids<4)bad.push('real excavated basin/walls');
+   // Independent ray/triangle intersection against the actual visible tower mesh.
+   function visualRay(a,o,d){let best=Infinity;for(let i=0;i<a.count;i+=3){
+    const ax=a.getX(i),ay=a.getY(i),az=a.getZ(i),ex=a.getX(i+1)-ax,ey=a.getY(i+1)-ay,ez=a.getZ(i+1)-az,fx=a.getX(i+2)-ax,fy=a.getY(i+2)-ay,fz=a.getZ(i+2)-az;
+    const px=d.y*fz-d.z*fy,py=d.z*fx-d.x*fz,pz=d.x*fy-d.y*fx,det=ex*px+ey*py+ez*pz;if(Math.abs(det)<1e-9)continue;
+    const tx=o.x-ax,ty=o.y-ay,tz=o.z-az,u=(tx*px+ty*py+tz*pz)/det;if(u<0||u>1)continue;
+    const qx=ty*ez-tz*ey,qy=tz*ex-tx*ez,qz=tx*ey-ty*ex,v=(d.x*qx+d.y*qy+d.z*qz)/det;if(v<0||u+v>1)continue;
+    const t=(fx*qx+fy*qy+fz*qz)/det;if(t>=0)best=Math.min(best,t);
+   }return best;}
+   let towerRays=0,maxTowerError=0;
+   for(const [ti,t]of p.towers.entries())for(const f of [.25,.6,.9])for(let k=0;k<12;k++){
+    const a=(k+.5)*Math.PI/6,dx=Math.sin(a),dz=Math.cos(a),o={x:t.x+dx*30,y:t.y+t.h*f,z:t.z+dz*30},d={x:-dx,y:0,z:-dz};
+    const vis=visualRay(t.mesh.geometry.attributes.position,o,d),hit=g.physics.world.castRay(new g.RAPIER.Ray(o,d),60,true,undefined,undefined,undefined,undefined,c=>g.physics.tagOf(c.handle).owner.startsWith(`${C.id}:tower:${ti}:`));
+    towerRays++;if(!hit||!Number.isFinite(vis))bad.push('tower surface ray '+ti);else maxTowerError=Math.max(maxTowerError,Math.abs(vis-hit.timeOfImpact));
+   }
+   const sign=p.sign.mesh.geometry.attributes.normal,near=w.network.index.nearest(C.sign.x,C.sign.z,70),dx=near.sample.x-C.sign.x,dz=near.sample.z-C.sign.z;
+   if((sign.getX(0)*dx+sign.getZ(0)*dz)/Math.hypot(dx,dz)<.9)bad.push('sign faces away from access');
+   if(!w.rural.builtSurfaces?.length||w.rural.builtSurfaces.some(b=>!(b.x0>=-425&&b.x1<=-250&&b.z0>=-595&&b.z1<=-525)&&!(b.x0>=C.apron.x0&&b.x1<=C.apron.x1&&b.z0>=C.apron.z0&&b.z1<=C.apron.z1)))bad.push('actual paving coverage bounds');
+   const hull=new g.RAPIER.Cuboid(.85,.7,2);for(let z=-519;z>=-531;z--)for(const x of [-337,-335,-333])g.physics.world.intersectionsWithShape({x,y:w.terrain.getHeight(x,z)+1.05,z},{x:0,y:0,z:0,w:1},hull,c=>{if(c.isEnabled()&&g.physics.tagOf(c.handle).type==='power station')bad.push('blocked gate/apron');return true;});
+   return {bad,solids:native.length,lights,depth,wallSolids,towerRays,maxTowerError,maxPavingError,formerApron,road:road?.name,triangles:paving.count/3};
+  });console.log('Power station native/static',JSON.stringify(r));assert.deepEqual(r.bad,[]);assert.ok(r.solids>=65);assert.equal(r.lights,1);assert.ok(r.maxTowerError<=.01);assert.ok(r.maxPavingError<=.01);
+  const turn=await page.evaluate(async()=>{
+   const g=__gta,lanes=g.traffic.graph.lanes,inbound=lanes.find(l=>l.road?.name==='Energy Way'&&l.to.links.length===1),outbound=lanes.find(l=>l.road?.name==='Energy Way'&&l.from===inbound.to),car=g.traffic.cars.find(c=>c.id==='farm-ute-gumleaf'),p=inbound.pts[0],q=inbound.pts[1],seen=[],bad=[];
+   g.debug.teleport(-350,-493,Math.PI);car.lane=inbound;car.s=0;car.v=6;car.wait=0;car.latOff=0;car.blockedT=0;car.pos.set(p.x,g.world.terrain.getHeight(p.x,p.z),p.z);car.fwd.set(q.x-p.x,0,q.z-p.z).normalize();car.body.setTranslation(car.pos,true);
+   let returned=false,completed=false,maxStep=0,last={x:p.x,z:p.z,t:performance.now()};const start=performance.now();
+   while(performance.now()-start<30000){await new Promise(resolve=>setTimeout(resolve,100));const now=performance.now(),distance=Math.hypot(car.pos.x-last.x,car.pos.z-last.z);maxStep=Math.max(maxStep,distance);if(distance>Math.max(car.cruise,car.v)*(now-last.t)/1000+1)bad.push('pose jump');last={x:car.pos.x,z:car.pos.z,t:now};if(!seen.includes(car.lane.id))seen.push(car.lane.id);if(car.lane===outbound&&car.s>1)returned=true;if(returned&&car.lane.road?.name==='Works Rd'){completed=true;break;}if(!Number.isFinite(car.pos.x+car.pos.y+car.pos.z))bad.push('NaN');}
+   return {returned,completed,bad,maxStep,seen,health:car.health,seconds:(performance.now()-start)/1000};
+  });console.log('Actual rural spur traffic return',JSON.stringify(turn));assert.ok(turn.returned&&turn.completed&&turn.health===100);assert.deepEqual(turn.bad,[]);
+  for(const dusk of [0,1]){await page.evaluate(d=>{__gta.lighting.setDusk(d);__gta.debug.teleport(-335,-520,Math.PI);},dusk);await page.waitForTimeout(2700);const v=await page.evaluate(()=>({visible:__gta.world.rural.power.group.visible,fps:__gta.stats().fps,calls:__gta.renderer.info.render.calls}));console.log('Power station view',dusk,JSON.stringify(v));assert.ok(v.visible&&v.fps>=45&&v.calls<600);}
+  await page.evaluate(()=>__gta.mapUI.setMode(2));await page.waitForTimeout(100);assert.ok(await page.evaluate(()=>document.querySelector('[data-kind="power"]')));await page.evaluate(()=>{__gta.mapUI.setMode(1);__gta.lighting.setDusk(0);__gta.debug.teleport(900,-200,0);});await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>__gta.world.rural.power.group.visible),false);
+  console.log('PASS powerstatic: native/visible towers, basin depth/walls, paving/ground, access/maps/sign, culling and day/night budget');
  }
  if(run('farmstatic')){
   const r=await page.evaluate(async()=>{
@@ -272,13 +329,18 @@ try{
   assert.ok(roads.length,'requested road must exist');
   for(const name of roads)for(const dir of [1,-1]){
    const r=await page.evaluate(async({name,dir})=>{const g=__gta,c=g.controls.car,road=g.world.rural.roads.find(r=>r.name===name),S=dir===1?road.samples:[...road.samples].reverse(),points=[];
-    for(let i=1;i<S.length-1;i+=3){const s=S[i];points.push({x:s.x-s.nx*1.8*dir,z:s.z-s.nz*1.8*dir});}
-    const end=S[S.length-2];points.push({x:end.x-end.nx*1.8*dir,z:end.z-end.nz*1.8*dir});
+    const fullSpur=name==='Energy Way';
+    for(let i=fullSpur?0:1;i<S.length-1;i+=3){const s=S[i];points.push({x:s.x-s.nx*1.8*dir,z:s.z-s.nz*1.8*dir});}
+    const end=S[S.length-(fullSpur?1:2)];points.push({x:end.x-end.nx*1.8*dir,z:end.z-end.nz*1.8*dir});
+    // drivePoints accepts nearby waypoints; the clear apron/junction runoff makes this short
+    // spur cross the actual far endpoint rather than finishing several metres before it.
+    if(fullSpur)points.push({x:end.x+end.tx*dir*8-end.nx*1.8*dir,z:end.z+end.tz*dir*8-end.nz*1.8*dir});
     c.health=100;c.dead=false;c.body.dead=false;g.wanted.clear(true);g.police.reset();const d0=g.combat.damageLog.length;g.controls.input.setVirtual('ShiftLeft',true);
     const obstacles=[...g.vehicles.cars.filter(v=>v!==c&&!v.impounded),...g.traffic.cars.map(t=>({position:t.pos}))];
     const res=await g.debug.drivePoints(points,{speed:80,timeout:120,obstacles});g.controls.input.setVirtual('ShiftLeft',false);
-    return {name,dir,...res,length:road.length,health:c.health,damage:g.combat.damageLog.slice(d0),traffic:g.traffic.cars.length,parked:g.vehicles.cars.length};
-   },{name,dir});console.log('Driving',JSON.stringify(r));assert.ok(r.ok,`${name} direction${dir}: ${r.reason}`);assert.ok(r.dist>=r.length-10,'drive must traverse the road');assert.deepEqual(r.damage,[]);assert.equal(r.health,100);assert.ok(r.maxTilt<30);assert.ok(r.traffic>0&&r.parked>0);
+    const start=S[0],last=S[S.length-1],endProgress=((c.position.x-start.x)*(last.x-start.x)+(c.position.z-start.z)*(last.z-start.z))/road.length;
+    return {name,dir,...res,length:road.length,fullSpur,endProgress,health:c.health,damage:g.combat.damageLog.slice(d0),traffic:g.traffic.cars.length,parked:g.vehicles.cars.length};
+   },{name,dir});console.log('Driving',JSON.stringify(r));assert.ok(r.ok,`${name} direction${dir}: ${r.reason}`);assert.ok(r.dist>=r.length-(r.fullSpur?0:10),'drive must traverse the road');if(r.fullSpur)assert.ok(r.endProgress>=r.length,'short spur must cross its actual endpoint');assert.deepEqual(r.damage,[]);assert.equal(r.health,100);assert.ok(r.maxTilt<30);assert.ok(r.traffic>0&&r.parked>0);
   }console.log(`PASS drive: ${roads.length} selected rural roads, both directions, full throttle, no damage/flips`);
  }
  assert.deepEqual(errors,[]);console.log('PASS world: no page errors');

@@ -35,6 +35,8 @@ export const PALETTE = {
     mulch: '#5b4232',
   },
 
+  industry: { concrete:'#b9b2a1',steel:'#7b8582',copper:'#a77b59',wall:'#b4c1bb' },
+
   road: {
     asphalt: '#716e73',
     asphaltPatch: '#67646a',

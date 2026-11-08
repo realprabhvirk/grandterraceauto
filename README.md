@@ -165,7 +165,9 @@ the farms, and duck during cutscenes. Barn and shed lamps glow at night without 
 Gumleaf Farm Shop is enterable at the Food & drink marker beside Gumleaf Orchard Farm. Press E at the
 door, walk to the counter and press E to shop: seasonal fruit ($8, +12 health), a farm sandwich ($14, +20)
 or a picnic lunch ($20, +25). The keeper uses the regular civilian reactions and witness rules.
-Industries and military operations are still being built.
+Stoneleaf Energy Works is under construction off Works Rd via the signed Energy Way spur (Power station
+marker). Its cooling towers, turbine hall, transformers, real cooling basin and fenced yard are in place;
+workers and operating equipment follow in the next phase. Other industries and military operations follow.
 See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 
 ## Self-tests (Playwright driving the installed Microsoft Edge - no browser download)
@@ -195,6 +197,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/worldtest.mjs animals # seeded livestock/dogs, native clearance, safe hits/recovery, gunfire/pause/night/perf
 .\dev.cmd node scripts/worldtest.mjs farmambience # shared synth waveforms/lifecycle, master/mute/pause and mounted night lamps
 .\dev.cmd node scripts/worldtest.mjs farmshop # native door/wall walks, food purchases, menu lock, keeper/witness and lighting
+.\dev.cmd node scripts/worldtest.mjs powerstatic # native/visible towers, basin/paving/gate, actual traffic return and map/culling/perf
 .\dev.cmd node scripts/worldtest.mjs drive  # every rural road, both directions, live traffic/parked cars retained
 .\dev.cmd node scripts/terrainExpansiontest.mjs # declared grading only; developed ground, chunks, physics and maps
 ```

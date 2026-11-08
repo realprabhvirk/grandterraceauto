@@ -4,6 +4,7 @@
 // (part already driven fades out) and street names along roads.
 import { PALETTE } from '../art/palette.js';
 export const ICON = {
+  power: { t:'E',c:PALETTE.town.yellow,label:'Power station',pri:6 },
   farm: { t: 'F', c: PALETTE.road.signBlade, label: 'Farm', pri: 6 },
   home: { t: '62', c: '#d86c3d', label: 'House 62', pri: 10 },
   police: { t: 'P', c: '#4f7bd8', label: 'Police station', pri: 9 },

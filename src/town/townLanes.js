@@ -1,5 +1,5 @@
 // Town lanes (keep left): one lane per direction per grid edge, plus curved connectors
-// through every intersection (left, straight, right - no U-turns). Straight on Terrace Pde
+// through every intersection (left, straight, right; rural dead ends get a return connector). Straight on Terrace Pde
 // and the ring road has priority; everything else gives way at the intersection.
 // The Terrace Link joins Grand Terrace's lanes at its east end.
 import { T } from './townPlan.js';
@@ -65,16 +65,19 @@ export function buildTownLanes(plan, { add, fwd, bwd, lanePt, S }) {
   const isMain = (L) => L === linkE || L === linkW || (L.road?.arterial && !L.road?.extra);
   for (const n of plan.nodes) {
     const ins = into.get(n.id) || [], outs = outOf.get(n.id) || [];
+    const ruralEnd = n.rural && n.links.length === 1;
     for (const inL of ins) {
       const di = dirOf(inL, true), A = inL.pts[inL.pts.length - 1];
       const choices = [];
       for (const outL of outs) {
         const dO = dirOf(outL, false), B = outL.pts[0];
         const dot = di.x * dO.x + di.z * dO.z;
-        if (dot < -0.5) continue; // no U-turns
+        const reverse = dot < -0.5;
+        if (reverse && !ruralEnd) continue; // retain the urban no-U-turn rule
         const straight = dot > 0.5;
         let C;
-        if (straight) C = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 };
+        if (reverse) C = { x: n.x + di.x * STOP, z: n.z + di.z * STOP };
+        else if (straight) C = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 };
         else {
           // Intersection of the incoming and outgoing lane lines.
           const det = di.x * -dO.z - di.z * -dO.x;
@@ -82,8 +85,8 @@ export function buildTownLanes(plan, { add, fwd, bwd, lanePt, S }) {
           C = { x: A.x + di.x * t, z: A.z + di.z * t };
         }
         const corner = n.links.length === 2 && !(n === entry);
-        const priority = corner || (straight && isMain(inL) && isMain(outL));
-        const con = add({ name: `x${n.id} ${straight ? 'straight' : 'turn'}`, pts: bezier(A, C, B), exits: [{ lane: outL.id, s: 0, prob: 1 }], slow: !straight, town: true, giveWay: priority ? null : { x: n.x, z: n.z } });
+        const priority = ruralEnd || corner || (straight && isMain(inL) && isMain(outL));
+        const con = add({ name: `x${n.id} ${reverse ? 'uturn' : straight ? 'straight' : 'turn'}`, pts: bezier(A, C, B), exits: [{ lane: outL.id, s: 0, prob: 1 }], slow: !straight, town: true, giveWay: priority ? null : { x: n.x, z: n.z } });
         choices.push({ con, w: straight ? 2 : 1 });
       }
       const sum = choices.reduce((a, c) => a + c.w, 0);

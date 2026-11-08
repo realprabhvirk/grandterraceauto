@@ -1263,7 +1263,10 @@ try {
       const g = window.__gta, W = g.world, R = W.citySigns.registry, plan = W.town.plan, wait = (ms) => new Promise((q) => setTimeout(q, ms));
       // Every grid junction (node where a N-S and an E-W street meet) has a blade with both names.
       const missing = [], wrong = [];
-      for (const n of plan.nodes) {
+      // A one-road rural terminus is not a two-street junction. Its limits and return route
+      // are asserted separately; retain every original urban junction/name assertion.
+      const junctions = plan.nodes.filter(n=>!(n.rural&&n.links.length===1));
+      for (const n of junctions) {
         const b = R.blades.find((q) => Math.abs(q.x - n.x) < 0.5 && Math.abs(q.z - n.z) < 0.5);
         if (!b) { missing.push([n.x, n.z]); continue; }
         const names = W.network.allRoads.filter((rd) => rd.samples.some((s) => Math.hypot(s.x - n.x, s.z - n.z) < 1.2)).map((rd) => rd.street);
@@ -1276,7 +1279,7 @@ try {
       const school = R.limits.some((l) => l.school);
       const breakable = ['streetBlade', 'limitSign'].every((n) => g.breakables.sets.some((s) => s.name === n));
       g.debug.teleport(470, -92, 0); await wait(2500);
-      return { nodes: plan.nodes.length, blades: R.blades.length, missing, wrong: wrong.slice(0, 5), roadsNoSign, mismatch: mismatch.slice(0, 5), limits: R.limits.length, downtownChange, school, breakable, calls: g.renderer.info.render.calls, fps: g.stats().fps };
+      return { nodes: junctions.length, ruralEnds:plan.nodes.length-junctions.length, blades: R.blades.length, missing, wrong: wrong.slice(0, 5), roadsNoSign, mismatch: mismatch.slice(0, 5), limits: R.limits.length, downtownChange, school, breakable, calls: g.renderer.info.render.calls, fps: g.stats().fps };
     });
     check('every junction has a blade sign with its two street names', r.missing.length === 0 && r.wrong.length === 0, { nodes: r.nodes, blades: r.blades, missing: r.missing.slice(0, 5), wrong: r.wrong });
     check('every road has a speed-limit sign matching the config (+ downtown change, school zone)', r.roadsNoSign.length === 0 && r.mismatch.length === 0 && r.downtownChange && r.school, r);

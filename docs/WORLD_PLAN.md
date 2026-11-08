@@ -73,4 +73,23 @@ C2c adds33actual seeded animals (10cows/20sheep/3farm dogs) in8instanced species
 
 C2d farm synth/night fixtures are verified and committed:5pooled voices/46nodes on existing master,6physical lamps on real walls/posts, no extra lights. C3 Gumleaf Farm Shop at55,-310 is complete with shared shell/hinged door/menu,36produce pieces,12solids and one registered reactive adult keeper (99total registered peds). Actual purchases/entrance/culling/day-night60fps and gameplay regressions pass. After captured43/44failures and measured controls, shared render-path/first-person materials and sleeping NPC matrix pruning remove recurring cache/traversal work without changing geometry, lighting or handling. Ordinary AND traced26scene sweeps each51-60fps/max382calls; focused controls,walk7/7,phase2 16/16,full phase4 51/51,phase5 172/172 and complete farm/world sections pass. Cold shader-startup waits are not claimed eliminated; failure logs retained. Continue D1 power-station native survey and plan. Coverage still76.1859997%unused; thin-wall shop/floor/fixture solids are conservatively excluded by the existing classifier, not replaced by a claimed full-pad footprint.
 
-Current unused land **76.1859997%**,2082375m2 /2733277.78m2. This supersedes the interim74.74478%generic-road/water calculation. The world is still far from the final15%target; the military campus, industry and reserves/fill remain pending. C1 farm day/night views58-60fps/44-242calls,25scene sweep51-60fps/max369calls; one shadow light. Static registry870->973boxes/native shapes and orchard trunks+63; terrain remains901120triangles/452025heights.
+Before D1, unused land was **76.1859997%**,2082375m2 /2733277.78m2. This supersedes the interim74.74478%generic-road/water calculation. The world is still far from the final15%target; the military campus, industry and reserves/fill remain pending. C1 farm day/night views58-60fps/44-242calls,25scene sweep51-60fps/max369calls; one shadow light. Static registry870->973boxes/native shapes and orchard trunks+63; terrain remains901120triangles/452025heights.
+
+## D1a power-station static site
+
+Stoneleaf Energy Works now occupies actual built land at x[-425,-250],z[-595,-525], inside the existing
+works grade. Native survey rejected the earlier steep coastal/TV-tower/boundary candidate. Two hollow
+faceted cooling towers use48exact convex wall panels; turbine hall, transformers/insulators, store,
+office, solid pipes/supports/fence/gate/sign and an excavated1.25m-deep cooling basin bring120new solids.
+Grid-following paving and the private gate apron match physical ground within5mm; a level apron first
+failed11.7cm and was corrected, preserving the intermediate ground rise. No map extension or original
+developed-ground change. Energy Way40km/h is a40m gravel spur; directed return and72shoulder links work.
+The live ute returns to Works Rd in13.96s/100health/no jumps; the real player's full-throttle stress run
+crosses both actual endpoints (>42m),89/96km/h peaks,zero damage with live traffic/parked cars.
+
+New Power station marker/label/legend and street/limit signs verified; day/night60fps/68-72calls,
+27scene sweep51-60fps/max382calls. Terrain8/8,map/POI/sign/navigation/airport42/42 and farm regressions
+pass. Current coverage is **75.77510023837615% unused**,2070986.1111122088m2 /2733069.4444444454m2;
+count only visible paving rectangles/buildings/water, never the rest of the declared works pad. Original
+63.980116%baseline remains fixed. Static registry1111,54roads,99registered peds/26traffic; terrain
+901120triangles/452025heights unchanged. Workers/forklift/steam/synth/mounted lamps are D1b, not built yet.

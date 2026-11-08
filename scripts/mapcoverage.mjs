@@ -29,7 +29,7 @@ try {
       roadAt:(x,z)=>roadCovered(w.network.index.nearest(x,z,20)),
       solids:w.colliders.filter(c=>c.hy>=1 && c.hx>=1 && c.hz>=1),
       yards:lotPads(w.layout).map(l=>({x:l.x,z:l.z,hx:l.hw,hz:l.hd,rot:l.rot})),
-      districts:[{x0:AP.fence.x0,x1:AP.fence.x1,z0:AP.fence.north,z1:AP.fence.z},...(w.rural?.cultivated||[])],
+      districts:[{x0:AP.fence.x0,x1:AP.fence.x1,z0:AP.fence.north,z1:AP.fence.z},...(w.rural?.cultivated||[]),...(w.rural?.builtSurfaces||[])],
       parks:[w.town.gardens.bounds,{x0:parkBox.min.x,x1:parkBox.max.x,z0:parkBox.min.z,z1:parkBox.max.z}],
       trees:w.trunks,water:[{x0:box.min.x,x1:box.max.x,z0:box.min.z,z1:box.max.z,y:WATER_Y},...(w.rural?.water||[])]
     });

@@ -29,6 +29,7 @@ export function buildRuralPlan() {
   road('Windmill Track',100,-430,-200,-430,'track');
   road('Harvest Lane',-200,-480,-200,-252,'track');
   road('Works Rd',-450,-480,-200,-480,'track');
+  road('Energy Way',-335,-480,-335,-520,'track');
   road('Parade Way',-500,-252,-1360,-252,'base');
   road('West Patrol Rd',-1360,-655,-1360,180,'base');
   road('Range Rd',-1360,-620,-500,-620,'base');

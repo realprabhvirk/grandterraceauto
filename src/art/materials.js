@@ -42,6 +42,7 @@ MAT.instancedColor = MAT.solid.clone();
 MAT.instancedGlass = MAT.glass.clone();
 // The first-person pass has its own fog/light state; sharing its cache with the world thrashes it.
 MAT.viewSolid = MAT.solid.clone();
+MAT.coolingWater = new THREE.MeshLambertMaterial({ color:PALETTE.town.water,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide });
 
 // Street light heads and the soft additive pools they throw on the road.
 MAT.streetHead = new THREE.MeshLambertMaterial({ color: '#e9e2cf', emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0 });

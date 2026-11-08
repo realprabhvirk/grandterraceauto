@@ -29,6 +29,8 @@ import { buildRuralRoads } from '../rural/ruralRoads.js';
 import { buildFarms } from '../rural/farms.js';
 import { farmPonds, farmTracks } from '../rural/farmConfig.js';
 import { TOWN } from './terrain.js';
+import { buildPowerStation } from '../industry/powerStation.js';
+import { powerPonds } from '../industry/powerConfig.js';
 
 export function buildWorld(scene) {
   const t0 = performance.now();
@@ -41,7 +43,7 @@ export function buildWorld(scene) {
   // street corridors under its bridges to the streets that pass underneath.
   const hwRoad = plan.roads.find((r) => r.highway && !r.ramp);
   const hwGrade = [-6, 0, 6].map((dz) => ({ halfW: 4, samples: hwRoad.samples.filter((s) => !HWY.crossings.some((c) => Math.abs(s.x - c) < HWY.deckHalf)).map((s) => ({ ...s, z: s.z + dz })) }));
-  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade, ...rural.roads, ...farmTracks(TOWN.h)], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots(), ...rural.sites], depressions: farmPonds(TOWN.h) });
+  const terrain = new Terrain({ roads: [...network.roads, plan.link, ...plan.roads.filter((r) => r !== hwRoad), ...hwGrade, ...rural.roads, ...farmTracks(TOWN.h)], pads: network.pads, lots: [...lotPads(layout), ...landmarkLots(), ...rural.sites], depressions: [...farmPonds(TOWN.h),...powerPonds(TOWN.h)] });
   terrain.bridges = BRIDGES;
   scene.add(terrain.mesh);
   scene.add(buildRoads(network, layout.cuts));
@@ -93,6 +95,10 @@ export function buildWorld(scene) {
   town.toggles.push(...farms.toggles); town.targets.push(...farms.targets);
   town.chunks.push(...farms.chunks); town.places.push(...farms.places); town.updaters.push(...farms.updaters);
   colliders.push(...farms.colliders);
+  const power = buildPowerStation({parent:scene,terrain});
+  rural.power = power.site; rural.builtSurfaces = power.surfaces; rural.water.push(...power.water);
+  town.chunks.push(...power.chunks); town.places.push(...power.places); town.updaters.push(...power.updaters);
+  colliders.push(...power.colliders);
   const trunks = [...trees.trunks, ...town.trunks];
   trunks.push(...farms.trunks);
   console.log(`[gta] world built in ${(performance.now() - t0).toFixed(0)} ms: ${layout.regular.length} houses, ${trunks.length} trees, hero at (${layout.hero.x.toFixed(1)}, ${layout.hero.z.toFixed(1)})`);
