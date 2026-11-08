@@ -37,7 +37,21 @@ The station is beside a deliberately excavated cooling basin within its yard; th
 
 ## Status
 
-D1a static/ground/access COMPLETE, D1 overall in progress. Plan5e36aed and C3c378ec2 pushed. D1a results below; review/commit/push this sub-task, then immediately D1b workers/forklift/steam/synth/lamps and its regressions. Screenshots0/8; no build.
+D1 COMPLETE, including D1a static/access (b6ad89e pushed) and D1b operations/serial acceptance below. Plan5e36aed and C3c378ec2 pushed. Review/commit/push D1b, then immediately D2 survey/plan and the remaining queue. Screenshots0/8; no build.
+
+### D1b implementation evidence (2026-11-08 10:32 IST, in progress)
+
+D1a committed/pushed b6ad89e. Worker test first red missing workers, then registry/native paths/work/motion/pause/sleep/shot PASS. Actual car encounter initially failed: revival restores logical position before its next native capsule update; spawning at once overlapped the prior fleeing capsule. Fixture now waits200ms before spawning, approaches with clearance from the wall, and passes actual knockdown/get-up/hp100/collider/witness. No reaction/damage rules changed. New workers append as ped99/100; original roster/streams preserved.
+
+Forklift first red missing manager; optional config/model/site/tag injection reuses the farm manager. Same farm dimensions/routes/dust remain defaults. Forks/pallet/crate have four exact visible/native boxes, four wheel cylinders and a body; full sampled route first passes1125body/load queries, clear. Movement/interpolation/operator/wheel changes/player stop and day/night60fps/73-81calls pass. Safe-wake test proves actual sedan/native overlap at1.6m lateral offset, missed by original walking-focus guard. First correction covered driving but the test exposed enter-car transition still using walking margin. Now use the full car diagonal for every car-focused transition as well; diagnostic confirms machine sleeping/disabled, car100health. This is a deliberate wake-safety improvement for farm machines too; their full original machinery regression is required. A test resume initially teleported during exit animation, which restored the saved far exit spot; now waits for walk mode before returning. Keep all failure logs; do not claim full circuit until observed.
+
+Steam/night test first red missing features. Added bounded64slot/two-mouth pool with shared material and four mounted native housings/shared heads/pools; current serial equipment test is observing the actual circuit, then steam/lighting. Audio test is written but synth remains unimplemented until its initial failure. No screenshots/build/dependencies/audio files changed. Finish all D1b acceptance/regressions before its commit, then continue D2/full queue.
+
+11:03 IST update: actual forklift circuit112.455m/112.282m in66.149s PASS, no route/speed/time edits. Native car overlap safe wake passes through entry/drive,100health; stops then resumes. Steam64slots/56-58active, both mouths, actual uploaded matrix motion, pause/far-cull/resume PASS; four native mounted fixtures and one shadow light, day/night60fps/81-87calls. Extended fixture also verifies actual wall/post mounts and forklift wheel-cylinder clearance; final equipment rerun pending. Audio first red missing synth, then optional farm-audio config injection with default46nodes unchanged; power2voices/19nodes on same context/master. Actual waveform RMS.014822, master.006648, hum37Hz/forklift85.625Hz; master mute/volume, pause, .4duck, distant exact0, repeat visit identities and persisted/normal pagehide disposal6sources/idempotence/contextrunning PASS. Workers repeat PASS including native collision/get-up/witness. Logs `codex-004-D1b-equipment.log` and `codex-004-D1b-sound-workers.log`; initial missing-feature and encounter/wake failures retained. Full serial regression runner now active, logs `codex-004-D1b-final-*.log`; one browser, no screenshots/build. Do not mark D1b complete before reading all results.
+
+11:17 IST partial regression: final forklift includes2025native body/load/wheel-cylinder samples, real112.483m circuit66.169s, all previous stop/wake/night/interpolation PASS. Full original farms PASS:12902native machine samples; real Gumleaf166.328m/60.957s, Redbank tractor571.721m and harvester510.882m/205.737s; player/farmer/car stops, pause/sleep/wide-header wake, dust/operators and60fpsviews retained. Farmers/animals/farmtraffic/farmambience/farmshop PASS, including original46nodes and waveform/calls/master/lifecycle, real theft/signals/native animal hits/get-up, actual shop entry/buys/menu/native behavior60fps/232-246calls. Roads/walking/powerstatic/farmstatic PASS:130station solids,72tower rays39micrometres,5mm paving,1.25m basin, ute return13.935s/no damage/jumps, gate remains clear. Walk PASS7/7. Other serial cases still running.
+
+Review found worker2's final waypoint duplicated its initial waypoint, making one zero-length route segment; the first native scan accidentally queried NaN for that segment. Tightened the new worker test to reject non-finite/zero-length segments before querying. After this runner finishes, reproduce that failure, reorder the existing worker2 stations A-B-A-C (same positions/panels/corridor, no duplicate adjacent/seam endpoints), and rerun worker acceptance. Do not edit production during this active regression or silently accept the malformed scan.
 
 D1a in progress: first red missing site, then first static/native check passes120solids,72visible-vs-native tower rays with max0.000039m disagreement, paving max0.005001m, basin depth1.25m, day/night60fps/67-71calls, one shadow light and correct maps/culling/sign. A short gravel apron now joins the40m public spur through the gate to the paved yard without changing its graph/U-turn endpoint; it is an actual separate visible coverage rectangle, not a full-pad claim. Add native gate/apron corridor clearance and include its ground in the<=1cm assertion before the next run. Grid-aligned paving triangles avoid re-triangulation errors around the excavated basin. Working site is not implemented yet.
 
@@ -64,3 +78,42 @@ Serial5180 `.\dev.cmd node` commands/results (Edge closed per case):
 | mapcoverage | PASS75.77510023837615%unused,2070986.1111122088m2/2733069.4444444454m2. Actual paved rectangles/water only; baseline63.980116%fixed. Registry1111solids,54roads,99peds,26traffic;901120terrain triangles/452025heights unchanged. |
 
 Final logs `codex-004-D1a-final-*.log`, strengthened drive `codex-004-D1a-full-endpoints.log`; initial static/BFS/sign/apron/32m-drive failures retained. Terrain-first and corrected-apron diagnostics are recorded above. All final test processes and the corrected shell runner exited0. Could not assess final art/audio by screenshots in D1a because the task's final eight-shot budget is still unused; operations are explicitly absent until D1b. By hand: take Energy Way, enter the gate, walk the apron/basin and look at the hollow towers by day/night. Next implement/test/commit D1b, then D2 and the entire remaining queue.
+
+## D1b completion report (2026-11-08 12:32 IST)
+
+Files: power config/builder now adds six native work panels, two registered maintenance adults, four
+mounted lamps and one64slot steam mesh. `pedestrians` adds the shared wrench and route-facing option;
+`character` aliases the existing work animation. `powerMachineryConfig`/`forkliftModels` provide the
+loaded forklift, using optional config/model/site/tag and exact extra solids in `farmMachinery`.
+The shared manager's deliberate wake-safety fix accounts for the whole driven car during entry/exit
+as well as driving; existing farm dimensions/routes/acceleration/braking/dust remain unchanged.
+`farmAudio` accepts optional config, with separate power2voice synth config and shared main-loop wiring.
+World aggregation appends workers, preserving the99prior roster; art/materials adds one shared steam
+material. Tests/docs updated; no vehicle handling, terrain, dependencies, songs, build or screenshots.
+
+Serial5180 commands use `.\dev.cmd node`, SHOTS/trace unset, one closed Edge per process:
+
+| Script / sections | Result |
+| --- | --- |
+| worldtest powerops | PASS final combined run after tightened zero-length-segment red and A-B-A-C correction. Two workers/101total, native routes/wrench/work/motion/pause/sleep/shot/real car get-up/witness;2025forklift native body/load/wheel samples, real112.427m circuit66.130s, stop/resume/full car-entry wake100health, four wheels/operator/pause/night/interpolation. Steam64slots/56-58active/both mouths/matrix motion/pause/cull/resume, four actual native mounts,60fps/81-87calls/one shadow light. Synth2voices/19nodes/shared master/actual RMS.010782/distant0/mute/volume/pause/duck/identity/persisted and normal pagehide6-source/idempotent disposal PASS. |
+| worldtest machinery farmers animals farmambience farmshop farmtraffic | PASS all.12902machine native queries; complete Gumleaf166.328m/60.957s and both510.60m Redbank circuits/205.737s, actual player/farmer/car stops, pause/sleep/header wake/night/operator/dust/interpolation. Farmer/animal shot/gunfire/native/collision/get-up/witness, theft/signals, original46node synth/lifecycle and real shop walks/buys pass. Shop60fps/232-246calls. |
+| worldtest roads walking powerstatic farmstatic | PASS18road/68lane BFS,164112ground rays/0error/missing/ghosts,84return footprints,72shoulders;130site solids,72tower rays/max.000039m,1.25m basin,5mm paving/apron; live ute return13.935s/100health/no jumps. All farms/day-night/culling remain green. |
+| walktest / phase2test / phase4test npcs | PASS7/7,16/16,9/9; real enter/exit/night60fps, original reactions/get-up/witness roster intact. |
+| phase5test pov cabin guns witness map pois signs mapnav airport vibe | PASS99/99, actual native-centre gun hits and original damage bounds, cameras/master world behavior, all76junction blades/109limits, map routes/POIs/legend and airport operations/safety; airport60fps/115calls. |
+| materialstest / renderpathtest | PASS identical appearance/36programs,0production vs869old-sharing cache switches; four viewmodel weapons0switches/37programs, old sharing80, old sleeping traversal22. Three immediate wake root/bone errors0, native interpolation lag.013-.015m; explicit hidden queries/flee/fade/revive intact. |
+| perfscenes | PASS all27scenes51-60fps/max384calls. Cabin51fps/384calls, operating power60fps/87calls; every old scene/2500ms settling/45fps/<600 assertion retained. |
+| mapcoverage | PASS75.77510023837615%unused,2070986.1111122088m2/2733069.4444444454m2; original63.980116%baseline fixed. Actual paving/water unchanged, no full-pad or steam land-use claim. Registry1121static solids/54roads/210trunks/101peds/26traffic, terrain901120triangles/452025heights unchanged. |
+
+Each of the11broad regression processes and its runner exited0; logs `codex-004-D1b-final-*.log`.
+Only worker2's existing station order changed afterward, within the same native-clear corridor/panels;
+the tightened test rejected its former duplicated seam before any NaN query and final `powerops` reran
+all station operations, exiting0 with no page errors. All browsers closed. Initial red/failed
+encounter/wake/exit-fixture/seam logs are retained.
+
+Could not judge final visual composition or audible balance by eye/ear: screenshots remain0/8 for
+Task004 final phaseI, and browser waveform checks establish behavior rather than subjective mixing.
+By hand: take Energy Way through the gate; watch both workers and the loaded forklift; stand in its
+clear approach to see it stop, then move away; look up at both plumes; switch N for mounted lamps;
+listen to the hum/engine and test M/Settings volume. Basin/walls/fork/load solids are native-tested.
+After review/commit/push, continue D2wind and all remaining industries/base/
+fill/population/deferred tasks. Overall004 and75.775%unused target remain open.

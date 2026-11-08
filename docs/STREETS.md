@@ -108,4 +108,5 @@ Gravel surfaces and earth shoulders, no urban kerbs. Stoneleaf Rd joins the moto
 
 Energy Way is the40m gravel spur from Works Rd to Stoneleaf Energy Works. A gravel apron continues
 through the open gate into its paved yard. Rural dead ends have slow return connectors; the public
-spur's endpoint is not a two-street junction. The works' operating equipment follows in Task004 D1b.
+spur's endpoint is not a two-street junction. Maintenance routes and the loaded forklift circuit stay
+inside the fenced works yard, clear of the public road, apron and gate corridor.

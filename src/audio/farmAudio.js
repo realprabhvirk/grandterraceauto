@@ -1,8 +1,8 @@
 // One lazy, bounded synth graph on the existing master. Sources stay pooled at zero gain while idle.
 import { makeRng } from '../utils/rng.js';
-import { FARM_AUDIO as C } from './farmAudioConfig.js';
+import { FARM_AUDIO } from './farmAudioConfig.js';
 
-export function createFarmAudio(audio,{machines,animals}){
+export function createFarmAudio(audio,{machines,animals=[],config:C=FARM_AUDIO}){
   let nodes=null,disposed=false;
   const st={nodesCreated:0,endedSources:0,elapsed:0,output:0,calls:{cow:0,sheep:0,dog:0}},rng=makeRng(C.seed);
   function init(){

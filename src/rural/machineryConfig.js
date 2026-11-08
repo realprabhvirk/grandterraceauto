@@ -1,6 +1,6 @@
 // Autonomous field equipment. These values do not change any drivable car tuning.
 export const MACHINERY = {
-  seed: 60427, awakeDistance: 220, acceleration: .9, braking: 3, stopGap: 2.5, stopReleaseMargin: 1.5,
+  seed: 60427, awakeDistance: 220, acceleration: .9, braking: 3, stopGap: 2.5, stopReleaseMargin: 1.5, wakeMargin: .6, wakeCarPadding: .1,
   dustCapacity: 60, dustInterval: .12, dustLife: 1.4, dustDistance: 100,
   sampleStep: .5, headerSpeed: 3.5,
   types: {

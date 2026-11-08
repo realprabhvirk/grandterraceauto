@@ -20,7 +20,7 @@ const RADIUS = 0.28, HALF = 0.55;
 // paramedic, shopkeeper stay at a spot (and walk back to it after being knocked down).
 const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', 'office', 'vendor', 'lifeguard', 'beach', 'teacher', 'farmer']);
 const BAG_COLORS = ['#f4f1e8', '#c8553e', '#3d5f8a', '#e2c25a', '#4f9a55'];
-let hoeGeometry = null;
+let hoeGeometry = null, wrenchGeometry = null;
 
 // Sleeping/gone people do not animate. Avoid visiting their bone trees on every world/mirror pass.
 // Explicit getWorldPosition/updateWorldMatrix queries retain Three's normal behavior.
@@ -93,6 +93,11 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
     if (spec.role === 'farmer') {
       if (!hoeGeometry) hoeGeometry = merge([boxB(.045, 1.2, .045, 0, -1.05, 0, PALETTE.town.wood), boxB(.4, .1, .18, 0, -1.08, .06, PALETTE.cars.chrome)]);
       ped.workTool = new THREE.Mesh(hoeGeometry, MAT.solid); ped.workTool.name = 'farm-hoe'; ped.workTool.castShadow = true; ped.workTool.visible = false;
+      ch.bones.rElbow.add(ped.workTool); ped.jobIndex = 0; ped.workT = 0;
+    }
+    if (spec.spot?.workAction === 'maintenance') {
+      if (!wrenchGeometry) wrenchGeometry = merge([boxB(.045,.4,.045,0,-.55,0,PALETTE.cars.chrome),boxB(.16,.12,.055,0,-.62,0,PALETTE.cars.chrome),boxB(.055,.1,.055,-.065,-.66,0,PALETTE.cars.chrome),boxB(.055,.1,.055,.065,-.66,0,PALETTE.cars.chrome)]);
+      ped.workTool = new THREE.Mesh(wrenchGeometry, MAT.solid); ped.workTool.name = 'maintenance-wrench'; ped.workTool.castShadow = true; ped.workTool.visible = false;
       ch.bones.rElbow.add(ped.workTool); ped.jobIndex = 0; ped.workT = 0;
     }
     if (spec.role === 'shopper') {
@@ -263,6 +268,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
           const index = ped.jobIndex || 0, target = h.route[index];
           if (ped.workT > 0) {
             ped.workT = Math.max(0, ped.workT - dt); ped.cur = 0; action = h.workAction;
+            if (h.workYaw !== undefined) faceToward(ped, ped.pos.x + Math.sin(h.workYaw), ped.pos.z + Math.cos(h.workYaw), dt);
             if (ped.workT === 0) ped.jobIndex = (index + 1) % h.route.length;
           } else {
             const d = stepToward(ped, target.x, target.y, target.z, h.speed, dt); speed = ped.cur;
@@ -349,7 +355,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
   /** Visuals + collider (+ the dog). Animate every frame up close, every 3rd frame further out. */
   function finishPed(ped, dt, dist, speed, action) {
     if (ped.home?.route) ped.jobAction = action;
-    if (ped.workTool) ped.workTool.visible = action === 'farmWork';
+    if (ped.workTool) ped.workTool.visible = action === 'farmWork' || action === 'maintenance';
     ped.ch.root.position.copy(ped.pos);
     ped.ch.root.rotation.y = ped.yaw;
     ped.body.setNextKinematicTranslation({ x: ped.pos.x, y: ped.pos.y + (HALF + RADIUS) * ped.scale, z: ped.pos.z });

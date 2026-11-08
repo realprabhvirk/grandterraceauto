@@ -97,6 +97,7 @@ export function buildWorld(scene) {
   colliders.push(...farms.colliders);
   const power = buildPowerStation({parent:scene,terrain});
   rural.power = power.site; rural.builtSurfaces = power.surfaces; rural.water.push(...power.water);
+  rural.npcSpots.push(...power.npcSpots);
   town.chunks.push(...power.chunks); town.places.push(...power.places); town.updaters.push(...power.updaters);
   colliders.push(...power.colliders);
   const trunks = [...trees.trunks, ...town.trunks];

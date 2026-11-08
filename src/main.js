@@ -22,6 +22,8 @@ import { createDebugApi } from './utils/debugApi.js';
 import { createPedestrians } from './npc/pedestrians.js';
 import { createTraffic } from './traffic/trafficManager.js';
 import { createFarmMachinery } from './rural/farmMachinery.js';
+import { POWER_MACHINERY } from './industry/powerMachineryConfig.js';
+import { buildForkliftModel } from './industry/forkliftModels.js';
 import { createFarmAnimals } from './rural/farmAnimals.js';
 import { createMirrors } from './camera/mirrors.js';
 import { createParticles } from './combat/particles.js';
@@ -50,6 +52,7 @@ import { createGunShopMenu } from './ui/gunShopMenu.js';
 import { createShopMenu } from './ui/shopMenu.js';
 import { createAmbience } from './audio/ambience.js';
 import { createFarmAudio } from './audio/farmAudio.js';
+import { POWER_AUDIO } from './audio/powerAudioConfig.js';
 import { createSpeeding } from './police/speeding.js';
 import { createSpeedLimitHud } from './ui/speedLimitHud.js';
 import { createSpeedCameras } from './police/speedCameras.js';
@@ -111,11 +114,12 @@ world.town?.npcSpots.push(...activitySpots(world)); // Phase 6: bus-stop waiters
 const peds = createPedestrians({ scene, physics, world, townCount: 7, downtownCount: 9 });
 const traffic = createTraffic({ scene, physics, world, vehicles, audio });
 const farmMachinery = createFarmMachinery({ scene, physics, world, controls, peds, vehicles, traffic });
+const industryMachinery = createFarmMachinery({ scene, physics, world, controls, peds, vehicles, traffic,config:POWER_MACHINERY,modelFactory:buildForkliftModel,sites:[world.rural.power] });
 const farmAnimals = createFarmAnimals({ physics, world });
 world.rural.animals = farmAnimals;
 const cyclists = createCyclists({ scene, traffic, terrain: world.terrain });
 /** Everything with wheels that pedestrians should watch out for. */
-const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...farmMachinery.movers, ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
+const movingCars = () => [...vehicles.cars.filter((c) => !c.impounded).map((c) => { const f = c.body.forward(), p = c.position; return { x: p.x, z: p.z, fx: f.x, fz: f.z, speed: c.body.state.speed, len: c.cfg.L, w: c.cfg.W, player: c === vehicles.active }; }), ...traffic.movers(), ...farmMachinery.movers, ...industryMachinery.movers, ...(world.police ? world.police.cars.map((c) => ({ x: c.pos.x, z: c.pos.z, fx: c.fwd.x, fz: c.fwd.z, speed: c.v, len: c.cfg.L, w: c.cfg.W })) : [])];
 
 // --- Damage, destruction, cash -------------------------------------------------------------
 const particles = createParticles(scene);
@@ -199,6 +203,7 @@ world.places.push(...landmarks.places);
 world.speeding = speeding;
 const ambience = createAmbience(audio);
 const farmAudio = createFarmAudio(audio,{machines:farmMachinery.machines,animals:farmAnimals.list});
+const powerAudio = createFarmAudio(audio,{machines:[{id:world.rural.power.id+'-hum',kind:'power',pose:world.rural.power.config.hall,v:0,sleeping:false},...industryMachinery.machines],config:POWER_AUDIO});
 const shopLight = new THREE.PointLight('#ffd9a8', 0, 22, 1.6);
 shopLight.castShadow = false;
 scene.add(shopLight);
@@ -222,7 +227,7 @@ window.addEventListener('resize', () => {
 });
 
 window.__gta = {
-  music, musicUi, farmMachinery, farmAudio,
+  music, musicUi, farmMachinery, farmAudio, industryMachinery, powerAudio,
   ready: false, stats: () => overlay.stats(), world, scene, renderer, camera, controls, physics, RAPIER, vehicles, lighting, peds, traffic, mirrors, combat, breakables, wallet, particles, spawns, wanted, police, theft, minimap, cyclists, viewmodel, cutscene, weapons, copGuns, crimes, nav, mapUI, gunShop, shopMenu, landmarks, airport, jitter, speeding, limitHud, speedCams, trafficCops, pullOver, skyLife, ambience, shopLight, dayCycle,
   debug: createDebugApi({ world, vehicles, controls, camera, lighting }),
 };
@@ -248,6 +253,7 @@ renderer.setAnimationLoop(() => {
   audio.setListener(controls.focus());
   ambience.update(rdt, controls.focus(), lighting.dusk);
   farmAudio.update(dt, controls.focus(), cutscene.active);
+  powerAudio.update(dt, controls.focus(), cutscene.active);
   speeding.update(dt);
   if (!paused) { speedCams.update(dt); trafficCops.update(dt); pullOver.update(dt); landmarks.update(dt, lighting.dusk); airport.update(dt); }
   limitHud.update(rdt, cutscene.active ? null : speeding.status());
@@ -269,6 +275,7 @@ renderer.setAnimationLoop(() => {
   world.heroState = world.hero?.update(dt, { player: controls.focus(), night: lighting.dusk });
   world.town?.update(dt, { focus: controls.focus(), dusk: lighting.dusk });
   farmMachinery.update(dt, physics.alpha, lighting.dusk);
+  industryMachinery.update(dt, physics.alpha, lighting.dusk);
   combat.update(dt);
   breakables.update(dt, controls.focus());
   particles.update(dt);

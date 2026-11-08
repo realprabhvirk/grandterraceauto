@@ -92,4 +92,31 @@ New Power station marker/label/legend and street/limit signs verified; day/night
 pass. Current coverage is **75.77510023837615% unused**,2070986.1111122088m2 /2733069.4444444454m2;
 count only visible paving rectangles/buildings/water, never the rest of the declared works pad. Original
 63.980116%baseline remains fixed. Static registry1111,54roads,99registered peds/26traffic; terrain
-901120triangles/452025heights unchanged. Workers/forklift/steam/synth/mounted lamps are D1b, not built yet.
+901120triangles/452025heights unchanged. D1b operations are documented below.
+
+## D1b working power station (complete)
+
+Two registered adult maintenance workers append after the existing99, with wrench work at wall panels
+and transformer controls, clear routes and normal shot/flee/car knockdown/get-up/witness behavior.
+A procedural forklift carries a solid pallet/crate around a112.28m yard circuit, with seated operator,
+four native rotating wheels and exact fork/load solids. Actual complete circuits take66.15-66.17s;
+player stop/resume, full-map pause, sleep and safe wake during car entry/driving pass. Shared machinery
+keeps the original farm routes/dimensions/dust defaults; wake safety now covers the full car footprint
+through transitions, fixing an actual native-overlap failure. Complete original farm regressions pass.
+
+Both towers emit rising steam through one64slot shared-material instance pool (56-58active); it freezes
+on map pause and while the station is culled. Four lamps attach to actual hall/store walls and gate post,
+with native housings and shared heads/pools, no new real light. Station hum/forklift engine use2voices/
+19nodes on the existing context/master; farm remains5voices/46nodes. Actual waveform, distance silence,
+master/mute/volume, pause/.4duck, bounded identity and bfcache/disposal pass. Focused power views60fps/
+73-87calls, one shadow-casting light. Current registered people101; intermediate population, not final G.
+
+Full serial regressions in `codex-004-D1b-final-*.log` PASS: original full machinery circuits/stops,
+farm workers/animals/traffic/audio/shop, roads/walking/static sites, walk7/7,phase2 16/16,NPCs9/9,
+gameplay/map/airport99/99, material/render paths,27scene51-60fps/max384calls, coverage. Final combined
+powerops passes after explicit duplicated worker-seam red and reorder within the same clear corridor;
+actual circuit112.427m/66.130s, waveform RMS.010782/distant0. Every process/runner exited0; browsers closed.
+Registry1121static solids/54roads/210trunks/101peds/26traffic, terrain unchanged. Coverage remains
+75.7751002%unused, actual paving/water only; no full-pad/steam claim. D1 complete; next D2wind then all
+remaining phases/queue. No build/screenshots/dependencies/audio-file changes; visual/mixing judgement
+remains for final phaseI/manual checks in004-D1-power report.

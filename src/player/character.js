@@ -165,6 +165,7 @@ export function createCharacter(outfit = PLAYER_OUTFIT, { shadow = true, name = 
     const run = Math.max(0, Math.min(1, (s.speed - 4.5) / 3));
     t += s.dt;
     switch (s.action) {
+      case 'maintenance':
       case 'farmWork': {
         const hoe = Math.sin(t * 3.6);
         p.torsoX = .22 + hoe * .06; p.headX = .3;
