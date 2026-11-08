@@ -22,6 +22,12 @@ const UNIFORM = new Set(['cop', 'worker', 'paramedic', 'shopkeeper', 'jogger', '
 const BAG_COLORS = ['#f4f1e8', '#c8553e', '#3d5f8a', '#e2c25a', '#4f9a55'];
 let hoeGeometry = null;
 
+// Sleeping/gone people do not animate. Avoid visiting their bone trees on every world/mirror pass.
+// Explicit getWorldPosition/updateWorldMatrix queries retain Three's normal behavior.
+function updateVisibleMatrices(force) {
+  if (this.visible) THREE.Object3D.prototype.updateMatrixWorld.call(this, force);
+}
+
 export function createPedestrians({ scene, physics, world, count = COUNT, townCount = 6, downtownCount = 7 }) {
   const rng = makeRng(3131);
   const parkLines = world.town?.parkLines || [];
@@ -67,6 +73,7 @@ export function createPedestrians({ scene, physics, world, count = COUNT, townCo
       p = line[idx];
     }
     const ch = createCharacter(UNIFORM.has(spec.role) ? roleOutfit(spec.role, r) : randomOutfit(r), { name: `ped-${i}`, idlePhase: spec.spot?.idlePhase });
+    ch.root.updateMatrixWorld = updateVisibleMatrices;
     const scale = r.range(0.92, 1.08);
     ch.root.scale.setScalar(scale);
     scene.add(ch.root);

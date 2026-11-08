@@ -536,8 +536,25 @@ try {
       const car = g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded && !c.sleeping) || g.vehicles.cars.find((c) => !c.hero && !c.dead && !c.impounded);
       const h0 = car.health ?? 100, cp = car.position;
       const carFixture = {type:car.type,sleeping:car.sleeping,position:{x:cp.x,y:cp.y,z:cp.z},body:car.body.position,colliders:car.body.colliders.map(c=>({enabled:c.isEnabled(),position:c.translation(),halfExtents:c.shape.halfExtents}))};
-      const r = W.debugShot({ x: cp.x - 6, y: cp.y + 0.8, z: cp.z }, { x: 1, y: 0, z: 0 }, 'rifle');
+      // Earlier driving sections can leave this stolen car rolled over. Aim at its actual solid.
+      const hull = car.body.colliders[0].translation();
+      const r = W.debugShot({ x: hull.x - 6, y: hull.y, z: hull.z }, { x: 1, y: 0, z: 0 }, 'rifle');
       const carDmg = h0 - car.health;
+      const body = car.body.body, saved = {pos:body.translation(),rot:body.rotation(),v:body.linvel(),w:body.angvel(),sleeping:car.sleeping};
+      let inverted;
+      try {
+        body.setTranslation({x:-1400,y:g.world.terrain.getHeight(-1400,240)+6,z:240},true);
+        body.setRotation({x:1,y:0,z:0,w:0},true);body.setLinvel({x:0,y:0,z:0},true);body.setAngvel({x:0,y:0,z:0},true);
+        await wait(120); // let the real physics query tree receive the new collider pose
+        const raw=body.translation(),hp=car.health;
+        const oldAim=W.debugShot({x:raw.x-6,y:raw.y+.8,z:raw.z},{x:1,y:0,z:0},'rifle'),oldDamage=hp-car.health;
+        const centre=car.body.colliders[0].translation(),before=car.health;
+        const actual=W.debugShot({x:centre.x-6,y:centre.y,z:centre.z},{x:1,y:0,z:0},'rifle');
+        inverted={old:oldAim.kind,oldDamage,actual:actual.kind,damage:before-car.health};
+      } finally {
+        body.setTranslation(saved.pos,true);body.setRotation(saved.rot,true);body.setLinvel(saved.v,true);body.setAngvel(saved.w,true);
+        if(saved.sleeping)body.sleep();car.sleeping=saved.sleeping;car.body.snapRender=true;car.hasPrev=false;
+      }
       // A street light (breakable): shoot until it breaks.
       const set = g.breakables.sets.find((s) => s.name === 'streetLight'), it = set.items.find((i) => !i.broken);
       let n = 0;
@@ -548,9 +565,10 @@ try {
       g.controls.input.setVirtual('Mouse0', true); await wait(60); g.controls.input.setVirtual('Mouse0', false); await wait(300);
       const P = g.controls.player.position;
       const near = g.peds.peds.filter((p) => p.ch.root.visible && p.state !== 'dead' && p.state !== 'down' && Math.hypot(p.pos.x - P.x, p.pos.z - P.z) < 40);
-      return { r, carDmg, carFixture, poleBroken: it.broken, shotsToBreak: n, near: near.length, reacting: near.filter((p) => p.flee > 0 || p.cower > 0).length };
+      return { r, carDmg, carFixture, inverted, poleBroken: it.broken, shotsToBreak: n, near: near.length, reacting: near.filter((p) => p.flee > 0 || p.cower > 0).length };
     });
     check('bullets damage cars a little', misc.r.kind === 'car' && misc.carDmg > 5 && misc.carDmg < 15, misc);
+    check('inverted car: old upright aim misses, native hull aim still damages it', misc.inverted.old !== 'car' && misc.inverted.oldDamage === 0 && misc.inverted.actual === 'car' && misc.inverted.damage > 5 && misc.inverted.damage < 15, misc.inverted);
     check('street light breaks from gunfire', misc.poleBroken && misc.shotsToBreak >= 2, misc);
     check('civilians within 40 m flee or cower', misc.near === 0 || misc.reacting >= Math.ceil(misc.near * 0.7), misc);
     // First person: viewmodel holds the gun, ADS centres the sights.

@@ -185,6 +185,7 @@ See [the world plan](docs/WORLD_PLAN.md) and [street list](docs/STREETS.md).
 .\dev.cmd node scripts/weaponsUnit.mjs   # gun logic in plain Node: damage, hit zones, falloff, ammo/reload, spread, save
 .\dev.cmd node scripts/perfscenes.mjs    # fps / draw calls / triangles (districts, countryside + gunfire)
 .\dev.cmd node scripts/materialstest.mjs # stable shared shader caches, unchanged appearance/programs, dusk and NPC revive
+.\dev.cmd node scripts/renderpathtest.mjs # first-person scene cache, sleeping NPC traversal and immediate wake/fade/revive
 .\dev.cmd node scripts/worldtest.mjs roads  # rural directed connectivity, signs, full-width ground and ghost scan
 .\dev.cmd node scripts/worldtest.mjs walking # rural shoulder junctions, civilian links and original resident areas
 .\dev.cmd node scripts/worldtest.mjs farmstatic # actual farm content/solids/maps, day/night views and pause/culling

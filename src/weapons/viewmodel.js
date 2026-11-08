@@ -13,7 +13,7 @@ const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3
 
 /** Unit segment mesh (length 1 along +Z, centred) painted in one colour. */
 function segMesh(w, h, color) {
-  const m = new THREE.Mesh(box(w, h, 1, 0, 0, 0, color, { jitter: 0.03 }), MAT.solid);
+  const m = new THREE.Mesh(box(w, h, 1, 0, 0, 0, color, { jitter: 0.03 }), MAT.viewSolid);
   m.frustumCulled = false;
   return m;
 }
@@ -31,7 +31,7 @@ function buildArm() {
   const hand = new THREE.Mesh(merge([
     box(0.075, 0.085, 0.1, 0, 0, 0, P.skin, { jitter: 0.03 }),
     box(0.03, 0.03, 0.06, 0.035, 0.015, -0.05, P.skinShade, { jitter: 0.02 }), // thumb
-  ]), MAT.solid);
+  ]), MAT.viewSolid);
   hand.frustumCulled = false;
   g.add(fore, upper, hand);
   return { g, fore, upper, hand, elbow: new THREE.Vector3(), shoulder: new THREE.Vector3() };
@@ -76,7 +76,7 @@ export function createViewmodel() {
     setItem(obj, spec) {
       if (item) itemHolder.remove(item.obj);
       item = obj ? { obj, spec } : null;
-      if (obj) { itemHolder.add(obj); obj.traverse((o) => { o.frustumCulled = false; }); }
+      if (obj) { itemHolder.add(obj); obj.traverse((o) => { o.frustumCulled = false; if (o.material === MAT.solid) o.material = MAT.viewSolid; }); }
     },
     /** Muzzle position in camera space (tracers start here in first person). */
     muzzle(out) { if (!item) return null; itemHolder.updateMatrixWorld(true); return out.set(...item.spec.muzzle).applyMatrix4(item.obj.matrixWorld); },
